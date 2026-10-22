@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "uvx",
+      "args": ["--from", "mcp-for-blender==2.1.9", "mcp-for-blender"],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "DISABLE_TELEMETRY": "true",
+        "BLENDER_MCP_SAFE_MODE": "1"
+      }
+    },
+    "godot-mcp": {
+      "command": "node",
+      "args": ["tools/godot-mcp/server/build/index.js"],
+      "env": {
+        "GODOT_MCP_PORT": "6505"
+      }
+    }
+  }
+}
