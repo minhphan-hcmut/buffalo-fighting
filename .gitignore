@@ -1,0 +1,16 @@
+# Godot generated files (.uid and .import are kept: Godot 4.4+ needs them in version control)
+.godot/
+
+# Node dependencies and generated MCP output
+node_modules/
+tools/godot-mcp/server/node_modules/
+tools/godot-mcp/server/build/
+
+# Python tooling
+.ruff_cache/
+
+# Blender and local logs
+*.blend1
+*.log
+*.pyc
+__pycache__/
