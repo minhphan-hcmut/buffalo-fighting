@@ -1,0 +1,20 @@
+{
+  "triangles": 22768,
+  "meshes": 25,
+  "bounds_metres": {
+    "x": [
+      -1.2816133499145508,
+      1.2816133499145508
+    ],
+    "y": [
+      -2.027202844619751,
+      2.027202844619751
+    ],
+    "z": [
+      0.0,
+      2.11543869972229
+    ]
+  },
+  "rigged": false,
+  "revision": "refined anatomy and shading via Blender MCP"
+}

@@ -1,0 +1,127 @@
+{
+  "Body": {
+    "vertices": 4009,
+    "faces": 6764,
+    "nonmanifold_edges": 0
+  },
+  "Ear_L": {
+    "vertices": 111,
+    "faces": 140,
+    "nonmanifold_edges": 0
+  },
+  "Ear_R": {
+    "vertices": 111,
+    "faces": 143,
+    "nonmanifold_edges": 0
+  },
+  "EarInner_L": {
+    "vertices": 235,
+    "faces": 291,
+    "nonmanifold_edges": 0
+  },
+  "EarInner_R": {
+    "vertices": 235,
+    "faces": 294,
+    "nonmanifold_edges": 0
+  },
+  "Eye_L": {
+    "vertices": 362,
+    "faces": 384,
+    "nonmanifold_edges": 0
+  },
+  "Eye_R": {
+    "vertices": 362,
+    "faces": 384,
+    "nonmanifold_edges": 0
+  },
+  "EyeSocket_L": {
+    "vertices": 224,
+    "faces": 224,
+    "nonmanifold_edges": 0
+  },
+  "EyeSocket_R": {
+    "vertices": 224,
+    "faces": 224,
+    "nonmanifold_edges": 0
+  },
+  "FrontHoof_L_Inner": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "FrontHoof_L_Outer": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "FrontHoof_R_Inner": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "FrontHoof_R_Outer": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "Horn_L": {
+    "vertices": 1458,
+    "faces": 1456,
+    "nonmanifold_edges": 0
+  },
+  "Horn_R": {
+    "vertices": 1458,
+    "faces": 1456,
+    "nonmanifold_edges": 0
+  },
+  "Mouth": {
+    "vertices": 24,
+    "faces": 18,
+    "nonmanifold_edges": 0
+  },
+  "Muzzle": {
+    "vertices": 577,
+    "faces": 586,
+    "nonmanifold_edges": 0
+  },
+  "Nostril_L": {
+    "vertices": 362,
+    "faces": 384,
+    "nonmanifold_edges": 0
+  },
+  "Nostril_R": {
+    "vertices": 362,
+    "faces": 384,
+    "nonmanifold_edges": 0
+  },
+  "RearHoof_L_Inner": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "RearHoof_L_Outer": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "RearHoof_R_Inner": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "RearHoof_R_Outer": {
+    "vertices": 154,
+    "faces": 144,
+    "nonmanifold_edges": 0
+  },
+  "Tail": {
+    "vertices": 60,
+    "faces": 50,
+    "nonmanifold_edges": 0
+  },
+  "TailTuft": {
+    "vertices": 24,
+    "faces": 26,
+    "nonmanifold_edges": 0
+  }
+}

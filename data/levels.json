@@ -1,0 +1,26 @@
+{
+  "L01": {
+    "title": "Vòng loại",
+    "description": "Học MOVE, HORN, DASH, GUARD và CLASH.",
+    "ai_profile": "EASY",
+    "mud_zones": []
+  },
+  "L02": {
+    "title": "Bán kết — sân lầy",
+    "description": "Quản lý stamina, né bùn và tránh bị dồn rào.",
+    "ai_profile": "NORMAL",
+    "mud_zones": ["A"]
+  },
+  "L03": {
+    "title": "Chung kết",
+    "description": "Căn góc, thắng CLASH và dồn đối thủ tới lúc chịu thua.",
+    "ai_profile": "HARD",
+    "mud_zones": ["A", "B"]
+  },
+  "LAN01": {
+    "title": "Giao hữu LAN",
+    "description": "Host-authoritative LAN 1v1.",
+    "ai_profile": "NONE",
+    "mud_zones": []
+  }
+}

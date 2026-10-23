@@ -1,0 +1,26 @@
+{
+  "EASY": {
+    "reaction_s": 0.65,
+    "attack_range": 3.0,
+    "dash_min_range": 999.0,
+    "dash_max_range": 0.0,
+    "strafe": false,
+    "guard": false
+  },
+  "NORMAL": {
+    "reaction_s": 0.40,
+    "attack_range": 3.0,
+    "dash_min_range": 3.0,
+    "dash_max_range": 5.0,
+    "strafe": true,
+    "guard": true
+  },
+  "HARD": {
+    "reaction_s": 0.25,
+    "attack_range": 3.0,
+    "dash_min_range": 2.5,
+    "dash_max_range": 5.0,
+    "strafe": true,
+    "guard": true
+  }
+}
