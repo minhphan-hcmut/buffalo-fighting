@@ -298,9 +298,12 @@ func get_snapshot() -> Dictionary:
 		"countdown_ms": int(countdown_time * 1000.0),
 		"winner_slot": winner_slot,
 		"end_reason": end_reason,
+		"clash_active": clash.is_active(),
+		"lock_balance": float(clash.active.get("lock_balance", 0.0)),
+		"clash_time_left": maxf(0.0, GameBalance.get_number("lock_max_s") - float(clash.active.get("time", 0.0))) if clash.is_active() else 0.0,
 		"players": [
-			{"slot": 1, "position": Vector2(player.position.x, player.position.z), "facing": Vector2(player.facing.x, player.facing.z), "spirit": player.spirit, "stamina": player.stamina, "action": player.state_name()},
-			{"slot": 2, "position": Vector2(opponent.position.x, opponent.position.z), "facing": Vector2(opponent.facing.x, opponent.facing.z), "spirit": opponent.spirit, "stamina": opponent.stamina, "action": opponent.state_name()}
+			{"slot": 1, "position": Vector2(player.position.x, player.position.z), "facing": Vector2(player.facing.x, player.facing.z), "spirit": player.spirit, "stamina": player.stamina, "action": player.state_name(), "hooking": player.clash_hooked},
+			{"slot": 2, "position": Vector2(opponent.position.x, opponent.position.z), "facing": Vector2(opponent.facing.x, opponent.facing.z), "spirit": opponent.spirit, "stamina": opponent.stamina, "action": opponent.state_name(), "hooking": opponent.clash_hooked}
 		]
 	}
 

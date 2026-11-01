@@ -124,11 +124,11 @@ func _test_state_poses(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 
 	# CLASH lean follows the tug-of-war balance.
 	_reset(buffalo, animator)
-	arena.active_clash = {"a": arena.player, "b": arena.opponent, "time": 0.0, "balance": 80.0}
+	arena.active_clash = {"a": arena.player, "b": arena.opponent, "time": 0.0, "lock_balance": 80.0}
 	buffalo.state = Buffalo.State.CLASH
 	_step(animator, 60)
 	check(animator.pose_offset.z < -0.1, "CLASH: the winning side leans in")
-	arena.active_clash = {"a": arena.opponent, "b": arena.player, "time": 0.0, "balance": 80.0}
+	arena.active_clash = {"a": arena.opponent, "b": arena.player, "time": 0.0, "lock_balance": 80.0}
 	_step(animator, 60)
 	check(animator.pose_offset.z > 0.1, "CLASH: the losing side is pushed back")
 	arena.active_clash.clear()

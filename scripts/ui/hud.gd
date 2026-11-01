@@ -9,7 +9,11 @@ var opponent_stamina: ProgressBar
 var timer_label: Label
 var center_label: Label
 var result_label: Label
-var clash_label: Label
+var clash_panel: Control
+var clash_title: Label
+var clash_bar: ProgressBar
+var clash_time_label: Label
+var clash_hook_label: Label
 var tutorial_label: Label
 var pause_overlay: Control
 var pause_panel: PanelContainer
@@ -49,13 +53,39 @@ func _ready() -> void:
 	center_label.add_theme_font_size_override("font_size", 42)
 	center_label.add_theme_color_override("font_color", Color("#F2E6CF"))
 	root.add_child(center_label)
-	clash_label = Label.new()
-	clash_label.position = Vector2(490, 118)
-	clash_label.size = Vector2(300, 34)
-	clash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	clash_label.add_theme_font_size_override("font_size", 22)
-	clash_label.add_theme_color_override("font_color", Color("#E8BC65"))
-	root.add_child(clash_label)
+	clash_panel = Control.new()
+	clash_panel.position = Vector2(440, 118)
+	clash_panel.size = Vector2(400, 84)
+	clash_panel.visible = false
+	root.add_child(clash_panel)
+	clash_title = Label.new()
+	clash_title.text = "KHÓA SỪNG"
+	clash_title.position = Vector2(0, 0)
+	clash_title.size = Vector2(400, 26)
+	clash_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	clash_title.add_theme_font_size_override("font_size", 22)
+	clash_title.add_theme_color_override("font_color", Color("#E8BC65"))
+	clash_panel.add_child(clash_title)
+	clash_bar = ProgressBar.new()
+	clash_bar.min_value = -100.0
+	clash_bar.max_value = 100.0
+	clash_bar.show_percentage = false
+	clash_bar.position = Vector2(0, 30)
+	clash_bar.size = Vector2(400, 16)
+	clash_bar.add_theme_stylebox_override("fill", _bar_style(Color("#E8BC65")))
+	clash_panel.add_child(clash_bar)
+	clash_time_label = Label.new()
+	clash_time_label.position = Vector2(0, 48)
+	clash_time_label.size = Vector2(400, 20)
+	clash_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	clash_time_label.add_theme_font_size_override("font_size", 16)
+	clash_panel.add_child(clash_time_label)
+	clash_hook_label = Label.new()
+	clash_hook_label.position = Vector2(0, 66)
+	clash_hook_label.size = Vector2(400, 18)
+	clash_hook_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	clash_hook_label.add_theme_font_size_override("font_size", 14)
+	clash_panel.add_child(clash_hook_label)
 	tutorial_label = Label.new()
 	tutorial_label.position = Vector2(24, 665)
 	tutorial_label.size = Vector2(1232, 32)
@@ -312,10 +342,25 @@ func _process(_delta: float) -> void:
 		tutorial_label.text = "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · Esc Tạm dừng"
 	elif controller.phase == &"RESULT":
 		tutorial_label.text = "Kết quả đã khóa · bấm Esc để thả chuột"
-	if controller.active_clash.is_empty():
-		clash_label.text = ""
-	else:
-		clash_label.text = "CLASH  %+.0f" % float(controller.active_clash.get("balance", 0.0))
+	_update_clash()
+
+
+## Tug-of-war bar: the right half is always the local player's side.
+func _update_clash() -> void:
+	var clash: Dictionary = controller.active_clash
+	clash_panel.visible = not clash.is_empty()
+	if clash.is_empty():
+		return
+	var mirror := 1.0 if controller.local_slot == 1 else -1.0
+	clash_bar.value = float(clash.get("lock_balance", 0.0)) * mirror
+	var time_left := maxf(0.0, GameBalance.get_number("lock_max_s") - float(clash.get("time", 0.0)))
+	clash_time_label.text = "%.1f s" % time_left
+	var hooking: Array[String] = []
+	if controller.player.clash_hooked:
+		hooking.append("ĐỎ đang móc")
+	if controller.opponent.clash_hooked:
+		hooking.append("XANH đang móc")
+	clash_hook_label.text = " · ".join(hooking)
 
 
 func show_result(winner_slot: int, reason: StringName) -> void:

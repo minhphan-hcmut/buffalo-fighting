@@ -4,7 +4,7 @@ extends RefCounted
 ## startup, RELEASE punishes a hooker in startup or costs the releaser. Slot A is the player.
 
 var controller: MatchController
-## Empty when no CLASH is running; otherwise {"a", "b", "time", "balance"}.
+## Empty when no CLASH is running; otherwise {"a", "b", "time", "lock_balance", ...blend data}.
 var active: Dictionary = {}
 var cooldown := 0.0
 
@@ -28,27 +28,57 @@ func enter(bias: float) -> void:
 	var opponent := controller.opponent
 	player.begin_clash(opponent)
 	opponent.begin_clash(player)
-	active = {"a": player, "b": opponent, "time": 0.0, "balance": bias}
 	var direction := (opponent.global_position - player.global_position)
 	direction.y = 0.0
 	if direction.length_squared() < 0.001:
 		direction = Vector3.RIGHT
 	direction = direction.normalized()
 	var midpoint := (player.global_position + opponent.global_position) * 0.5
-	var separation := GameBalance.get_number("buffalo_radius") * 2.0
-	player.global_position = midpoint - direction * separation * 0.5
-	opponent.global_position = midpoint + direction * separation * 0.5
-	player.rotation.y = atan2(-direction.x, -direction.z)
-	opponent.rotation.y = atan2(direction.x, direction.z)
-	player.facing = direction
-	opponent.facing = -direction
+	var half := GameBalance.get_number("clash_distance") * 0.5
+	# The lock pose is reached over clash_enter_blend_s instead of teleporting.
+	active = {
+		"a": player,
+		"b": opponent,
+		"time": 0.0,
+		"lock_balance": bias,
+		"blend": 0.0,
+		"from_a": player.global_position,
+		"from_b": opponent.global_position,
+		"to_a": midpoint - direction * half,
+		"to_b": midpoint + direction * half,
+		"yaw_from_a": player.rotation.y,
+		"yaw_from_b": opponent.rotation.y,
+		"yaw_to_a": atan2(-direction.x, -direction.z),
+		"yaw_to_b": atan2(direction.x, direction.z)
+	}
 	controller.combat_event.emit(&"CLASH_START", player.slot, opponent.slot, bias)
+
+
+## Moves both buffaloes toward the lock pose; true while the blend is still running.
+func _blend(a: Buffalo, b: Buffalo, delta: float) -> bool:
+	var duration := GameBalance.get_number("clash_enter_blend_s", 0.1)
+	var elapsed := float(active.get("blend", duration))
+	if elapsed >= duration:
+		return false
+	elapsed = minf(duration, elapsed + delta)
+	active["blend"] = elapsed
+	var weight := 1.0 if duration <= 0.0 else elapsed / duration
+	a.global_position = Vector3(active["from_a"]).lerp(active["to_a"], weight)
+	b.global_position = Vector3(active["from_b"]).lerp(active["to_b"], weight)
+	a.rotation.y = lerp_angle(float(active["yaw_from_a"]), float(active["yaw_to_a"]), weight)
+	b.rotation.y = lerp_angle(float(active["yaw_from_b"]), float(active["yaw_to_b"]), weight)
+	a.facing = Vector3(-sin(a.rotation.y), 0.0, -cos(a.rotation.y))
+	b.facing = Vector3(-sin(b.rotation.y), 0.0, -cos(b.rotation.y))
+	ArenaBounds.constrain(a)
+	ArenaBounds.constrain(b)
+	return true
 
 
 func process(delta: float, a_frame: InputFrame, b_frame: InputFrame) -> void:
 	var a: Buffalo = active["a"]
 	var b: Buffalo = active["b"]
 	active["time"] += delta
+	var blending := _blend(a, b, delta)
 	var a_choice := choice_for(a_frame)
 	var b_choice := choice_for(b_frame)
 	if a_choice == &"RELEASE" or b_choice == &"RELEASE":
@@ -71,18 +101,19 @@ func process(delta: float, a_frame: InputFrame, b_frame: InputFrame) -> void:
 	var push_b := push_strength(b, b_choice)
 	a.consume_stamina(GameBalance.get_number("lock_stamina_per_s") * delta if push_a > 0.0 else 0.0)
 	b.consume_stamina(GameBalance.get_number("lock_stamina_per_s") * delta if push_b > 0.0 else 0.0)
-	active["balance"] = clampf(
-		float(active["balance"]) + (push_a - push_b) * GameBalance.get_number("lock_rate") * delta,
+	active["lock_balance"] = clampf(
+		float(active["lock_balance"]) + (push_a - push_b) * GameBalance.get_number("lock_rate") * delta,
 		-100.0,
 		100.0
 	)
-	_slide(a, b, push_a - push_b, delta)
-	if absf(float(active["balance"])) >= 100.0:
-		var loser := b if float(active["balance"]) > 0.0 else a
+	if not blending:
+		_slide(a, b, push_a - push_b, delta)
+	if absf(float(active["lock_balance"])) >= 100.0:
+		var loser := b if float(active["lock_balance"]) > 0.0 else a
 		apply_loss(loser, GameBalance.get_number("lock_loss_spirit"), GameBalance.get_number("lock_loss_stun_s"), GameBalance.get_number("lock_loss_knockback_multiplier"))
-		end(float(active["balance"]), &"CLASH_BREAK")
+		end(float(active["lock_balance"]), &"CLASH_BREAK")
 	elif active["time"] >= GameBalance.get_number("lock_max_s"):
-		var balance := float(active["balance"])
+		var balance := float(active["lock_balance"])
 		var loss := 3.0 if is_zero_approx(balance) else _split_loss(balance)
 		if balance > 0.0:
 			apply_loss(b, loss)
@@ -95,7 +126,7 @@ func process(delta: float, a_frame: InputFrame, b_frame: InputFrame) -> void:
 func resolve_timeout() -> void:
 	if active.is_empty():
 		return
-	var balance := float(active["balance"])
+	var balance := float(active["lock_balance"])
 	if not is_zero_approx(balance):
 		apply_loss(active["b"] if balance > 0.0 else active["a"], _split_loss(balance))
 	end(balance, &"CLASH_TIME")
@@ -152,10 +183,10 @@ func advance_hooks(a: Buffalo, b: Buffalo, delta: float) -> void:
 		return
 	if a_complete:
 		a.clash_hooked = false
-		active["balance"] = float(active["balance"]) + GameBalance.get_number("lock_hook_power")
+		active["lock_balance"] = float(active["lock_balance"]) + GameBalance.get_number("lock_hook_power")
 	elif b_complete:
 		b.clash_hooked = false
-		active["balance"] = float(active["balance"]) - GameBalance.get_number("lock_hook_power")
+		active["lock_balance"] = float(active["lock_balance"]) - GameBalance.get_number("lock_hook_power")
 
 
 func apply_loss(actor: Buffalo, amount: float, stun_s: float = -1.0, knockback_multiplier: float = 1.0) -> void:
@@ -177,6 +208,11 @@ func end(_balance: float, event_name: StringName) -> void:
 		a.state = Buffalo.State.NORMAL
 	if b.state == Buffalo.State.CLASH:
 		b.state = Buffalo.State.NORMAL
+	# A loser keeps the knockback applied by apply_loss(); everyone else stops dead.
+	if a.state != Buffalo.State.STUNNED:
+		a.velocity = Vector3.ZERO
+	if b.state != Buffalo.State.STUNNED:
+		b.velocity = Vector3.ZERO
 	a.clash_partner = null
 	b.clash_partner = null
 	a.clash_hooked = false
@@ -196,12 +232,12 @@ func _apply_whiff(hooker: Buffalo) -> void:
 
 
 func _apply_release(releaser: Buffalo) -> void:
-	var balance := float(active["balance"])
+	var balance := float(active["lock_balance"])
 	var releaser_sign := 1.0 if releaser == active["a"] else -1.0
 	var advantage := maxf(0.0, -balance * releaser_sign)
 	var loss := GameBalance.get_number("lock_release_spirit_base") + advantage * GameBalance.get_number("lock_release_spirit_per_point")
 	apply_loss(releaser, loss, GameBalance.get_number("lock_release_stun_s"))
-	end(float(active["balance"]), &"CLASH_RELEASE")
+	end(float(active["lock_balance"]), &"CLASH_RELEASE")
 
 
 func _slide(a: Buffalo, b: Buffalo, difference: float, delta: float) -> void:
@@ -210,7 +246,7 @@ func _slide(a: Buffalo, b: Buffalo, difference: float, delta: float) -> void:
 	var direction := (b.global_position - a.global_position).normalized()
 	var midpoint := (a.global_position + b.global_position) * 0.5
 	midpoint += direction * signf(difference) * GameBalance.get_number("lock_slide_speed") * absf(difference) * delta
-	var separation := GameBalance.get_number("buffalo_radius") * 2.0
+	var separation := GameBalance.get_number("clash_distance")
 	a.global_position = midpoint - direction * separation * 0.5
 	b.global_position = midpoint + direction * separation * 0.5
 	ArenaBounds.constrain(a)

@@ -169,6 +169,8 @@ func begin_clash(partner: Buffalo) -> void:
 	hit_targets.clear()
 	guarding = false
 	clash_partner = partner
+	velocity = Vector3.ZERO
+	knockback = Vector3.ZERO
 	clash_hook_time = 0.0
 	clash_hooked = false
 	clash_release_pressed = false

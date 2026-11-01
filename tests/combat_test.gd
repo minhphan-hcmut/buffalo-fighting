@@ -56,11 +56,11 @@ func run() -> void:
 	attacker.input_frame.move = Vector2(0.0, -1.0)
 	attacker.input_frame.camera_yaw = 0.0
 	check(arena.clash.push_strength(attacker, &"PUSH") > 0.0, "holding toward the opponent pushes")
-	arena.active_clash["balance"] = 0.0
+	arena.active_clash["lock_balance"] = 0.0
 	arena.clash.start_hook(attacker, defender, &"HOOK")
 	arena.clash.start_hook(defender, attacker, &"HOOK")
 	arena.clash.advance_hooks(attacker, defender, GameBalance.get_number("lock_hook_startup_s") + 0.01)
-	check(is_zero_approx(float(arena.active_clash["balance"])), "simultaneous hooks cancel symmetrically")
+	check(is_zero_approx(float(arena.active_clash["lock_balance"])), "simultaneous hooks cancel symmetrically")
 	check(not attacker.clash_hooked and not defender.clash_hooked, "simultaneous hook startup clears both hooks")
 	arena.clash.apply_loss(defender, 5.0)
 	check(defender.state == Buffalo.State.STUNNED, "CLASH loss applies stun")

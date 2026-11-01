@@ -40,6 +40,7 @@ var time := 0.0
 var pose_offset := Vector3.ZERO
 var pose_pitch := 0.0
 var pose_roll := 0.0
+var pose_yaw := 0.0
 var ear_back := 0.0
 var tail_lift := 0.0
 var victory_weight := 0.0
@@ -54,6 +55,7 @@ var rng := RandomNumberGenerator.new()
 var _target_offset := Vector3.ZERO
 var _target_pitch := 0.0
 var _target_roll := 0.0
+var _target_yaw := 0.0
 var _target_rate := POSE_RATE
 var _target_ear_back := 0.0
 var _target_tail_lift := 0.0
@@ -130,6 +132,7 @@ func update_pose(delta: float) -> void:
 	pose_offset = pose_offset.lerp(_target_offset, k)
 	pose_pitch = lerpf(pose_pitch, _target_pitch, k)
 	pose_roll = lerpf(pose_roll, _target_roll, k)
+	pose_yaw = lerpf(pose_yaw, _target_yaw, k)
 	var soft := 1.0 - exp(-POSE_RATE * delta)
 	ear_back = lerpf(ear_back, _target_ear_back, soft)
 	tail_lift = lerpf(tail_lift, _target_tail_lift, soft)
@@ -153,7 +156,7 @@ func update_pose(delta: float) -> void:
 		- defeat_weight * 8.0
 	)
 	var roll := pose_roll + deg_to_rad(turn_roll + walk * SWAY_ROLL_DEG * sin(gait_phase * TAU)) + _shake_roll
-	var rotation_basis := Basis.from_euler(Vector3(pitch, 0.0, roll))
+	var rotation_basis := Basis.from_euler(Vector3(pitch, pose_yaw, roll))
 	var breath := 1.0 + BREATH_SCALE * sin(time * TAU * BREATH_HZ) * (1.0 - minf(walk, 1.0))
 	var shaped := rotation_basis * Basis.from_scale(Vector3(1.0, breath, 1.0))
 	var origin := PITCH_PIVOT - shaped * PITCH_PIVOT + pose_offset + Vector3(0.0, bob + hop, 0.0)
@@ -166,6 +169,7 @@ func _compute_targets() -> void:
 	_target_offset = Vector3.ZERO
 	_target_pitch = 0.0
 	_target_roll = 0.0
+	_target_yaw = 0.0
 	_target_rate = POSE_RATE
 	_target_ear_back = 0.0
 	_target_tail_lift = 0.0
@@ -211,6 +215,8 @@ func _compute_targets() -> void:
 			var winning := _clash_advantage()
 			_target_offset = Vector3(0.0, -0.03, -0.2 * winning)
 			_target_pitch = deg_to_rad(-12.0 - 3.0 * winning)
+			# Display only: a clockwise turn (seen from above) lets the two muzzles slide past each other.
+			_target_yaw = -deg_to_rad(GameBalance.get_number("clash_visual_yaw_deg", 10.0))
 			_target_ear_back = deg_to_rad(45.0)
 			_gait_weight = 0.0
 			_shake_roll = deg_to_rad(1.5) * sin(time * 21.0)
@@ -225,7 +231,7 @@ func _compute_targets() -> void:
 func _clash_advantage() -> float:
 	if controller == null or controller.active_clash.is_empty():
 		return 0.0
-	var balance := float(controller.active_clash.get("balance", 0.0)) / 100.0
+	var balance := float(controller.active_clash.get("lock_balance", 0.0)) / 100.0
 	return clampf(balance if controller.active_clash.get("a") == buffalo else -balance, -1.0, 1.0)
 
 

@@ -25,6 +25,7 @@ func run() -> void:
 	_test_pinned_damage()
 	_test_clash_whiff_and_release()
 	_test_clash_loss_effects()
+	_test_clash_enter_blend()
 	arena.free()
 	print("CLASH PINNED TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -172,7 +173,7 @@ func _test_clash_loss_effects() -> void:
 	_ready_actor(arena.player, Vector3(-1.0, 0.0, 0.0))
 	_ready_actor(arena.opponent, Vector3(1.0, 0.0, 0.0))
 	arena.clash.enter(0.0)
-	arena.active_clash["balance"] = 99.99
+	arena.active_clash["lock_balance"] = 99.99
 	var push := InputFrame.new(1)
 	push.move = Vector2(0.0, -1.0)
 	push.camera_yaw = atan2(-1.0, 0.0) # face +X, toward the opponent
@@ -194,3 +195,26 @@ func _test_clash_loss_effects() -> void:
 	arena.clash.process(1.0 / 60.0, _release_frame(), _push_frame())
 	check(is_equal_approx(arena.opponent.spirit, 100.0 - whiff * GameBalance.get_number("pinned_spirit_multiplier")), "pinned whiff: SPIRIT loss x pinned multiplier")
 	check(is_equal_approx(arena.opponent.velocity.length(), knockback), "pinned whiff: knockback is not multiplied")
+
+
+# Entering a CLASH eases both buffaloes to clash_distance instead of teleporting them.
+func _test_clash_enter_blend() -> void:
+	arena.active_clash.clear()
+	_ready_actor(arena.player, Vector3(-1.0, 0.0, 0.0))
+	_ready_actor(arena.opponent, Vector3(1.0, 0.0, 0.0))
+	arena.player.velocity = Vector3(6.0, 0.0, 0.0)
+	arena.opponent.velocity = Vector3(-6.0, 0.0, 0.0)
+	arena.clash.enter(0.0)
+	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH starts")
+	var distance := arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - 2.0) < 0.01, "entering a CLASH does not move the buffaloes instantly")
+	arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	distance = arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(distance > 2.0 and distance < 2.3, "first CLASH tick only moves part of the way")
+	for i in 6:
+		arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	distance = arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - GameBalance.get_number("clash_distance")) < 0.03, "centers reach clash_distance within clash_enter_blend_s")
+	arena.player.velocity = Vector3(3.0, 0.0, 0.0)
+	arena.clash.end(0.0, &"CLASH_TEST")
+	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH ends")
