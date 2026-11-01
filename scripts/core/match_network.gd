@@ -130,6 +130,7 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		actor.stamina = float(item.get("stamina", actor.stamina))
 		actor.clash_hooked = bool(item.get("hooking", false))
 		_apply_facing(actor, item.get("facing"))
+		_apply_action(actor, item.get("action"))
 	_apply_clash_snapshot(snapshot)
 	if controller.phase == &"RESULT" and not controller.finished:
 		controller.finished = true
@@ -137,6 +138,18 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		controller.end_reason = StringName(snapshot.get("end_reason", "NONE"))
 		if is_instance_valid(controller.hud):
 			controller.hud.show_result(controller.winner_slot, controller.end_reason)
+
+
+## Client: show the action state the host reports (NORMAL, GUARD, STUNNED, FLEE, attacks...).
+func _apply_action(actor: Buffalo, value: Variant) -> void:
+	if not (value is String or value is StringName):
+		return
+	var state := Buffalo.state_from_name(StringName(value))
+	if state < 0 or state == actor.state:
+		return
+	actor.state = state as Buffalo.State
+	actor.guarding = state == Buffalo.State.GUARD
+	actor.state_time = 0.0
 
 
 ## Client: both buffaloes face where the host says they face (also outside CLASH).
@@ -170,6 +183,7 @@ func _apply_clash_snapshot(snapshot: Dictionary) -> void:
 	controller.active_clash = {}
 	for actor: Buffalo in actors:
 		actor.clash_partner = null
+		# The action in the same snapshot wins; this only covers snapshots without one.
 		if actor.state == Buffalo.State.CLASH:
 			actor.state = Buffalo.State.NORMAL
 

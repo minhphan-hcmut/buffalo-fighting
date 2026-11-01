@@ -40,6 +40,27 @@ func run() -> void:
 	check(player.state == Buffalo.State.NORMAL and opponent.state == Buffalo.State.NORMAL, "state returns to NORMAL")
 	check(player.clash_partner == null and opponent.clash_partner == null, "clash_partner is cleared")
 
+	# Host snapshot right after a CLASH: the loser is STUNNED, the other GUARDs.
+	lan._on_snapshot_received(_snapshot(true, 40.0, 1.0))
+	var after := _snapshot(false, 0.0, 0.0)
+	after["players"][0]["action"] = "STUNNED"
+	after["players"][1]["action"] = "GUARD"
+	lan._on_snapshot_received(after)
+	check(arena.active_clash.is_empty(), "CLASH is gone in the post-CLASH snapshot")
+	check(player.state == Buffalo.State.STUNNED, "client keeps STUNNED right after the CLASH ends")
+	check(opponent.state == Buffalo.State.GUARD and opponent.guarding, "client shows GUARD right after the CLASH ends")
+	var fled := _snapshot(false, 0.0, 0.0)
+	fled["players"][0]["action"] = "FLEE"
+	lan._on_snapshot_received(fled)
+	check(player.state == Buffalo.State.FLEE, "client shows FLEE")
+	lan._on_snapshot_received(_snapshot(false, 0.0, 0.0))
+	check(player.state == Buffalo.State.NORMAL and opponent.state == Buffalo.State.NORMAL and not opponent.guarding, "NORMAL comes back from the snapshot")
+	var odd := _snapshot(false, 0.0, 0.0)
+	odd["players"][0]["action"] = "NOT_A_STATE"
+	odd["players"][1]["action"] = 7
+	lan._on_snapshot_received(odd)
+	check(player.state == Buffalo.State.NORMAL and opponent.state == Buffalo.State.NORMAL, "unknown or mistyped action is ignored")
+
 	# Missing fields never crash and never teleport anyone.
 	var before := player.global_position
 	lan.remote_targets.clear()

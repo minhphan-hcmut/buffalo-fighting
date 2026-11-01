@@ -77,6 +77,14 @@ func reset_combat() -> void:
 	velocity = Vector3.ZERO
 
 
+## State for a snapshot action name, or -1 when the name is unknown.
+static func state_from_name(action: StringName) -> int:
+	for key in STATE_NAMES:
+		if STATE_NAMES[key] == action:
+			return key
+	return -1
+
+
 func state_name() -> StringName:
 	return STATE_NAMES[state]
 
