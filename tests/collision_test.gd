@@ -27,6 +27,7 @@ func run() -> void:
 	_test_velocity_after_separate()
 	_test_dash_still_hits()
 	_test_separate_symmetry()
+	_test_guard_knockback()
 	arena.free()
 	print("COLLISION TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -167,3 +168,33 @@ func _test_separate_symmetry() -> void:
 		ArenaBounds.separate(b, a)
 		check(first_a.distance_to(a.global_position) < 0.001 and first_b.distance_to(b.global_position) < 0.001, "%s: separate(a, b) and separate(b, a) end in the same positions" % name)
 		check(first_a.x <= first_b.x + 0.0001, "%s: slot 1 ends on the -X side" % name)
+
+
+# A guarding buffalo takes an impulse without stun; separate() must not eat that knockback.
+func _test_guard_knockback() -> void:
+	var a := arena.player
+	var b := arena.opponent
+	_place(a, Vector3(-1.45, 0.0, 0.0), -PI / 2.0)
+	_place(b, Vector3(1.45, 0.0, 0.0), PI / 2.0)
+	b.state = Buffalo.State.GUARD
+	b.guarding = true
+	a.attack_kind = &"HORN"
+	arena.combat.apply_hit(a, b)
+	check(b.state == Buffalo.State.GUARD and b.knockback_time > 0.0, "guarded hit sets knockback_time without stunning")
+	var expected := b.velocity.x
+	var decays := true
+	for i in 12:
+		b.simulate_movement(1.0 / 60.0, Vector3.ZERO, 1.0)
+		b.update_timers(1.0 / 60.0)
+		ArenaBounds.separate(a, b)
+		expected = maxf(0.0, expected - GameBalance.get_number("deceleration") / 60.0)
+		decays = decays and absf(b.velocity.x - expected) < 0.01
+	check(decays, "guarded knockback decays at `deceleration` with separate() running every tick")
+	# Knocked into the other body while overlapping: the pusher is stopped, the knocked one keeps its velocity.
+	_place(a, Vector3(-0.5, 0.0, 0.0), -PI / 2.0)
+	_place(b, Vector3(0.5, 0.0, 0.0), PI / 2.0)
+	a.velocity = Vector3(6.0, 0.0, 0.0)
+	b.receive_spirit(0.0, Vector3(-5.0, 0.0, 0.0), false)
+	ArenaBounds.separate(a, b)
+	check(is_equal_approx(b.velocity.x, -5.0), "knocked-back buffalo keeps its velocity through separate")
+	check(a.velocity.x <= 0.0001, "the other buffalo still loses its inward velocity")

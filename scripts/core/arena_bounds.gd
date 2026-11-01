@@ -137,9 +137,9 @@ static func separate(a: Buffalo, b: Buffalo) -> void:
 		constrain(b)
 	if normal == Vector3.ZERO:
 		return
-	if a.state != Buffalo.State.STUNNED:
+	if a.knockback_time <= 0.0:
 		a.velocity -= normal * maxf(0.0, a.velocity.dot(normal))
-	if b.state != Buffalo.State.STUNNED:
+	if b.knockback_time <= 0.0:
 		b.velocity += normal * maxf(0.0, -b.velocity.dot(normal))
 
 

@@ -35,6 +35,8 @@ var stamina_regen_delay := 0.0
 var horn_cooldown := 0.0
 var dash_cooldown := 0.0
 var knockback := Vector3.ZERO
+## Counts down after any impulse (stunning or not); separate() leaves such a buffalo's velocity alone.
+var knockback_time := 0.0
 var buffered_action: StringName = &"NONE"
 var input_buffer_time := 0.0
 var active := true
@@ -66,6 +68,7 @@ func reset_combat() -> void:
 	horn_cooldown = 0.0
 	dash_cooldown = 0.0
 	knockback = Vector3.ZERO
+	knockback_time = 0.0
 	buffered_action = &"NONE"
 	input_buffer_time = 0.0
 	active = true
@@ -171,6 +174,7 @@ func begin_clash(partner: Buffalo) -> void:
 	clash_partner = partner
 	velocity = Vector3.ZERO
 	knockback = Vector3.ZERO
+	knockback_time = 0.0
 	clash_hook_time = 0.0
 	clash_hooked = false
 	clash_release_pressed = false
@@ -186,6 +190,7 @@ func apply_stun(duration: float, impulse: Vector3) -> void:
 	state_duration = duration
 	knockback = impulse
 	velocity = impulse
+	knockback_time = GameBalance.get_number("knockback_time_s")
 
 
 func receive_spirit(amount: float, impulse: Vector3, stun: bool = true) -> void:
@@ -196,6 +201,7 @@ func receive_spirit(amount: float, impulse: Vector3, stun: bool = true) -> void:
 		apply_stun(GameBalance.get_number("hitstun_s"), impulse)
 	else:
 		velocity = impulse
+		knockback_time = GameBalance.get_number("knockback_time_s")
 
 
 func consume_stamina(amount: float) -> void:
@@ -210,6 +216,7 @@ func update_timers(delta: float) -> void:
 	horn_cooldown = maxf(0.0, horn_cooldown - delta)
 	dash_cooldown = maxf(0.0, dash_cooldown - delta)
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
+	knockback_time = maxf(0.0, knockback_time - delta)
 	stamina_regen_delay = maxf(0.0, stamina_regen_delay - delta)
 	input_buffer_time = maxf(0.0, input_buffer_time - delta)
 	if input_buffer_time <= 0.0:

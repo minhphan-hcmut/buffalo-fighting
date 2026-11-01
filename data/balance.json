@@ -52,6 +52,7 @@
   "hitstun_s": 0.30,
   "hit_invulnerability_s": 0.45,
   "knockback_speed": 8.3,
+  "knockback_time_s": 0.3,
   "input_buffer_s": 0.10,
   "lock_max_s": 1.5,
   "lock_rate": 120.0,

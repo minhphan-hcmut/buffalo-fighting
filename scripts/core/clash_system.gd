@@ -208,9 +208,9 @@ func end(_balance: float, event_name: StringName) -> void:
 	if b.state == Buffalo.State.CLASH:
 		b.state = Buffalo.State.NORMAL
 	# A loser keeps the knockback applied by apply_loss(); everyone else stops dead.
-	if a.state != Buffalo.State.STUNNED:
+	if a.knockback_time <= 0.0:
 		a.velocity = Vector3.ZERO
-	if b.state != Buffalo.State.STUNNED:
+	if b.knockback_time <= 0.0:
 		b.velocity = Vector3.ZERO
 	a.clash_partner = null
 	b.clash_partner = null
