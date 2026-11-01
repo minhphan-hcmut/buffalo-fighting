@@ -69,8 +69,7 @@ func _blend(a: Buffalo, b: Buffalo, delta: float) -> bool:
 	b.rotation.y = lerp_angle(float(active["yaw_from_b"]), float(active["yaw_to_b"]), weight)
 	a.facing = Vector3(-sin(a.rotation.y), 0.0, -cos(a.rotation.y))
 	b.facing = Vector3(-sin(b.rotation.y), 0.0, -cos(b.rotation.y))
-	ArenaBounds.constrain(a)
-	ArenaBounds.constrain(b)
+	_fit_pair(a, b)
 	return true
 
 
@@ -249,5 +248,21 @@ func _slide(a: Buffalo, b: Buffalo, difference: float, delta: float) -> void:
 	var separation := GameBalance.get_number("clash_distance")
 	a.global_position = midpoint - direction * separation * 0.5
 	b.global_position = midpoint + direction * separation * 0.5
-	ArenaBounds.constrain(a)
-	ArenaBounds.constrain(b)
+	_fit_pair(a, b)
+
+
+## Keeps the pair inside the arena by moving both together, so a locked pair never gets squeezed
+## below clash_distance when one buffalo is against the fence.
+func _fit_pair(a: Buffalo, b: Buffalo) -> void:
+	for pass_index in 3:
+		var before_a := a.global_position
+		var before_b := b.global_position
+		ArenaBounds.constrain(a)
+		ArenaBounds.constrain(b)
+		var shift_a := a.global_position - before_a
+		var shift_b := b.global_position - before_b
+		if shift_a.length_squared() < 0.000001 and shift_b.length_squared() < 0.000001:
+			return
+		var shift := shift_a if shift_a.length_squared() > shift_b.length_squared() else shift_b
+		a.global_position = before_a + shift
+		b.global_position = before_b + shift

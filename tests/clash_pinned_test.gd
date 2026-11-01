@@ -26,6 +26,7 @@ func run() -> void:
 	_test_clash_whiff_and_release()
 	_test_clash_loss_effects()
 	_test_clash_enter_blend()
+	_test_clash_against_fence()
 	arena.free()
 	print("CLASH PINNED TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -218,3 +219,20 @@ func _test_clash_enter_blend() -> void:
 	arena.player.velocity = Vector3(3.0, 0.0, 0.0)
 	arena.clash.end(0.0, &"CLASH_TEST")
 	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH ends")
+
+
+# A pair locked against the fence keeps clash_distance instead of being squeezed together.
+func _test_clash_against_fence() -> void:
+	arena.active_clash.clear()
+	_ready_actor(arena.player, Vector3(0.0, 0.0, 8.2))
+	_ready_actor(arena.opponent, Vector3(0.0, 0.0, 9.6))
+	arena.player.rotation.y = PI
+	arena.opponent.rotation.y = 0.0
+	arena.player.facing = Vector3.BACK
+	arena.opponent.facing = Vector3.FORWARD
+	arena.clash.enter(0.0)
+	for i in 30:
+		arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	var distance := arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - GameBalance.get_number("clash_distance")) < 0.03, "CLASH against the fence keeps clash_distance")
+	arena.active_clash.clear()
