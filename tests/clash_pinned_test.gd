@@ -33,7 +33,7 @@ func run() -> void:
 func _fence_position(angle_deg: float) -> Vector3:
 	var rx := GameBalance.get_number("arena_rx")
 	var rz := GameBalance.get_number("arena_rz")
-	var radius := GameBalance.get_number("buffalo_radius")
+	var radius := GameBalance.get_number("body_radius")
 	var angle := deg_to_rad(angle_deg)
 	return Vector3(cos(angle) * (rx - radius), 0.0, sin(angle) * (rz - radius))
 

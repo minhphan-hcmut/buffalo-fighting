@@ -34,33 +34,32 @@ func resolve_attacks() -> void:
 func attack_valid(attacker: Buffalo, target: Buffalo) -> bool:
 	if not attacker.is_attack_active() or attacker.hit_targets.has(target.slot):
 		return false
-	var offset := target.global_position - attacker.global_position
-	offset.y = 0.0
-	var distance := offset.length()
-	if distance <= 0.001:
-		return false
-	var direction := offset.normalized()
-	var facing_dot := attacker.forward().dot(direction)
 	if attacker.state == Buffalo.State.HORN_ACTIVE:
-		return distance <= GameBalance.get_number("horn_range") and facing_dot >= cos(GameBalance.get_angle("horn_half_angle"))
+		return in_reach(attacker, target, &"HORN")
 	if attacker.state == Buffalo.State.DASH_ACTIVE:
-		return distance <= GameBalance.get_number("buffalo_radius") * 2.0 + 0.1 and facing_dot >= cos(GameBalance.get_angle("dash_half_angle"))
+		return in_reach(attacker, target, &"DASH")
 	return false
 
 
-## True while a committed attack (startup or active) points at the target within range.
+## True while a committed attack (startup or active) points at the target within reach.
 func aims_at(attacker: Buffalo, target: Buffalo) -> bool:
 	if not attacker.is_committed():
 		return false
+	return in_reach(attacker, target, attacker.attack_kind)
+
+
+## Gap from the attacker's head capsule to the target's nearest capsule, plus the cone check.
+func in_reach(attacker: Buffalo, target: Buffalo, kind: StringName) -> bool:
 	var offset := target.global_position - attacker.global_position
 	offset.y = 0.0
 	if offset.length_squared() < 0.0001:
 		return false
 	var dot := attacker.forward().dot(offset.normalized())
-	if attacker.attack_kind == &"HORN":
-		return offset.length() <= GameBalance.get_number("horn_range") and dot >= cos(GameBalance.get_angle("horn_half_angle"))
-	if attacker.attack_kind == &"DASH":
-		return offset.length() <= GameBalance.get_number("buffalo_radius") * 2.0 + 0.1 and dot >= cos(GameBalance.get_angle("dash_half_angle"))
+	var gap := ArenaBounds.head_gap(attacker, target)
+	if kind == &"HORN":
+		return gap <= GameBalance.get_number("horn_reach") and dot >= cos(GameBalance.get_angle("horn_half_angle"))
+	if kind == &"DASH":
+		return gap <= GameBalance.get_number("dash_hit_gap") and dot >= cos(GameBalance.get_angle("dash_half_angle"))
 	return false
 
 

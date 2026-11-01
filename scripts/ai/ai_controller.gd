@@ -61,15 +61,10 @@ func _param(key: String, fallback: float) -> float:
 	return float(profile_data.get(key, fallback))
 
 
-## Open space between the two bodies; stand-in until the capsule geometry replaces it.
-func _gap(distance: float) -> float:
-	return distance - GameBalance.get_number("buffalo_radius") * 2.0
-
-
 func _decide(frame: InputFrame, distance: float, toward: Vector3) -> void:
 	held_move = Vector2.ZERO
 	held_guard = false
-	var gap := _gap(distance)
+	var gap := ArenaBounds.head_gap(actor, target)
 	if recovering and actor.stamina > _param("recover_exit", 60.0):
 		recovering = false
 	elif not recovering and actor.stamina < _param("recover_enter", 25.0):

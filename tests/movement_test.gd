@@ -132,8 +132,7 @@ func _test_separate(arena: MatchController) -> void:
 	ArenaBounds.separate(a, b)
 	check(a.velocity.x <= 0.0001 and b.velocity.x >= -0.0001, "separate removes velocity pointing into the other body")
 	check(is_equal_approx(a.velocity.z, 2.0) and is_equal_approx(b.velocity.z, -1.0), "separate keeps the tangential velocity")
-	var distance := a.global_position.distance_to(b.global_position)
-	check(distance >= GameBalance.get_number("buffalo_radius") * 2.0 - 0.001, "separate leaves no overlap")
+	check(float(ArenaBounds.deepest_contact(a, b)["depth"]) <= 0.001, "separate leaves no overlap")
 	# A buffalo with knockback keeps its velocity.
 	_reset(a)
 	_reset(b)

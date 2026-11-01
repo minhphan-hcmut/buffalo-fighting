@@ -46,6 +46,7 @@ godot --headless --path . --script res://tests/network_manager_test.gd
 godot --headless --path . --script res://tests/session_test.gd
 godot --headless --path . --script res://tests/movement_test.gd
 godot --headless --path . --script res://tests/clash_pinned_test.gd
+godot --headless --path . --script res://tests/collision_test.gd
 godot --headless --path . --script res://tests/pause_test.gd
 godot --headless --path . --script res://tests/animation_test.gd
 ```

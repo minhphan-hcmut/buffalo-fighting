@@ -88,7 +88,7 @@ func _test_body_untouched(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 		buffalo.state_duration = 0.2
 		_step(animator, 20)
 	check(buffalo.global_transform.is_equal_approx(before), "animator never moves or rotates the physics body")
-	check(buffalo.get_node("Collision").position.is_equal_approx(Vector3(0.0, 1.0, 0.0)), "collision shape is not animated")
+	check(buffalo.get_node("Body").position.is_equal_approx(Vector3(0.0, 1.0, 0.275)) and buffalo.get_node("Head").position.is_equal_approx(Vector3(0.0, 1.0, -0.8)), "collision shapes are not animated")
 	buffalo.state = Buffalo.State.NORMAL
 
 

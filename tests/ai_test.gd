@@ -42,9 +42,7 @@ func _profile(name: String) -> Dictionary:
 
 
 func _gap(arena: MatchController) -> float:
-	var offset := arena.opponent.global_position - arena.player.global_position
-	offset.y = 0.0
-	return offset.length() - GameBalance.get_number("buffalo_radius") * 2.0
+	return ArenaBounds.head_gap(arena.opponent, arena.player)
 
 
 func _test_decision_behaviour() -> void:
