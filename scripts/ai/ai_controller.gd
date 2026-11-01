@@ -15,6 +15,9 @@ var strafe_sign := 1.0
 var recovering := false
 var held_move := Vector2(0.0, -1.0)
 var held_guard := false
+var retreat_time := 0.0
+var retreat_reference := 0.0
+var retreat_stalled := false
 var cached_clash_action: StringName = &"PUSH"
 var rng := RandomNumberGenerator.new()
 var profile_data: Dictionary = {}
@@ -52,7 +55,7 @@ func build_input(delta: float) -> InputFrame:
 	if decision_time <= 0.0:
 		decision_time = _param("reaction_s", 0.65)
 		_decide(frame, distance, toward)
-	frame.move = held_move
+	frame.move = _recover_move(delta, distance, toward) if recovering and state == State.RECOVER else held_move
 	frame.guard_held = held_guard
 	return frame
 
@@ -71,10 +74,9 @@ func _decide(frame: InputFrame, distance: float, toward: Vector3) -> void:
 		recovering = true
 	if recovering:
 		state = State.RECOVER
-		if distance < _param("recover_distance", 5.0):
-			held_move = Vector2(0.0, 1.0)
-		else:
-			held_move = Vector2(strafe_sign, 0.0)
+		if retreat_time <= 0.0:
+			retreat_reference = distance
+		held_move = Vector2(0.0, 1.0) if distance < _param("recover_distance", 5.0) else Vector2(strafe_sign, 0.0)
 		return
 	var in_front := actor.forward().dot(toward) >= cos(GameBalance.get_angle("horn_half_angle"))
 	if bool(profile_data.get("guard", false)) and target.is_committed() \
@@ -109,6 +111,45 @@ func _decide(frame: InputFrame, distance: float, toward: Vector3) -> void:
 		held_move = Vector2(strafe_sign, -clampf((gap - middle) * _param("strafe_radial_gain", 2.0), -0.5, 0.5))
 	else:
 		state = State.ATTACK
+
+
+## Backing off while recovering. A fence behind the AI (or a retreat that is not gaining distance)
+## turns the retreat into a walk along the fence, toward the side away from the opponent.
+func _recover_move(delta: float, distance: float, toward: Vector3) -> Vector2:
+	if distance >= _param("recover_distance", 5.0):
+		retreat_time = 0.0
+		return Vector2(strafe_sign, 0.0)
+	var away := -toward
+	var wall_gap := ArenaBounds.fence_distance(actor.global_position, away) - _rear_extent(away)
+	retreat_time += delta
+	if retreat_time >= _param("wall_stuck_s", 0.3):
+		retreat_stalled = distance < retreat_reference + _param("wall_stuck_gain", 0.05)
+		retreat_reference = distance
+		retreat_time = 0.0
+	if wall_gap >= _param("wall_margin", 0.5) and not retreat_stalled:
+		return Vector2(0.0, 1.0)
+	# Tangent of the oval at the AI's position, pointing away from the opponent.
+	var rx := GameBalance.get_number("arena_rx")
+	var rz := GameBalance.get_number("arena_rz")
+	var outward := Vector3(actor.position.x / (rx * rx), 0.0, actor.position.z / (rz * rz)).normalized()
+	var tangent := Vector3(-outward.z, 0.0, outward.x)
+	if tangent.dot(away) < 0.0 or (is_zero_approx(tangent.dot(away)) and strafe_sign < 0.0):
+		tangent = -tangent
+	var yaw := atan2(-toward.x, -toward.z)
+	var camera_forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
+	var camera_right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	return Vector2(tangent.dot(camera_right), -tangent.dot(camera_forward))
+
+
+## How far the body reaches from the actor's origin along `direction` (capsule end points + radius).
+func _rear_extent(direction: Vector3) -> float:
+	var origin := Vector3(actor.global_position.x, 0.0, actor.global_position.z)
+	var extent := 0.0
+	for shape in ArenaBounds.shapes(actor):
+		for key in ["a", "b"]:
+			var point: Vector3 = shape[key]
+			extent = maxf(extent, (point - origin).dot(direction) + float(shape["r"]))
+	return extent
 
 
 func _target_faces_actor() -> bool:

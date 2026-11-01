@@ -31,6 +31,8 @@ func run() -> void:
 	check(next_frame is InputFrame, "HARD profile still produces standard InputFrame")
 	arena.free()
 	await _test_decision_behaviour()
+	for profile in ["EASY", "NORMAL", "HARD"]:
+		await _test_recover_at_wall(profile)
 	print("AI TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
 
@@ -114,4 +116,26 @@ func _test_decision_behaviour() -> void:
 		else:
 			glued_ticks = 0
 	check(worst_glued <= 60, "AI is not glued at gap < 0.05 for over 1 s while unable to attack")
+	arena.free()
+
+
+# RECOVER against the fence: the AI walks along it until it is at least 4 m from the player.
+func _test_recover_at_wall(profile: String) -> void:
+	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
+	root.add_child(arena)
+	await process_frame
+	arena.start_playing()
+	var ai: Node = arena.ai
+	ai.profile = StringName(profile)
+	ai.profile_data = _profile(profile)
+	arena.player.position = Vector3(0.0, 0.0, 6.9)
+	arena.opponent.position = Vector3(0.0, 0.0, 9.9)
+	arena.opponent.rotation.y = 0.0
+	arena.opponent.stamina = 5.0
+	var tick := 1.0 / 60.0
+	var best := 0.0
+	for i in 180:
+		arena._physics_process(tick)
+		best = maxf(best, arena.player.global_position.distance_to(arena.opponent.global_position))
+	check(best >= 4.0, "%s AI recovering at the fence reaches 4 m from the player in 3 s (best %.2f)" % [profile, best])
 	arena.free()

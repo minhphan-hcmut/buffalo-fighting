@@ -137,6 +137,23 @@ static func separate(a: Buffalo, b: Buffalo) -> void:
 		b.velocity += normal * maxf(0.0, -b.velocity.dot(normal))
 
 
+## Distance from `from` to the arena oval along the flat direction `dir` (0 if outside or no direction).
+static func fence_distance(from: Vector3, dir: Vector3) -> float:
+	var rx := GameBalance.get_number("arena_rx")
+	var rz := GameBalance.get_number("arena_rz")
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	if flat.length_squared() < 0.0001:
+		return INF
+	flat = flat.normalized()
+	var a := pow(flat.x / rx, 2.0) + pow(flat.z / rz, 2.0)
+	var b := 2.0 * (from.x * flat.x / (rx * rx) + from.z * flat.z / (rz * rz))
+	var c := pow(from.x / rx, 2.0) + pow(from.z / rz, 2.0) - 1.0
+	var discriminant := b * b - 4.0 * a * c
+	if discriminant < 0.0 or c > 0.0:
+		return 0.0
+	return maxf(0.0, (-b + sqrt(discriminant)) / (2.0 * a))
+
+
 ## PINNED: the body capsule is within `pinned_distance` of the fence and `away` points at it.
 static func is_pinned(target: Buffalo, away: Vector3) -> bool:
 	var rx := GameBalance.get_number("arena_rx")
