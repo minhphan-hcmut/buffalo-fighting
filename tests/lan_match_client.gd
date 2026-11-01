@@ -4,6 +4,7 @@ extends SceneTree
 const PORT := 47932
 
 var arena: MatchController
+var failures := 0
 
 
 func _initialize() -> void:
@@ -23,11 +24,21 @@ func run() -> void:
 	var panel_frames := 0
 	var saw_bar := false
 	var best_bar := 0.0
+	var clash_was_visible := false
+	var post_clash_ticks := 0
+	var saw_post_clash_stun := false
+	var facing_ok := true
 	while frame < 900 and arena.phase != &"RESULT":
 		await physics_frame
 		frame += 1
 		var hud = arena.hud
+		if clash_was_visible and arena.active_clash.is_empty():
+			post_clash_ticks += 1
+			if post_clash_ticks <= 30 and arena.opponent.state == Buffalo.State.STUNNED:
+				saw_post_clash_stun = true
 		if hud != null and hud.clash_panel.visible:
+			clash_was_visible = true
+			facing_ok = facing_ok and arena.player.facing.distance_to(Vector3.RIGHT) < 0.05 and arena.opponent.facing.distance_to(Vector3.LEFT) < 0.05
 			panel_frames += 1
 			saw_bar = true
 			best_bar = hud.clash_bar.value
@@ -37,8 +48,23 @@ func run() -> void:
 			print("C ", _line())
 	print("CLIENT bar_seen=%s panel_frames=%d last_bar=%.1f" % [saw_bar, panel_frames, best_bar])
 	print("CLIENT FINAL ", _line())
+	check(saw_bar, "client saw the KHÓA SỪNG bar")
+	check(absf(best_bar - (-70.0)) < 0.5, "client bar shows -70 (mirrored for slot 2), last value %.1f" % best_bar)
+	check(facing_ok and arena.player.facing.distance_to(Vector3.RIGHT) < 0.05 and arena.opponent.facing.distance_to(Vector3.LEFT) < 0.05, "client facing is +X / -X during and after the CLASH")
+	check(is_equal_approx(arena.player.spirit, 100.0) and is_equal_approx(arena.opponent.spirit, 86.0), "client final SPIRIT is 100/86")
+	check(saw_post_clash_stun, "client shows the loser STUNNED right after the CLASH")
+	check(arena.player.state == Buffalo.State.NORMAL and arena.opponent.state == Buffalo.State.NORMAL and arena.active_clash.is_empty(), "client final states are NORMAL/NORMAL with no CLASH")
 	manager.leave()
-	quit(0)
+	print("LAN CLIENT FAILURES: ", failures)
+	quit(0 if failures == 0 else 1)
+
+
+func check(condition: bool, description: String) -> void:
+	if condition:
+		print("PASS: ", description)
+	else:
+		failures += 1
+		push_error(description)
 
 
 func _line() -> String:

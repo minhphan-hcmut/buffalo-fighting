@@ -31,7 +31,7 @@ func run() -> void:
 	check(player.state == Buffalo.State.CLASH and opponent.state == Buffalo.State.CLASH, "both buffaloes enter CLASH state")
 	check(player.clash_partner == opponent and opponent.clash_partner == player, "clash_partner is rebuilt")
 	check(player.facing.distance_to(Vector3.RIGHT) < 0.001 and opponent.facing.distance_to(Vector3.LEFT) < 0.001, "facing follows the snapshot")
-	check(angle_difference(player.rotation.y, -PI / 2.0) < 0.001 and angle_difference(opponent.rotation.y, PI / 2.0) < 0.001, "rotation follows the snapshot facing")
+	check(absf(angle_difference(player.rotation.y, -PI / 2.0)) < 0.001 and absf(angle_difference(opponent.rotation.y, PI / 2.0)) < 0.001, "rotation follows the snapshot facing")
 	check(player.clash_hooked and not opponent.clash_hooked, "hook state follows the snapshot")
 
 	# CLASH ended.

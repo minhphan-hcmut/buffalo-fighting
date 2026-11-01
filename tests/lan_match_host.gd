@@ -5,7 +5,8 @@ extends SceneTree
 const PORT := 47932
 
 var arena: MatchController
-var started_at := -1
+var failures := 0
+var saw_post_clash_stun := false
 
 
 func _initialize() -> void:
@@ -37,18 +38,37 @@ func run() -> void:
 	b.start_horn()
 	var frame := 0
 	var clash_seen := false
+	var clash_ended := false
 	while frame < 360:
 		await physics_frame
 		frame += 1
 		if arena.clash.is_active() and not clash_seen:
 			clash_seen = true
 			arena.active_clash["lock_balance"] = 70.0
+		if clash_seen and not arena.clash.is_active():
+			clash_ended = true
+		if clash_ended and b.state == Buffalo.State.STUNNED:
+			saw_post_clash_stun = true
 		if frame % 12 == 0 or (arena.clash.is_active() != clash_seen and frame % 3 == 0):
 			print(_line(frame))
 	print("HOST FINAL ", _line(frame))
 	print("HOST SPIRIT p1=%.0f p2=%.0f" % [a.spirit, b.spirit])
+	check(clash_seen, "host entered a CLASH")
+	check(clash_ended, "host CLASH ended")
+	check(is_equal_approx(a.spirit, 100.0) and is_equal_approx(b.spirit, 86.0), "host final SPIRIT is 100/86")
+	check(saw_post_clash_stun, "host loser was STUNNED after the CLASH")
+	check(a.state == Buffalo.State.NORMAL and b.state == Buffalo.State.NORMAL, "host final states are NORMAL/NORMAL")
 	root.get_node("NetworkManager").leave()
-	quit(0)
+	print("LAN HOST FAILURES: ", failures)
+	quit(0 if failures == 0 else 1)
+
+
+func check(condition: bool, description: String) -> void:
+	if condition:
+		print("PASS: ", description)
+	else:
+		failures += 1
+		push_error(description)
 
 
 func _line(frame: int) -> String:
