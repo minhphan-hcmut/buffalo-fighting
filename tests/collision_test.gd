@@ -26,6 +26,7 @@ func run() -> void:
 	_test_symmetry()
 	_test_velocity_after_separate()
 	_test_dash_still_hits()
+	_test_separate_symmetry()
 	arena.free()
 	print("COLLISION TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -139,3 +140,30 @@ func _test_dash_still_hits() -> void:
 			break
 		a.advance_state(1.0 / 60.0)
 	check(hit, "DASH straight at an idle opponent still reaches dash_hit_gap")
+
+
+# separate(a, b) and separate(b, a) must leave both buffaloes in the same places, including when
+# the two bodies coincide exactly.
+func _test_separate_symmetry() -> void:
+	var a := arena.player
+	var b := arena.opponent
+	var cases := {
+		"coincident": [Vector3.ZERO, 0.0, Vector3.ZERO, 0.0],
+		"coincident, facing apart": [Vector3(2.0, 0.0, 1.0), 1.0, Vector3(2.0, 0.0, 1.0), 1.0 + PI],
+		"overlapping": [Vector3(-0.4, 0.0, 0.2), -PI / 2.0 + 0.1, Vector3(0.9, 0.0, -0.1), PI / 2.0 - 0.2]
+	}
+	for name in cases:
+		var c: Array = cases[name]
+		_place(a, c[0], c[1])
+		_place(b, c[2], c[3])
+		var normal_ab: Vector3 = ArenaBounds.deepest_contact(a, b)["normal"]
+		var normal_ba: Vector3 = ArenaBounds.deepest_contact(b, a)["normal"]
+		check(normal_ab.distance_to(-normal_ba) < 0.001, "%s: normals are opposite when the arguments are swapped" % name)
+		ArenaBounds.separate(a, b)
+		var first_a := a.global_position
+		var first_b := b.global_position
+		_place(a, c[0], c[1])
+		_place(b, c[2], c[3])
+		ArenaBounds.separate(b, a)
+		check(first_a.distance_to(a.global_position) < 0.001 and first_b.distance_to(b.global_position) < 0.001, "%s: separate(a, b) and separate(b, a) end in the same positions" % name)
+		check(first_a.x <= first_b.x + 0.0001, "%s: slot 1 ends on the -X side" % name)

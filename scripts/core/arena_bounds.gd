@@ -71,7 +71,7 @@ static func closest_points(p1: Vector3, q1: Vector3, p2: Vector3, q2: Vector3) -
 ## Deepest overlap among the 4 body/head pairs: {"depth", "normal"} with the normal from a to b.
 static func deepest_contact(a: Buffalo, b: Buffalo) -> Dictionary:
 	var best_depth := -INF
-	var best_normal := Vector3.RIGHT
+	var best_normal := slot_fallback_normal(a, b)
 	for shape_a in shapes(a):
 		for shape_b in shapes(b):
 			var hit := closest_points(shape_a["a"], shape_a["b"], shape_b["a"], shape_b["b"])
@@ -83,8 +83,14 @@ static func deepest_contact(a: Buffalo, b: Buffalo) -> Dictionary:
 			if normal.length() < 0.001:
 				normal = b.global_position - a.global_position
 				normal.y = 0.0
-			best_normal = normal.normalized() if normal.length() >= 0.001 else Vector3.RIGHT
+			best_normal = normal.normalized() if normal.length() >= 0.001 else slot_fallback_normal(a, b)
 	return {"depth": best_depth, "normal": best_normal}
+
+
+## Normal from a to b when the bodies coincide: slot 1 goes to -X and slot 2 to +X of the arena,
+## so swapping the arguments flips the sign and the final positions stay the same.
+static func slot_fallback_normal(a: Buffalo, b: Buffalo) -> Vector3:
+	return Vector3.RIGHT if a.slot <= b.slot else Vector3.LEFT
 
 
 ## Open space from the attacker's head capsule to the nearest target capsule (head or body).
