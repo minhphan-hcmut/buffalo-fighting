@@ -103,18 +103,18 @@ func process(delta: float, a_frame: InputFrame, b_frame: InputFrame) -> void:
 	b.consume_stamina(GameBalance.get_number("lock_stamina_per_s") * delta if push_b > 0.0 else 0.0)
 	active["lock_balance"] = clampf(
 		float(active["lock_balance"]) + (push_a - push_b) * GameBalance.get_number("lock_rate") * delta,
-		-100.0,
-		100.0
+		-GameBalance.get_number("lock_balance_max", 100.0),
+		GameBalance.get_number("lock_balance_max", 100.0)
 	)
 	if not blending:
 		_slide(a, b, push_a - push_b, delta)
-	if absf(float(active["lock_balance"])) >= 100.0:
+	if absf(float(active["lock_balance"])) >= GameBalance.get_number("lock_balance_max", 100.0):
 		var loser := b if float(active["lock_balance"]) > 0.0 else a
 		apply_loss(loser, GameBalance.get_number("lock_loss_spirit"), GameBalance.get_number("lock_loss_stun_s"), GameBalance.get_number("lock_loss_knockback_multiplier"))
 		end(float(active["lock_balance"]), &"CLASH_BREAK")
 	elif active["time"] >= GameBalance.get_number("lock_max_s"):
 		var balance := float(active["lock_balance"])
-		var loss := 3.0 if is_zero_approx(balance) else _split_loss(balance)
+		var loss := GameBalance.get_number("lock_split_min_spirit") if is_zero_approx(balance) else _split_loss(balance)
 		if balance > 0.0:
 			apply_loss(b, loss)
 		elif balance < 0.0:
@@ -159,7 +159,7 @@ func push_strength(actor: Buffalo, choice: StringName) -> float:
 	var move_dir := actor.movement_world(actor.input_frame, camera_forward, camera_right)
 	if move_dir.length_squared() <= 0.001 or move_dir.normalized().dot(toward) < 0.5:
 		return 0.0
-	return 0.5 + 0.5 * actor.stamina / GameBalance.get_number("stamina_max")
+	return GameBalance.get_number("lock_push_base") + GameBalance.get_number("lock_push_stamina_scale") * actor.stamina / GameBalance.get_number("stamina_max")
 
 
 func start_hook(actor: Buffalo, other: Buffalo, choice: StringName) -> void:
@@ -223,7 +223,7 @@ func end(_balance: float, event_name: StringName) -> void:
 
 
 func _split_loss(balance: float) -> float:
-	return maxf(3.0, roundf(absf(balance) * GameBalance.get_number("lock_split_spirit_per_point")))
+	return maxf(GameBalance.get_number("lock_split_min_spirit"), roundf(absf(balance) * GameBalance.get_number("lock_split_spirit_per_point")))
 
 
 func _apply_whiff(hooker: Buffalo) -> void:

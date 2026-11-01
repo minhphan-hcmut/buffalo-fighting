@@ -231,7 +231,7 @@ func _compute_targets() -> void:
 func _clash_advantage() -> float:
 	if controller == null or controller.active_clash.is_empty():
 		return 0.0
-	var balance := float(controller.active_clash.get("lock_balance", 0.0)) / 100.0
+	var balance := float(controller.active_clash.get("lock_balance", 0.0)) / GameBalance.get_number("lock_balance_max", 100.0)
 	return clampf(balance if controller.active_clash.get("a") == buffalo else -balance, -1.0, 1.0)
 
 

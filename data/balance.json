@@ -55,6 +55,10 @@
   "input_buffer_s": 0.10,
   "lock_max_s": 1.5,
   "lock_rate": 120.0,
+  "lock_balance_max": 100.0,
+  "lock_split_min_spirit": 3.0,
+  "lock_push_base": 0.5,
+  "lock_push_stamina_scale": 0.5,
   "lock_stamina_per_s": 15.0,
   "lock_slide_speed": 1.7,
   "lock_hook_startup_s": 0.15,
@@ -87,5 +91,7 @@
   "gate_width": 3.5,
   "match_duration_s": 90.0,
   "countdown_s": 3.0,
-  "lan_port": 7777
+  "lan_port": 7777,
+  "net_interp_rate": 18.0,
+  "arena_fence_segments": 32
 }

@@ -64,7 +64,7 @@ func interpolate(delta: float) -> void:
 	for slot in remote_targets:
 		var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
 		var target_position: Vector3 = remote_targets[slot]
-		actor.global_position = actor.global_position.lerp(target_position, minf(1.0, delta * 18.0))
+		actor.global_position = actor.global_position.lerp(target_position, minf(1.0, delta * GameBalance.get_number("net_interp_rate", 18.0)))
 
 
 static func frame_to_payload(frame: InputFrame) -> Dictionary:

@@ -67,8 +67,8 @@ func _ready() -> void:
 	clash_title.add_theme_color_override("font_color", Color("#E8BC65"))
 	clash_panel.add_child(clash_title)
 	clash_bar = ProgressBar.new()
-	clash_bar.min_value = -100.0
-	clash_bar.max_value = 100.0
+	clash_bar.min_value = -GameBalance.get_number("lock_balance_max", 100.0)
+	clash_bar.max_value = GameBalance.get_number("lock_balance_max", 100.0)
 	clash_bar.show_percentage = false
 	clash_bar.position = Vector2(0, 30)
 	clash_bar.size = Vector2(400, 16)
