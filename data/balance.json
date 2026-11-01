@@ -17,7 +17,6 @@
   "camera_shake_distance": 0.06,
   "camera_shake_frequency": 42.0,
   "mouse_sensitivity": 0.15,
-  "buffalo_radius": 1.0,
   "body_radius": 0.8,
   "body_seg_front": -0.3,
   "body_seg_back": 0.85,

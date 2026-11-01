@@ -6,6 +6,7 @@
 - Va chạm: mỗi trâu là hai capsule 2D (thân + đầu). `separate()` bỏ vận tốc hướng vào nhau, lặp tối đa 3 lượt; sân co theo từng trục. Tầm HORN/DASH đo bằng khoảng hở từ đầu bên đánh (`horn_reach` 0,5, `dash_hit_gap` 0,15), thay `horn_range`.
 - CLASH: giữ nguyên luật; đối mặt ở `clash_distance` 2,9 m, vào khóa nội suy trong `clash_enter_blend_s` 0,1 s, `balance` đổi tên `lock_balance`, HUD có thanh giằng co "KHÓA SỪNG" và snapshot LAN mang trạng thái CLASH.
 - Knockback: thêm `knockback_time` (`knockback_time_s` 0,3 s) đặt mỗi khi trâu nhận impulse, kể cả GUARD hợp lệ không stun; `separate()` không lọc vận tốc của trâu đang có `knockback_time`. Lúc thoát CLASH, trâu thua giữ knockback của `apply_loss`; chỉ trâu còn lại (không có knockback) bị zero velocity.
+- Xóa `buffalo_radius` (không còn script nào đọc). `clash_weights` của AI chỉ giữ `RELEASE` và `HOOK`; PUSH là phần xác suất còn lại. Thêm `back_off_speed`, `strafe_radial_clamp`, `faces_dot`, `wall_*` vào `ai_profiles.json`.
 - Hằng số còn viết cứng chuyển vào `data/balance.json` (`lock_balance_max`, `lock_split_min_spirit`, `lock_push_*`, `net_interp_rate`, `arena_fence_segments`).
 
 ## v0.4 — 22/10/2026

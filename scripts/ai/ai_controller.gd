@@ -100,7 +100,7 @@ func _decide(frame: InputFrame, distance: float, toward: Vector3) -> void:
 		return
 	if gap < _param("min_gap", 0.1):
 		state = State.ATTACK
-		held_move = Vector2(0.0, 0.5)
+		held_move = Vector2(0.0, _param("back_off_speed", 0.5))
 		return
 	if bool(profile_data.get("strafe", false)):
 		state = State.STRAFE
@@ -108,7 +108,7 @@ func _decide(frame: InputFrame, distance: float, toward: Vector3) -> void:
 			strafe_sign *= -1.0
 		# Radial term keeps the gap inside [min_gap, approach_gap] while circling.
 		var middle := (_param("approach_gap", 0.5) + _param("min_gap", 0.1)) * 0.5
-		held_move = Vector2(strafe_sign, -clampf((gap - middle) * _param("strafe_radial_gain", 2.0), -0.5, 0.5))
+		held_move = Vector2(strafe_sign, -clampf((gap - middle) * _param("strafe_radial_gain", 2.0), -_param("strafe_radial_clamp", 0.5), _param("strafe_radial_clamp", 0.5)))
 	else:
 		state = State.ATTACK
 
@@ -155,10 +155,11 @@ func _rear_extent(direction: Vector3) -> float:
 func _target_faces_actor() -> bool:
 	var toward_target := (actor.global_position - target.global_position)
 	toward_target.y = 0.0
-	return target.forward().dot(toward_target.normalized()) > 0.45
+	return target.forward().dot(toward_target.normalized()) > _param("faces_dot", 0.45)
 
 
 func _clash_choice() -> StringName:
+	# PUSH is whatever probability RELEASE and HOOK leave over.
 	var weights: Dictionary = profile_data.get("clash_weights", {})
 	var release := float(weights.get("RELEASE", 0.0))
 	var hook := float(weights.get("HOOK", 0.0))

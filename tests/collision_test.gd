@@ -21,6 +21,7 @@ func run() -> void:
 	root.add_child(arena)
 	await process_frame
 	arena.start_playing()
+	_test_segment_distance()
 	_test_static_contact()
 	_test_reach()
 	_test_symmetry()
@@ -42,10 +43,9 @@ func _place(actor: Buffalo, at: Vector3, yaw: float) -> void:
 	actor.active = true
 
 
-# Pushes `b` toward `a` along +X until separate() leaves them touching, then returns the center distance.
+# Exactly one separate() call, then the center distance.
 func _settle(a: Buffalo, b: Buffalo) -> float:
-	for i in 40:
-		ArenaBounds.separate(a, b)
+	ArenaBounds.separate(a, b)
 	return a.global_position.distance_to(b.global_position)
 
 
@@ -198,3 +198,21 @@ func _test_guard_knockback() -> void:
 	ArenaBounds.separate(a, b)
 	check(is_equal_approx(b.velocity.x, -5.0), "knocked-back buffalo keeps its velocity through separate")
 	check(a.velocity.x <= 0.0001, "the other buffalo still loses its inward velocity")
+
+
+func _segment(p1: Vector3, q1: Vector3, p2: Vector3, q2: Vector3) -> float:
+	return float(ArenaBounds.closest_points(p1, q1, p2, q2)["distance"])
+
+
+func _test_segment_distance() -> void:
+	var o := Vector3.ZERO
+	check(is_equal_approx(_segment(o, Vector3(2, 0, 0), Vector3(0, 0, 1), Vector3(2, 0, 1)), 1.0), "parallel segments")
+	check(is_equal_approx(_segment(o, Vector3(2, 0, 0), Vector3(3, 0, 1), Vector3(5, 0, 1)), sqrt(2.0)), "parallel and offset along the axis")
+	check(is_zero_approx(_segment(Vector3(-1, 0, 0), Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 0, 1))), "crossing segments")
+	check(is_equal_approx(_segment(o, Vector3(2, 0, 0), Vector3(1, 0, 3), Vector3(1, 0, 3)), 3.0), "a segment against a degenerate point (point above)")
+	check(is_equal_approx(_segment(Vector3(1, 0, 3), Vector3(1, 0, 3), o, Vector3(2, 0, 0)), 3.0), "a degenerate point against a segment")
+	check(is_equal_approx(_segment(Vector3(1, 0, 1), Vector3(1, 0, 1), Vector3(4, 0, 5), Vector3(4, 0, 5)), 5.0), "two degenerate points")
+	check(is_zero_approx(_segment(o, Vector3(2, 0, 0), Vector3(2, 0, 0), Vector3(2, 0, 3))), "end points touching")
+	check(is_equal_approx(_segment(o, Vector3(2, 0, 0), Vector3(3, 0, 0), Vector3(5, 0, 0)), 1.0), "collinear segments with a gap")
+	var hit := ArenaBounds.closest_points(o, Vector3(2, 0, 0), Vector3(1, 0, 3), Vector3(1, 0, 3))
+	check((hit["c1"] as Vector3).is_equal_approx(Vector3(1, 0, 0)) and (hit["c2"] as Vector3).is_equal_approx(Vector3(1, 0, 3)), "closest points are returned")

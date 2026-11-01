@@ -32,7 +32,9 @@ func run() -> void:
 	arena.free()
 	await _test_decision_behaviour()
 	for profile in ["EASY", "NORMAL", "HARD"]:
+		await _test_not_glued(profile)
 		await _test_recover_at_wall(profile)
+		await _test_match_finishes(profile)
 	print("AI TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
 
@@ -97,25 +99,6 @@ func _test_decision_behaviour() -> void:
 	var cooling: InputFrame = ai.build_input(tick)
 	check(not cooling.horn_pressed, "AI does not press HORN during cooldown")
 
-	# Headless 10 s run against an idle player: the AI must not stay glued while unable to attack.
-	ai.profile = &"EASY"
-	ai.profile_data = _profile("EASY")
-	ai.recovering = false
-	arena.player.reset_combat()
-	arena.opponent.reset_combat()
-	arena.player.position = Vector3.ZERO
-	arena.opponent.position = Vector3(6.0, 0.0, 0.0)
-	var glued_ticks := 0
-	var worst_glued := 0
-	for i in 600:
-		arena._physics_process(tick)
-		var attacking: bool = arena.opponent.state != Buffalo.State.NORMAL or arena.opponent.horn_cooldown > 0.0
-		if _gap(arena) < 0.05 and not attacking:
-			glued_ticks += 1
-			worst_glued = maxi(worst_glued, glued_ticks)
-		else:
-			glued_ticks = 0
-	check(worst_glued <= 60, "AI is not glued at gap < 0.05 for over 1 s while unable to attack")
 	arena.free()
 
 
@@ -138,4 +121,46 @@ func _test_recover_at_wall(profile: String) -> void:
 		arena._physics_process(tick)
 		best = maxf(best, arena.player.global_position.distance_to(arena.opponent.global_position))
 	check(best >= 4.0, "%s AI recovering at the fence reaches 4 m from the player in 3 s (best %.2f)" % [profile, best])
+	arena.free()
+
+
+# 10 s against an idle player: only ticks with a committed/active attack may stay at gap < 0.05.
+# Cooldown and low STAMINA do not excuse sticking to the player.
+func _test_not_glued(profile: String) -> void:
+	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
+	root.add_child(arena)
+	await process_frame
+	arena.start_playing()
+	var ai: Node = arena.ai
+	ai.profile = StringName(profile)
+	ai.profile_data = _profile(profile)
+	arena.opponent.position = Vector3(6.0, 0.0, 0.0)
+	var glued_ticks := 0
+	var worst_glued := 0
+	for i in 600:
+		arena._physics_process(1.0 / 60.0)
+		var attacking: bool = arena.opponent.is_committed() or arena.opponent.is_attack_active()
+		if _gap(arena) < 0.05 and not attacking:
+			glued_ticks += 1
+			worst_glued = maxi(worst_glued, glued_ticks)
+		else:
+			glued_ticks = 0
+	check(worst_glued <= 60, "%s AI is not glued at gap < 0.05 for over 1 s (worst %d ticks)" % [profile, worst_glued])
+	arena.free()
+
+
+# Every profile must play a full 90 s match against an idle player to an end by FLEE or TIME.
+func _test_match_finishes(profile: String) -> void:
+	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
+	root.add_child(arena)
+	await process_frame
+	arena.start_playing()
+	var ai: Node = arena.ai
+	ai.profile = StringName(profile)
+	ai.profile_data = _profile(profile)
+	var ticks := 0
+	while not arena.finished and ticks < 6000:
+		arena._physics_process(1.0 / 60.0)
+		ticks += 1
+	check(arena.finished and arena.end_reason in [&"FLEE", &"TIME"], "%s AI match ends by FLEE or TIME (%s after %.1f s)" % [profile, arena.end_reason, ticks / 60.0])
 	arena.free()
