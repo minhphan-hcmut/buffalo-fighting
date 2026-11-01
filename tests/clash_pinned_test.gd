@@ -33,9 +33,9 @@ func run() -> void:
 func _fence_position(angle_deg: float) -> Vector3:
 	var rx := GameBalance.get_number("arena_rx")
 	var rz := GameBalance.get_number("arena_rz")
-	var limit := 1.0 - GameBalance.get_number("buffalo_radius") / minf(rx, rz)
+	var radius := GameBalance.get_number("buffalo_radius")
 	var angle := deg_to_rad(angle_deg)
-	return Vector3(cos(angle) * limit * rx, 0.0, sin(angle) * limit * rz)
+	return Vector3(cos(angle) * (rx - radius), 0.0, sin(angle) * (rz - radius))
 
 
 func _outward(position: Vector3) -> Vector3:

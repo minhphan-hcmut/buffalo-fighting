@@ -4,31 +4,38 @@ extends RefCounted
 
 
 static func constrain(actor: Buffalo) -> void:
-	var rx := GameBalance.get_number("arena_rx")
-	var rz := GameBalance.get_number("arena_rz")
 	var radius := GameBalance.get_number("buffalo_radius")
-	var limit := 1.0 - radius / minf(rx, rz)
-	var point := Vector2(actor.position.x / rx, actor.position.z / rz)
-	if point.length() > limit:
-		point = point.normalized() * limit
-		actor.position.x = point.x * rx
-		actor.position.z = point.y * rz
+	var half := Vector2(GameBalance.get_number("arena_rx") - radius, GameBalance.get_number("arena_rz") - radius)
+	var point := Vector2(actor.position.x / half.x, actor.position.z / half.y)
+	if point.length() > 1.0:
+		point = point.normalized()
+		actor.position.x = point.x * half.x
+		actor.position.z = point.y * half.y
 
 
-## Pushes two overlapping bodies apart symmetrically, then keeps both inside the fence.
+## Pushes two overlapping bodies apart symmetrically (up to 3 passes with the fence clamp), then
+## drops the velocity component that still points into the other body.
 static func separate(a: Buffalo, b: Buffalo) -> void:
-	var offset := b.global_position - a.global_position
-	offset.y = 0.0
-	var distance := offset.length()
 	var required := GameBalance.get_number("buffalo_radius") * 2.0
-	if distance >= required:
+	var normal := Vector3.ZERO
+	for pass_index in 3:
+		var offset := b.global_position - a.global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		if distance >= required:
+			break
+		normal = Vector3.RIGHT if distance < 0.001 else offset / distance
+		var correction := (required - distance) * 0.5
+		a.global_position -= normal * correction
+		b.global_position += normal * correction
+		constrain(a)
+		constrain(b)
+	if normal == Vector3.ZERO:
 		return
-	var direction := Vector3.RIGHT if distance < 0.001 else offset / distance
-	var correction := (required - distance) * 0.5
-	a.global_position -= direction * correction
-	b.global_position += direction * correction
-	constrain(a)
-	constrain(b)
+	if a.state != Buffalo.State.STUNNED:
+		a.velocity -= normal * maxf(0.0, a.velocity.dot(normal))
+	if b.state != Buffalo.State.STUNNED:
+		b.velocity += normal * maxf(0.0, -b.velocity.dot(normal))
 
 
 static func is_pinned(target: Buffalo, away: Vector3) -> bool:

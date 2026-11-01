@@ -114,7 +114,36 @@ func run() -> void:
 	check(strictly, "knockback speed strictly decreases each stunned tick")
 	check(decayed and reached_zero, "knockback decays to rest")
 
+	_test_separate(arena)
+	print("MOVEMENT TEST FAILURES: ", failures)
 	quit(failures)
+
+
+# Overlapping bodies lose the velocity component pointing into each other, keep the tangent.
+func _test_separate(arena: MatchController) -> void:
+	var a := arena.player
+	var b := arena.opponent
+	_reset(a)
+	_reset(b)
+	a.position = Vector3(-0.5, 0.0, 0.0)
+	b.position = Vector3(0.5, 0.0, 0.0)
+	a.velocity = Vector3(6.0, 0.0, 2.0)
+	b.velocity = Vector3(-4.0, 0.0, -1.0)
+	ArenaBounds.separate(a, b)
+	check(a.velocity.x <= 0.0001 and b.velocity.x >= -0.0001, "separate removes velocity pointing into the other body")
+	check(is_equal_approx(a.velocity.z, 2.0) and is_equal_approx(b.velocity.z, -1.0), "separate keeps the tangential velocity")
+	var distance := a.global_position.distance_to(b.global_position)
+	check(distance >= GameBalance.get_number("buffalo_radius") * 2.0 - 0.001, "separate leaves no overlap")
+	# A buffalo with knockback keeps its velocity.
+	_reset(a)
+	_reset(b)
+	a.position = Vector3(-0.5, 0.0, 0.0)
+	b.position = Vector3(0.5, 0.0, 0.0)
+	a.velocity = Vector3(6.0, 0.0, 0.0)
+	b.apply_stun(0.3, Vector3(-8.0, 0.0, 0.0))
+	ArenaBounds.separate(a, b)
+	check(is_equal_approx(b.velocity.x, -8.0), "separate leaves a knocked-back buffalo untouched")
+	check(a.velocity.x <= 0.0001, "separate still cancels the pusher")
 
 
 func _reset(buffalo: Buffalo) -> void:
