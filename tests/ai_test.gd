@@ -31,6 +31,7 @@ func run() -> void:
 	check(next_frame is InputFrame, "HARD profile still produces standard InputFrame")
 	arena.free()
 	await _test_decision_behaviour()
+	await _test_negative_controls()
 	for profile in ["EASY", "NORMAL", "HARD"]:
 		await _test_not_glued(profile)
 		await _test_recover_at_wall(profile)
@@ -124,6 +125,21 @@ func _test_recover_at_wall(profile: String) -> void:
 	arena.free()
 
 
+const ESCAPE_GAP := 0.3
+const ESCAPE_GRACE_S := 0.5
+
+
+## Stand-in AI for the negative controls: always sends the same move.
+class FakeAI extends Node:
+	var move := Vector2.ZERO
+
+	func build_input(_delta: float) -> InputFrame:
+		var frame := InputFrame.new(2)
+		frame.move = move
+		frame.camera_yaw = PI / 2.0 # toward the player at the origin
+		return frame
+
+
 func _face_off(arena: MatchController) -> void:
 	arena.player.position = Vector3.ZERO
 	arena.player.rotation.y = -PI / 2.0
@@ -136,32 +152,21 @@ func _face_off(arena: MatchController) -> void:
 	arena.opponent.velocity = Vector3.ZERO
 
 
-# Both buffaloes face each other at head_gap ~0.05 for 10 s while the AI cannot attack.
-# "cooldown": HORN/DASH cooldown held above zero. "stamina": STAMINA held below 20 with RECOVER
-# disabled (otherwise the AI would simply retreat and never stay close, which is not what is tested).
-# The face-off is restored every second. Only ticks with a committed/active attack may stay at gap < 0.05 for over 1 s, and the AI must
-# really have been close (>= 30 ticks at gap < 0.1 uncommitted) or the test fails.
-func _test_not_glued(profile: String) -> void:
-	for scenario in ["cooldown", "stamina"]:
-		var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
-		root.add_child(arena)
-		await process_frame
-		arena.start_playing()
-		var ai: Node = arena.ai
-		ai.profile = StringName(profile)
-		ai.profile_data = _profile(profile)
-		if scenario == "stamina":
-			ai.profile_data["recover_enter"] = 0.0
+## Puts the buffaloes face to face at head_gap ~0.05 eight times, with the AI unable to attack
+## ("cooldown": HORN/DASH cooldown held above zero; "stamina": STAMINA held at 15). After each
+## face-off the gap must reach ESCAPE_GAP within `deadline_s`. Also needs >= 30 uncommitted ticks at
+## gap < 0.1, so a run where the AI was never close cannot pass. Returns {"ok", "near", "failed",
+## "worst_escape_s"}.
+func _escape_check(arena: MatchController, deadline_s: float, scenario: String) -> Dictionary:
+	var deadline_ticks := int(ceil(deadline_s * 60.0))
+	var interval := deadline_ticks + 6
+	var near_ticks := 0
+	var failed := 0
+	var worst_escape := 0.0
+	for faceoff in 8:
 		_face_off(arena)
-		check(absf(_gap(arena) - 0.05) < 0.02, "%s/%s: setup starts at head_gap ~0.05 (%.3f)" % [profile, scenario, _gap(arena)])
-		var near_ticks := 0
-		var glued_ticks := 0
-		var worst_glued := 0
-		for i in 600:
-			# Put both back into the face-off every second: an AI that leaves on its own is not glued,
-			# one that stays shows up as a long streak.
-			if i > 0 and i % 60 == 0:
-				_face_off(arena)
+		var escaped_tick := -1
+		for tick in interval:
 			if scenario == "cooldown":
 				arena.opponent.horn_cooldown = 1.0
 				arena.opponent.dash_cooldown = 1.0
@@ -172,13 +177,54 @@ func _test_not_glued(profile: String) -> void:
 			var gap := _gap(arena)
 			if gap < 0.1 and not attacking:
 				near_ticks += 1
-			if gap < 0.05 and not attacking:
-				glued_ticks += 1
-				worst_glued = maxi(worst_glued, glued_ticks)
-			else:
-				glued_ticks = 0
-		check(near_ticks >= 30, "%s/%s: AI really was close without attacking (%d ticks at gap < 0.1)" % [profile, scenario, near_ticks])
-		check(worst_glued <= 60, "%s/%s: AI is not glued at gap < 0.05 for over 1 s (worst %d ticks)" % [profile, scenario, worst_glued])
+			if escaped_tick < 0 and tick < deadline_ticks and gap >= ESCAPE_GAP:
+				escaped_tick = tick + 1
+		if escaped_tick < 0:
+			failed += 1
+		else:
+			worst_escape = maxf(worst_escape, escaped_tick / 60.0)
+	return {"ok": near_ticks >= 30 and failed == 0, "near": near_ticks, "failed": failed, "worst_escape_s": worst_escape}
+
+
+func _new_arena() -> MatchController:
+	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
+	root.add_child(arena)
+	await process_frame
+	arena.start_playing()
+	return arena
+
+
+func _test_not_glued(profile: String) -> void:
+	for scenario in ["cooldown", "stamina"]:
+		var arena := await _new_arena()
+		var ai: Node = arena.ai
+		ai.profile = StringName(profile)
+		ai.profile_data = _profile(profile)
+		if scenario == "stamina":
+			# RECOVER would make the AI retreat for another reason; isolate the "cannot attack" path.
+			ai.profile_data["recover_enter"] = 0.0
+		var deadline := float(ai.profile_data["reaction_s"]) + ESCAPE_GRACE_S
+		_face_off(arena)
+		check(absf(_gap(arena) - 0.05) < 0.02, "%s/%s: setup starts at head_gap ~0.05 (%.3f)" % [profile, scenario, _gap(arena)])
+		var result := _escape_check(arena, deadline, scenario)
+		print("ESCAPE %s/%s: slowest escape to gap %.1f took %.2f s (deadline %.2f s), %d ticks close" % [profile, scenario, ESCAPE_GAP, result["worst_escape_s"], deadline, result["near"]])
+		check(int(result["near"]) >= 30, "%s/%s: AI really was close without attacking (%d ticks at gap < 0.1)" % [profile, scenario, result["near"]])
+		check(int(result["failed"]) == 0, "%s/%s: AI reaches gap %.1f within reaction_s + %.1f s after every face-off" % [profile, scenario, ESCAPE_GAP, ESCAPE_GRACE_S])
+		arena.free()
+
+
+# The check above must be able to fail: an AI that stands still and one that always walks forward.
+func _test_negative_controls() -> void:
+	for control in [["stands still", Vector2.ZERO], ["always walks forward", Vector2(0.0, -1.0)]]:
+		var arena := await _new_arena()
+		var fake := FakeAI.new()
+		fake.move = control[1]
+		arena.remove_child(arena.ai)
+		arena.ai.free()
+		arena.add_child(fake)
+		arena.ai = fake
+		var result := _escape_check(arena, float(_profile("EASY")["reaction_s"]) + ESCAPE_GRACE_S, "cooldown")
+		check(not bool(result["ok"]) and int(result["failed"]) > 0, "negative control: an AI that %s fails the escape check (%d of 8 face-offs not escaped)" % [control[0], result["failed"]])
 		arena.free()
 
 
