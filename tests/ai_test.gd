@@ -124,29 +124,62 @@ func _test_recover_at_wall(profile: String) -> void:
 	arena.free()
 
 
-# 10 s against an idle player: only ticks with a committed/active attack may stay at gap < 0.05.
-# Cooldown and low STAMINA do not excuse sticking to the player.
+func _face_off(arena: MatchController) -> void:
+	arena.player.position = Vector3.ZERO
+	arena.player.rotation.y = -PI / 2.0
+	arena.player.facing = Vector3.RIGHT
+	arena.player.velocity = Vector3.ZERO
+	arena.opponent.position = Vector3(2.95, 0.0, 0.0)
+	arena.opponent.rotation.y = PI / 2.0
+	arena.opponent.facing = Vector3.LEFT
+	arena.opponent.camera_yaw = PI / 2.0
+	arena.opponent.velocity = Vector3.ZERO
+
+
+# Both buffaloes face each other at head_gap ~0.05 for 10 s while the AI cannot attack.
+# "cooldown": HORN/DASH cooldown held above zero. "stamina": STAMINA held below 20 with RECOVER
+# disabled (otherwise the AI would simply retreat and never stay close, which is not what is tested).
+# The face-off is restored every second. Only ticks with a committed/active attack may stay at gap < 0.05 for over 1 s, and the AI must
+# really have been close (>= 30 ticks at gap < 0.1 uncommitted) or the test fails.
 func _test_not_glued(profile: String) -> void:
-	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
-	root.add_child(arena)
-	await process_frame
-	arena.start_playing()
-	var ai: Node = arena.ai
-	ai.profile = StringName(profile)
-	ai.profile_data = _profile(profile)
-	arena.opponent.position = Vector3(6.0, 0.0, 0.0)
-	var glued_ticks := 0
-	var worst_glued := 0
-	for i in 600:
-		arena._physics_process(1.0 / 60.0)
-		var attacking: bool = arena.opponent.is_committed() or arena.opponent.is_attack_active()
-		if _gap(arena) < 0.05 and not attacking:
-			glued_ticks += 1
-			worst_glued = maxi(worst_glued, glued_ticks)
-		else:
-			glued_ticks = 0
-	check(worst_glued <= 60, "%s AI is not glued at gap < 0.05 for over 1 s (worst %d ticks)" % [profile, worst_glued])
-	arena.free()
+	for scenario in ["cooldown", "stamina"]:
+		var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
+		root.add_child(arena)
+		await process_frame
+		arena.start_playing()
+		var ai: Node = arena.ai
+		ai.profile = StringName(profile)
+		ai.profile_data = _profile(profile)
+		if scenario == "stamina":
+			ai.profile_data["recover_enter"] = 0.0
+		_face_off(arena)
+		check(absf(_gap(arena) - 0.05) < 0.02, "%s/%s: setup starts at head_gap ~0.05 (%.3f)" % [profile, scenario, _gap(arena)])
+		var near_ticks := 0
+		var glued_ticks := 0
+		var worst_glued := 0
+		for i in 600:
+			# Put both back into the face-off every second: an AI that leaves on its own is not glued,
+			# one that stays shows up as a long streak.
+			if i > 0 and i % 60 == 0:
+				_face_off(arena)
+			if scenario == "cooldown":
+				arena.opponent.horn_cooldown = 1.0
+				arena.opponent.dash_cooldown = 1.0
+			else:
+				arena.opponent.stamina = 15.0
+			arena._physics_process(1.0 / 60.0)
+			var attacking: bool = arena.opponent.is_committed() or arena.opponent.is_attack_active()
+			var gap := _gap(arena)
+			if gap < 0.1 and not attacking:
+				near_ticks += 1
+			if gap < 0.05 and not attacking:
+				glued_ticks += 1
+				worst_glued = maxi(worst_glued, glued_ticks)
+			else:
+				glued_ticks = 0
+		check(near_ticks >= 30, "%s/%s: AI really was close without attacking (%d ticks at gap < 0.1)" % [profile, scenario, near_ticks])
+		check(worst_glued <= 60, "%s/%s: AI is not glued at gap < 0.05 for over 1 s (worst %d ticks)" % [profile, scenario, worst_glued])
+		arena.free()
 
 
 # Every profile must play a full 90 s match against an idle player to an end by FLEE or TIME.
@@ -159,8 +192,8 @@ func _test_match_finishes(profile: String) -> void:
 	ai.profile = StringName(profile)
 	ai.profile_data = _profile(profile)
 	var ticks := 0
-	while not arena.finished and ticks < 6000:
+	while not arena.finished and ticks < 5400:
 		arena._physics_process(1.0 / 60.0)
 		ticks += 1
-	check(arena.finished and arena.end_reason in [&"FLEE", &"TIME"], "%s AI match ends by FLEE or TIME (%s after %.1f s)" % [profile, arena.end_reason, ticks / 60.0])
+	check(arena.finished and arena.end_reason in [&"FLEE", &"TIME"], "%s AI match ends by FLEE or TIME within 5400 ticks (%s after %.1f s)" % [profile, arena.end_reason, ticks / 60.0])
 	arena.free()
