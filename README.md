@@ -46,8 +46,15 @@ godot --headless --path . --script res://tests/network_manager_test.gd
 godot --headless --path . --script res://tests/session_test.gd
 godot --headless --path . --script res://tests/movement_test.gd
 godot --headless --path . --script res://tests/clash_pinned_test.gd
+godot --headless --path . --script res://tests/collision_test.gd
+godot --headless --path . --script res://tests/clash_pose_test.gd
+godot --headless --path . --script res://tests/lan_snapshot_test.gd
+# Hai tiến trình, chạy host trước rồi client sau ~2 s: trận LAN có CLASH
+godot --headless --path . --script res://tests/lan_match_host.gd
+godot --headless --path . --script res://tests/lan_match_client.gd
 godot --headless --path . --script res://tests/pause_test.gd
 godot --headless --path . --script res://tests/animation_test.gd
+godot --headless --path . --script res://tests/hero_audio_test.gd
 ```
 
 LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A); phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.

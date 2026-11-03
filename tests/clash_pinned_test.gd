@@ -25,6 +25,8 @@ func run() -> void:
 	_test_pinned_damage()
 	_test_clash_whiff_and_release()
 	_test_clash_loss_effects()
+	_test_clash_enter_blend()
+	_test_clash_against_fence()
 	arena.free()
 	print("CLASH PINNED TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -33,9 +35,9 @@ func run() -> void:
 func _fence_position(angle_deg: float) -> Vector3:
 	var rx := GameBalance.get_number("arena_rx")
 	var rz := GameBalance.get_number("arena_rz")
-	var limit := 1.0 - GameBalance.get_number("buffalo_radius") / minf(rx, rz)
+	var radius := GameBalance.get_number("body_radius")
 	var angle := deg_to_rad(angle_deg)
-	return Vector3(cos(angle) * limit * rx, 0.0, sin(angle) * limit * rz)
+	return Vector3(cos(angle) * (rx - radius), 0.0, sin(angle) * (rz - radius))
 
 
 func _outward(position: Vector3) -> Vector3:
@@ -172,7 +174,7 @@ func _test_clash_loss_effects() -> void:
 	_ready_actor(arena.player, Vector3(-1.0, 0.0, 0.0))
 	_ready_actor(arena.opponent, Vector3(1.0, 0.0, 0.0))
 	arena.clash.enter(0.0)
-	arena.active_clash["balance"] = 99.99
+	arena.active_clash["lock_balance"] = 99.99
 	var push := InputFrame.new(1)
 	push.move = Vector2(0.0, -1.0)
 	push.camera_yaw = atan2(-1.0, 0.0) # face +X, toward the opponent
@@ -194,3 +196,43 @@ func _test_clash_loss_effects() -> void:
 	arena.clash.process(1.0 / 60.0, _release_frame(), _push_frame())
 	check(is_equal_approx(arena.opponent.spirit, 100.0 - whiff * GameBalance.get_number("pinned_spirit_multiplier")), "pinned whiff: SPIRIT loss x pinned multiplier")
 	check(is_equal_approx(arena.opponent.velocity.length(), knockback), "pinned whiff: knockback is not multiplied")
+
+
+# Entering a CLASH eases both buffaloes to clash_distance instead of teleporting them.
+func _test_clash_enter_blend() -> void:
+	arena.active_clash.clear()
+	_ready_actor(arena.player, Vector3(-1.0, 0.0, 0.0))
+	_ready_actor(arena.opponent, Vector3(1.0, 0.0, 0.0))
+	arena.player.velocity = Vector3(6.0, 0.0, 0.0)
+	arena.opponent.velocity = Vector3(-6.0, 0.0, 0.0)
+	arena.clash.enter(0.0)
+	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH starts")
+	var distance := arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - 2.0) < 0.01, "entering a CLASH does not move the buffaloes instantly")
+	arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	distance = arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(distance > 2.0 and distance < 2.3, "first CLASH tick only moves part of the way")
+	for i in 6:
+		arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	distance = arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - GameBalance.get_number("clash_distance")) < 0.03, "centers reach clash_distance within clash_enter_blend_s")
+	arena.player.velocity = Vector3(3.0, 0.0, 0.0)
+	arena.clash.end(0.0, &"CLASH_TEST")
+	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH ends")
+
+
+# A pair locked against the fence keeps clash_distance instead of being squeezed together.
+func _test_clash_against_fence() -> void:
+	arena.active_clash.clear()
+	_ready_actor(arena.player, Vector3(0.0, 0.0, 8.2))
+	_ready_actor(arena.opponent, Vector3(0.0, 0.0, 9.6))
+	arena.player.rotation.y = PI
+	arena.opponent.rotation.y = 0.0
+	arena.player.facing = Vector3.BACK
+	arena.opponent.facing = Vector3.FORWARD
+	arena.clash.enter(0.0)
+	for i in 30:
+		arena.clash.process(1.0 / 60.0, _push_frame(), _push_frame())
+	var distance := arena.player.global_position.distance_to(arena.opponent.global_position)
+	check(absf(distance - GameBalance.get_number("clash_distance")) < 0.03, "CLASH against the fence keeps clash_distance")
+	arena.active_clash.clear()

@@ -1,5 +1,17 @@
 # Changelog GDD
 
+## v0.4.1 — 01/11/2026
+
+- AI: giữ nguyên quyết định (move, guard) suốt cửa sổ `reaction_s`, nút cạnh chỉ gửi ở tick quyết định; giữ khoảng hở `approach_gap`/`min_gap`; RECOVER có trễ (vào < 25, ra > 60 STAMINA); DASH theo `dash_min_range`/`dash_max_range` của profile. Ngưỡng và xác suất CLASH chuyển vào `data/ai_profiles.json`.
+- Va chạm: mỗi trâu là hai capsule 2D (thân + đầu). `separate()` bỏ vận tốc hướng vào nhau, lặp tối đa 3 lượt; sân co theo từng trục. Tầm HORN/DASH đo bằng khoảng hở từ đầu bên đánh (`horn_reach` 0,5, `dash_hit_gap` 0,15), thay `horn_range`.
+- CLASH: giữ nguyên luật; đối mặt ở `clash_distance` 2,9 m, vào khóa nội suy trong `clash_enter_blend_s` 0,1 s, `balance` đổi tên `lock_balance`, HUD có thanh giằng co "KHÓA SỪNG" và snapshot LAN mang trạng thái CLASH.
+- Knockback: thêm `knockback_time` (`knockback_time_s` 0,3 s) đặt mỗi khi trâu nhận impulse, kể cả GUARD hợp lệ không stun; `separate()` không lọc vận tốc của trâu đang có `knockback_time`. Lúc thoát CLASH, trâu thua giữ knockback của `apply_loss`; chỉ trâu còn lại (không có knockback) bị zero velocity.
+- Xóa `buffalo_radius` (không còn script nào đọc). `clash_weights` của AI chỉ giữ `RELEASE` và `HOOK`; PUSH là phần xác suất còn lại. Thêm `back_off_speed`, `strafe_radial_clamp`, `faces_dot`, `wall_*` vào `ai_profiles.json`.
+- CLASH và vận tốc: lúc vào CLASH zero vận tốc (và knockback) của cả hai trâu. Lúc thoát, trâu thua giữ knockback do `apply_loss` đặt (`knockback_time_s` 0,3 s); chỉ trâu còn lại, không có knockback, bị zero vận tốc.
+- LAN: client áp `facing`, action state (NORMAL, GUARD, STUNNED, FLEE...) và trạng thái CLASH từ snapshot; các trường `action`, `facing`, `position` thiếu hoặc sai kiểu được xử lý an toàn (đã có test); chưa bảo đảm cho mọi trường khác của payload. `tests/lan_match_host.gd` và `lan_match_client.gd` tự kiểm kết quả và thoát mã 1 nếu sai.
+- Giới hạn đã biết: kiểm tra xuyên model (`tests/clash_pose_test.gd`) mới đo điểm mõm (z −2,03) ở pose khóa sừng. Sừng, toàn bộ mesh, các pose khác ngoài CLASH và va chạm sát cổng chưa được xác minh. Harness LAN mới chạy trên localhost với một kịch bản CLASH.
+- Hằng số còn viết cứng chuyển vào `data/balance.json` (`lock_balance_max`, `lock_split_min_spirit`, `lock_push_*`, `net_interp_rate`, `arena_fence_segments`).
+
 ## v0.4 — 22/10/2026
 
 - Thay prototype 3D cũ bằng combat 2.5D theo GDD: SPIRIT/STAMINA, HORN/DASH/GUARD, countdown 90 giây, hit theo cung, guard hướng trước, PINNED và CLASH đối xứng.

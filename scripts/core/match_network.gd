@@ -64,7 +64,7 @@ func interpolate(delta: float) -> void:
 	for slot in remote_targets:
 		var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
 		var target_position: Vector3 = remote_targets[slot]
-		actor.global_position = actor.global_position.lerp(target_position, minf(1.0, delta * 18.0))
+		actor.global_position = actor.global_position.lerp(target_position, minf(1.0, delta * GameBalance.get_number("net_interp_rate", 18.0)))
 
 
 static func frame_to_payload(frame: InputFrame) -> Dictionary:
@@ -118,18 +118,74 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 	controller.remaining_time = float(snapshot.get("remaining_ms", 0)) / 1000.0
 	controller.countdown_time = float(snapshot.get("countdown_ms", controller.countdown_time * 1000.0)) / 1000.0
 	var players: Array = snapshot.get("players", [])
-	for item in players:
-		var actor := controller.player if int(item.get("slot", 0)) == 1 else controller.opponent
-		var position: Vector2 = item.get("position", Vector2.ZERO)
-		remote_targets[int(item.get("slot", 0))] = Vector3(position.x, actor.global_position.y, position.y)
+	for item: Dictionary in players:
+		var slot := int(item.get("slot", 0))
+		if slot != 1 and slot != 2:
+			continue
+		var actor := controller.player if slot == 1 else controller.opponent
+		if item.get("position") is Vector2:
+			var position: Vector2 = item["position"]
+			remote_targets[slot] = Vector3(position.x, actor.global_position.y, position.y)
 		actor.spirit = float(item.get("spirit", actor.spirit))
 		actor.stamina = float(item.get("stamina", actor.stamina))
+		actor.clash_hooked = bool(item.get("hooking", false))
+		_apply_facing(actor, item.get("facing"))
+		_apply_action(actor, item.get("action"))
+	_apply_clash_snapshot(snapshot)
 	if controller.phase == &"RESULT" and not controller.finished:
 		controller.finished = true
 		controller.winner_slot = int(snapshot.get("winner_slot", 0))
 		controller.end_reason = StringName(snapshot.get("end_reason", "NONE"))
 		if is_instance_valid(controller.hud):
 			controller.hud.show_result(controller.winner_slot, controller.end_reason)
+
+
+## Client: show the action state the host reports (NORMAL, GUARD, STUNNED, FLEE, attacks...).
+func _apply_action(actor: Buffalo, value: Variant) -> void:
+	if not (value is String or value is StringName):
+		return
+	var state := Buffalo.state_from_name(StringName(value))
+	if state < 0 or state == actor.state:
+		return
+	actor.state = state as Buffalo.State
+	actor.guarding = state == Buffalo.State.GUARD
+	actor.state_time = 0.0
+
+
+## Client: both buffaloes face where the host says they face (also outside CLASH).
+func _apply_facing(actor: Buffalo, value: Variant) -> void:
+	if not value is Vector2:
+		return
+	var flat: Vector2 = value
+	if flat.length_squared() < 0.0001:
+		return
+	flat = flat.normalized()
+	actor.facing = Vector3(flat.x, 0.0, flat.y)
+	actor.rotation.y = atan2(-flat.x, -flat.y)
+
+
+## Client: rebuild the CLASH the host is running so the HUD and animator behave as on the host.
+func _apply_clash_snapshot(snapshot: Dictionary) -> void:
+	var actors := [controller.player, controller.opponent]
+	if bool(snapshot.get("clash_active", false)):
+		var lock_max := GameBalance.get_number("lock_max_s")
+		controller.active_clash = {
+			"a": controller.player,
+			"b": controller.opponent,
+			"time": lock_max - float(snapshot.get("clash_time_left", lock_max)),
+			"lock_balance": float(snapshot.get("lock_balance", 0.0))
+		}
+		controller.player.clash_partner = controller.opponent
+		controller.opponent.clash_partner = controller.player
+		for actor: Buffalo in actors:
+			actor.state = Buffalo.State.CLASH
+		return
+	controller.active_clash = {}
+	for actor: Buffalo in actors:
+		actor.clash_partner = null
+		# The action in the same snapshot wins; this only covers snapshots without one.
+		if actor.state == Buffalo.State.CLASH:
+			actor.state = Buffalo.State.NORMAL
 
 
 func _on_connection_lost() -> void:

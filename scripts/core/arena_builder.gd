@@ -66,7 +66,7 @@ static func material(color: Color) -> StandardMaterial3D:
 static func _build_fence(parent: Node3D) -> void:
 	var rx := GameBalance.get_number("arena_rx")
 	var rz := GameBalance.get_number("arena_rz")
-	var count := 32
+	var count := GameBalance.get_int("arena_fence_segments", 32)
 	for index in range(count):
 		var a0 := TAU * float(index) / count
 		var a1 := TAU * float(index + 1) / count

@@ -56,6 +56,10 @@ func _step(animator: BuffaloAnimator, ticks: int) -> void:
 
 
 func _test_pivots(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if buffalo.find_child("HeroBody", true, false) != null:
+		check(animator.ear_pivots.is_empty() and animator.tail_pivot == null, "joined HERO mesh does not create invalid legacy pivots")
+		check(buffalo.get_node("Visual/Model").find_children("*", "MeshInstance3D", true, false).size() == 2, "HERO body and faction cloth remain")
+		return
 	check(animator.ear_pivots.size() == 2 and animator.tail_pivot != null, "ear and tail pivots are created")
 	for label in ["Ear_L", "EarInner_L", "Ear_R", "EarInner_R"]:
 		var mesh := buffalo.find_child(label, true, false)
@@ -75,8 +79,9 @@ func _test_rest(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	check(absf(euler.x) < deg_to_rad(0.5) and absf(euler.z) < deg_to_rad(0.5), "standing still: Visual is level")
 	check(absf(animator.basis.get_scale().y - 1.0) <= BuffaloAnimator.BREATH_SCALE + 0.001, "idle breathing stays within its small scale range")
 	var ear := buffalo.find_child("Ear_L", true, false) as Node3D
-	animator.ear_pivots[0].rotation = Vector3.ZERO
-	check(ear.global_position.distance_to(buffalo.global_position) < 0.01, "reparented ear keeps its rest position")
+	if ear != null:
+		animator.ear_pivots[0].rotation = Vector3.ZERO
+		check(ear.global_position.distance_to(buffalo.global_position) < 0.01, "reparented ear keeps its rest position")
 
 
 func _test_body_untouched(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
@@ -88,7 +93,7 @@ func _test_body_untouched(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 		buffalo.state_duration = 0.2
 		_step(animator, 20)
 	check(buffalo.global_transform.is_equal_approx(before), "animator never moves or rotates the physics body")
-	check(buffalo.get_node("Collision").position.is_equal_approx(Vector3(0.0, 1.0, 0.0)), "collision shape is not animated")
+	check(buffalo.get_node("Body").position.is_equal_approx(Vector3(0.0, 1.0, 0.275)) and buffalo.get_node("Head").position.is_equal_approx(Vector3(0.0, 1.0, -0.8)), "collision shapes are not animated")
 	buffalo.state = Buffalo.State.NORMAL
 
 
@@ -124,11 +129,11 @@ func _test_state_poses(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 
 	# CLASH lean follows the tug-of-war balance.
 	_reset(buffalo, animator)
-	arena.active_clash = {"a": arena.player, "b": arena.opponent, "time": 0.0, "balance": 80.0}
+	arena.active_clash = {"a": arena.player, "b": arena.opponent, "time": 0.0, "lock_balance": 80.0}
 	buffalo.state = Buffalo.State.CLASH
 	_step(animator, 60)
 	check(animator.pose_offset.z < -0.1, "CLASH: the winning side leans in")
-	arena.active_clash = {"a": arena.opponent, "b": arena.player, "time": 0.0, "balance": 80.0}
+	arena.active_clash = {"a": arena.opponent, "b": arena.player, "time": 0.0, "lock_balance": 80.0}
 	_step(animator, 60)
 	check(animator.pose_offset.z > 0.1, "CLASH: the losing side is pushed back")
 	arena.active_clash.clear()
