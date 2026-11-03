@@ -54,6 +54,7 @@ godot --headless --path . --script res://tests/lan_match_host.gd
 godot --headless --path . --script res://tests/lan_match_client.gd
 godot --headless --path . --script res://tests/pause_test.gd
 godot --headless --path . --script res://tests/animation_test.gd
+godot --headless --path . --script res://tests/hero_audio_test.gd
 ```
 
 LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A); phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
