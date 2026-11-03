@@ -56,6 +56,10 @@ func _step(animator: BuffaloAnimator, ticks: int) -> void:
 
 
 func _test_pivots(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if buffalo.find_child("HeroBody", true, false) != null:
+		check(animator.ear_pivots.is_empty() and animator.tail_pivot == null, "joined HERO mesh does not create invalid legacy pivots")
+		check(buffalo.get_node("Visual/Model").find_children("*", "MeshInstance3D", true, false).size() == 2, "HERO body and faction cloth remain")
+		return
 	check(animator.ear_pivots.size() == 2 and animator.tail_pivot != null, "ear and tail pivots are created")
 	for label in ["Ear_L", "EarInner_L", "Ear_R", "EarInner_R"]:
 		var mesh := buffalo.find_child(label, true, false)
@@ -75,8 +79,9 @@ func _test_rest(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	check(absf(euler.x) < deg_to_rad(0.5) and absf(euler.z) < deg_to_rad(0.5), "standing still: Visual is level")
 	check(absf(animator.basis.get_scale().y - 1.0) <= BuffaloAnimator.BREATH_SCALE + 0.001, "idle breathing stays within its small scale range")
 	var ear := buffalo.find_child("Ear_L", true, false) as Node3D
-	animator.ear_pivots[0].rotation = Vector3.ZERO
-	check(ear.global_position.distance_to(buffalo.global_position) < 0.01, "reparented ear keeps its rest position")
+	if ear != null:
+		animator.ear_pivots[0].rotation = Vector3.ZERO
+		check(ear.global_position.distance_to(buffalo.global_position) < 0.01, "reparented ear keeps its rest position")
 
 
 func _test_body_untouched(buffalo: Buffalo, animator: BuffaloAnimator) -> void:

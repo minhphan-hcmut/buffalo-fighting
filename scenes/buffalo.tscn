@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/buffalo.gd" id="1"]
-[ext_resource type="PackedScene" path="res://assets/characters/buffalo/buffalo.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/characters/buffalo_hero/buffalo_hero.glb" id="2"]
 [ext_resource type="Script" path="res://scripts/core/buffalo_animator.gd" id="3"]
 
 [sub_resource type="CapsuleShape3D" id="BodyShape"]

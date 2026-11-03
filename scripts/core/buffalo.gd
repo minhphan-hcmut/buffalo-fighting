@@ -52,6 +52,12 @@ var clash_action: StringName = &"PUSH"
 
 func _ready() -> void:
 	reset_combat()
+	if slot == 2:
+		var cloth := find_child("FACTION_Cloth_and_Belt", true, false) as MeshInstance3D
+		if cloth != null:
+			var material := cloth.get_active_material(0).duplicate() as BaseMaterial3D
+			material.albedo_texture = load("res://assets/characters/buffalo_hero/faction_tay.png")
+			cloth.set_surface_override_material(0, material)
 
 
 func reset_combat() -> void:
