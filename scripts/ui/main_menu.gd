@@ -19,6 +19,7 @@ func _ready() -> void:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		_build_session_overlay()
 		return
+	(get_node("/root/GameAudio") as FestivalAudio).play_music("music_festival_loop", true)
 	_build_main_menu()
 
 

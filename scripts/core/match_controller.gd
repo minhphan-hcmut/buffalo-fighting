@@ -84,6 +84,9 @@ func _ready() -> void:
 	match_ended.connect(_on_match_ended)
 	combat_event.connect(_on_combat_event)
 	start_countdown()
+	var audio := Node.new()
+	audio.set_script(preload("res://scripts/core/match_audio.gd"))
+	add_child(audio)
 
 
 func _input(event: InputEvent) -> void:
