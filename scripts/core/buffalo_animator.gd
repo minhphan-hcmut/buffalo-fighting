@@ -64,6 +64,7 @@ var _gait_weight := 1.0
 var _shake_roll := 0.0
 var _last_position := Vector3.ZERO
 var _last_yaw := 0.0
+var clash_gait_weight := 0.0
 var _horn_visual_state := -1
 var _horn_visual_time := 0.0
 
@@ -102,6 +103,7 @@ func reset_motion() -> void:
 	forward_speed = 0.0
 	forward_accel = 0.0
 	turn_rate = 0.0
+	clash_gait_weight = 0.0
 	_horn_visual_state = -1
 	_horn_visual_time = 0.0
 
@@ -151,7 +153,8 @@ func update_pose(delta: float) -> void:
 
 	var walk_speed := GameBalance.get_number("walk_speed", 8.75)
 	# Distance-driven cadence: no cycling feet at rest or on a blocked body.
-	var stride := GameBalance.get_number("gait_stride_length", 3.65)
+	clash_gait_weight = lerpf(clash_gait_weight, 1.0 if buffalo.state == Buffalo.State.CLASH else 0.0, soft)
+	var stride := lerpf(GameBalance.get_number("gait_stride_length", 3.65), GameBalance.get_number("clash_gait_stride_length", 0.8), clash_gait_weight)
 	gait_phase = fposmod(gait_phase + delta * speed / stride, 1.0)
 	_update_legs()
 	var walk := clampf(speed / walk_speed, 0.0, 1.3) * _gait_weight
@@ -220,7 +223,8 @@ func _compute_targets() -> void:
 			# Display only: a clockwise turn (seen from above) lets the two muzzles slide past each other.
 			_target_yaw = -deg_to_rad(GameBalance.get_number("clash_visual_yaw_deg", 10.0))
 			_target_ear_back = deg_to_rad(45.0)
-			_gait_weight = 0.0
+			# Small body bob, but hooves still step according to real displacement.
+			_gait_weight = 0.15
 			_shake_roll = deg_to_rad(1.5) * sin(time * 21.0)
 		Buffalo.State.FLEE:
 			_target_pitch = deg_to_rad(5.0)
@@ -338,8 +342,11 @@ func _update_legs() -> void:
 	if leg_mesh == null or leg_shape_indices.is_empty():
 		return
 	var amount := clampf(speed / GameBalance.get_number("walk_speed"), 0.0, 1.0) * minf(_gait_weight, 1.0)
-	var reach := GameBalance.get_number("gait_step_reach", 0.28) * amount
-	var lift := GameBalance.get_number("gait_hoof_lift", 0.14) * amount
+	# Clash moves much slower than a walk: use its own reference speed and
+	# low, short steps instead of scaling the regular trot down to invisibility.
+	var clash_amount := clampf(speed / GameBalance.get_number("lock_slide_speed", 1.7), 0.0, 1.0)
+	var reach := lerpf(GameBalance.get_number("gait_step_reach", 0.28) * amount, GameBalance.get_number("clash_gait_step_reach", 0.1) * clash_amount, clash_gait_weight)
+	var lift := lerpf(GameBalance.get_number("gait_hoof_lift", 0.14) * amount, GameBalance.get_number("clash_gait_hoof_lift", 0.05) * clash_amount, clash_gait_weight)
 	var direction := local_velocity.normalized() if local_velocity.length_squared() > 0.001 else Vector3.ZERO
 	for leg in 4:
 		# Diagonal pairs alternate in a heavy trot. During stance the hoof travels

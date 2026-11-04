@@ -36,6 +36,7 @@ func run() -> void:
 	_test_horn_sequence(buffalo, animator)
 	_test_walk(buffalo, animator)
 	_test_legs(buffalo, animator)
+	_test_clash_steps(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
 	_test_result(animator, arena.opponent.visual as BuffaloAnimator)
 	_test_pause(buffalo, animator)
@@ -261,6 +262,42 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	var phase := animator.gait_phase
 	_step(animator, 60)
 	check(absf(animator.gait_phase - phase) < 0.001, "stride phase stops advancing at rest")
+
+
+func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if animator.leg_mesh == null:
+		return
+	for direction in [Vector3.FORWARD, Vector3.BACK]:
+		_reset(buffalo, animator)
+		buffalo.state = Buffalo.State.CLASH
+		_step(animator, 120)
+		var lifted := 0.0
+		var reach := 0.0
+		var previous_phase := animator.gait_phase
+		for i in 120:
+			buffalo.position += direction * GameBalance.get_number("lock_slide_speed") * TICK
+			var before := buffalo.global_transform
+			_step(animator, 1)
+			if i == 60:
+				check(buffalo.global_transform.is_equal_approx(before), "clash steps never move the physics body")
+			lifted = maxf(lifted, animator.leg_mesh.get_blend_shape_value(1))
+			reach = maxf(reach, absf(animator.leg_mesh.get_blend_shape_value(2)))
+		check(lifted > 0.025 and lifted <= GameBalance.get_number("clash_gait_hoof_lift") + 0.001, "clash hooves lift in low steps")
+		check(reach > 0.05 and reach <= GameBalance.get_number("clash_gait_step_reach") + 0.001, "clash steps stay short")
+		check(animator.local_velocity.normalized().dot(direction) > 0.99, "clash gait follows push or retreat displacement")
+		check(absf(animator.gait_phase - previous_phase) > 0.01, "moving clash advances stride phase")
+		_step(animator, 180)
+		var planted := true
+		for index in animator.leg_shape_indices:
+			planted = planted and absf(animator.leg_mesh.get_blend_shape_value(index)) < 0.001
+		check(planted, "stationary clash plants every hoof, even while bracing")
+		var phase := animator.gait_phase
+		_step(animator, 60)
+		check(absf(animator.gait_phase - phase) < 0.001, "stationary clash never cycles hooves in place")
+	buffalo.state = Buffalo.State.NORMAL
+	_step(animator, 60)
+	check(animator.clash_gait_weight < 0.001, "leaving clash restores regular gait")
+	_reset(buffalo, animator)
 
 
 func _test_turn_and_teleport(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
