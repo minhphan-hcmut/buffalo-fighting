@@ -34,6 +34,7 @@ func run() -> void:
 	_test_body_untouched(buffalo, animator)
 	_test_state_poses(buffalo, animator)
 	_test_walk(buffalo, animator)
+	_test_legs(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
 	_test_result(animator, arena.opponent.visual as BuffaloAnimator)
 	_test_pause(buffalo, animator)
@@ -162,6 +163,45 @@ func _test_walk(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	for i in 120:
 		_step(animator, 1)
 	check(animator.speed < 0.05 and animator.position.length() < 0.02, "gait settles when the body stops")
+
+
+func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	_reset(buffalo, animator)
+	_step(animator, 120)
+	if animator.leg_mesh == null:
+		return # Legacy model has separate meshes rather than the joined HERO body.
+	check(animator.leg_shape_indices.size() == 12, "HERO has three motion channels for each hoof")
+	var source := load("res://assets/characters/buffalo_hero/buffalo_hero.glb") as PackedScene
+	var original := source.instantiate()
+	var original_body := original.find_child("HeroBody", true, false) as MeshInstance3D
+	check(original_body.mesh.get_blend_shape_count() == 0, "procedural gait leaves imported mesh unchanged")
+	original.free()
+	var moved := false
+	var lifted := false
+	for i in 90:
+		buffalo.position.z -= GameBalance.get_number("walk_speed") * TICK
+		_step(animator, 1)
+		var mesh := animator.leg_mesh
+		var left := mesh.get_blend_shape_value(2)
+		moved = moved or absf(left) > 0.05
+		lifted = lifted or mesh.get_blend_shape_value(1) > 0.05
+		if i == 60:
+			check(is_equal_approx(left, mesh.get_blend_shape_value(11)), "diagonal hooves share their stride")
+	check(moved and lifted, "moving buffalo strides and lifts its hooves")
+	for direction in [Vector3.BACK, Vector3.RIGHT]:
+		_reset(buffalo, animator)
+		for i in 90:
+			buffalo.position += direction * 4.0 * TICK
+			_step(animator, 1)
+		check(animator.local_velocity.normalized().dot(direction) > 0.99, "gait follows backward/lateral displacement")
+	_step(animator, 180)
+	var settled := true
+	for index in animator.leg_shape_indices:
+		settled = settled and absf(animator.leg_mesh.get_blend_shape_value(index)) < 0.001
+	check(settled, "all hoof channels return to rest after stopping")
+	var phase := animator.gait_phase
+	_step(animator, 60)
+	check(absf(animator.gait_phase - phase) < 0.001, "stride phase stops advancing at rest")
 
 
 func _test_turn_and_teleport(buffalo: Buffalo, animator: BuffaloAnimator) -> void:

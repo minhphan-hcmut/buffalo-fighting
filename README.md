@@ -57,4 +57,4 @@ godot --headless --path . --script res://tests/animation_test.gd
 godot --headless --path . --script res://tests/hero_audio_test.gd
 ```
 
-LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A); phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
+LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A), có bước chân chéo và nhấc móng cho model HERO bằng blend shape runtime, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/balance.json`; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
