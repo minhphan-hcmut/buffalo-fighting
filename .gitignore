@@ -1,6 +1,9 @@
 # Godot generated files (.uid and .import are kept: Godot 4.4+ needs them in version control)
 .godot/
 
+# Local agent plans and scratch files
+.scratch/
+
 # Node dependencies and generated MCP output
 node_modules/
 tools/godot-mcp/server/node_modules/
