@@ -2,7 +2,7 @@ class_name BuffaloAnimator
 extends Node3D
 
 # Visual-only procedural motion for the unrigged buffalo model (animation stage A).
-# Moves this node plus the ear/tail pivots it creates; the physics body is never touched,
+# Moves this node, HERO hoof morphs and legacy ear/tail pivots; the physics body is never touched,
 # so gameplay, LAN and combat tests are unaffected. Motion is read from the body's actual
 # displacement, which also works on a LAN client where velocity is not replicated.
 
@@ -10,8 +10,6 @@ const POSE_RATE := 12.0
 const SNAP_RATE := 32.0
 const MOTION_FILTER_RATE := 12.0
 const TELEPORT_DISTANCE := 3.0
-const GAIT_HZ_MIN := 1.1
-const GAIT_HZ_MAX := 2.4
 const BOB_HEIGHT := 0.05
 const SWAY_ROLL_DEG := 2.5
 const ROCK_PITCH_DEG := 1.5
@@ -32,6 +30,9 @@ const TAIL_PIVOT := Vector3(0.0, 1.42, 1.52)
 var buffalo: Buffalo
 var controller: MatchController
 var speed := 0.0
+var local_velocity := Vector3.ZERO
+var leg_mesh: MeshInstance3D
+var leg_shape_indices: Array[int] = []
 var forward_speed := 0.0
 var forward_accel := 0.0
 var turn_rate := 0.0
@@ -73,6 +74,7 @@ func _ready() -> void:
 	controller = node as MatchController
 	rng.seed = get_instance_id()
 	_build_pivots()
+	_build_leg_shapes()
 	reset_motion()
 
 
@@ -94,6 +96,7 @@ func reset_motion() -> void:
 	_last_position = buffalo.global_position
 	_last_yaw = buffalo.global_rotation.y
 	speed = 0.0
+	local_velocity = Vector3.ZERO
 	forward_speed = 0.0
 	forward_accel = 0.0
 	turn_rate = 0.0
@@ -114,6 +117,7 @@ func sample_motion(delta: float) -> void:
 	heading = heading.normalized()
 	var filter := 1.0 - exp(-MOTION_FILTER_RATE * delta)
 	speed = lerpf(speed, planar.length(), filter)
+	local_velocity = local_velocity.lerp(buffalo.global_basis.inverse() * planar, filter)
 	var filtered_forward := lerpf(forward_speed, planar.dot(heading), filter)
 	forward_accel = lerpf(forward_accel, (filtered_forward - forward_speed) / delta, filter)
 	forward_speed = filtered_forward
@@ -141,8 +145,10 @@ func update_pose(delta: float) -> void:
 	defeat_weight = lerpf(defeat_weight, 1.0 if result < 0 else 0.0, soft * 0.5)
 
 	var walk_speed := GameBalance.get_number("walk_speed", 8.75)
-	var speed_ratio := clampf(speed / walk_speed, 0.0, 1.0)
-	gait_phase = fposmod(gait_phase + delta * lerpf(GAIT_HZ_MIN, GAIT_HZ_MAX, speed_ratio), 1.0)
+	# Distance-driven cadence: no cycling feet at rest or on a blocked body.
+	var stride := GameBalance.get_number("gait_stride_length", 3.65)
+	gait_phase = fposmod(gait_phase + delta * speed / stride, 1.0)
+	_update_legs()
 	var walk := clampf(speed / walk_speed, 0.0, 1.3) * _gait_weight
 	var bob := BOB_HEIGHT * walk * (0.5 - 0.5 * cos(gait_phase * TAU * 2.0))
 	var hop := victory_weight * VICTORY_HOP_HEIGHT * absf(sin(time * TAU * VICTORY_HOP_HZ))
@@ -242,6 +248,66 @@ func _result_for_self() -> int:
 	if buffalo.state == Buffalo.State.FLEE:
 		return 0
 	return 1 if controller.winner_slot == buffalo.slot else -1
+
+
+# The HERO asset is a joined mesh, not a skeleton. Build visual-only morphs once,
+# preserving every surface/material/UV. Smooth masks keep the hips attached to the
+# torso; only the lower legs and hooves move. The imported resource stays untouched.
+func _build_leg_shapes() -> void:
+	leg_mesh = find_child("HeroBody", true, false) as MeshInstance3D
+	if leg_mesh == null or leg_mesh.mesh == null:
+		return
+	var source := leg_mesh.mesh
+	var animated := ArrayMesh.new()
+	animated.blend_shape_mode = Mesh.BLEND_SHAPE_MODE_NORMALIZED
+	for leg in 4:
+		for axis in ["X", "Y", "Z"]:
+			animated.add_blend_shape("Step_%d_%s" % [leg, axis])
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var shapes: Array[Array] = []
+		for leg in 4:
+			var side := -1.0 if leg % 2 == 0 else 1.0
+			var front := leg < 2
+			for axis in 3:
+				var targets := vertices.duplicate()
+				for i in vertices.size():
+					var vertex := vertices[i]
+					var lower := 1.0 - smoothstep(0.32, 0.95, vertex.y)
+					var lateral := smoothstep(0.12, 0.28, vertex.x * side)
+					var longitudinal := 1.0 - smoothstep(-0.45, 0.05, vertex.z) if front else smoothstep(0.35, 0.75, vertex.z)
+					targets[i][axis] += lower * lateral * longitudinal
+				var shape: Array = []
+				shape.resize(Mesh.ARRAY_MAX)
+				shape[Mesh.ARRAY_VERTEX] = targets
+				shape[Mesh.ARRAY_NORMAL] = arrays[Mesh.ARRAY_NORMAL]
+				shape[Mesh.ARRAY_TANGENT] = arrays[Mesh.ARRAY_TANGENT]
+				shapes.append(shape)
+		animated.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, shapes)
+		animated.surface_set_material(surface, source.surface_get_material(surface))
+	leg_mesh.mesh = animated
+	for i in animated.get_blend_shape_count():
+		leg_shape_indices.append(i)
+
+
+func _update_legs() -> void:
+	if leg_mesh == null or leg_shape_indices.is_empty():
+		return
+	var amount := clampf(speed / GameBalance.get_number("walk_speed"), 0.0, 1.0) * minf(_gait_weight, 1.0)
+	var reach := GameBalance.get_number("gait_step_reach", 0.28) * amount
+	var lift := GameBalance.get_number("gait_hoof_lift", 0.14) * amount
+	var direction := local_velocity.normalized() if local_velocity.length_squared() > 0.001 else Vector3.ZERO
+	for leg in 4:
+		# Diagonal pairs alternate in a heavy trot. During stance the hoof travels
+		# backwards relative to the body; the return stroke lifts it off the dirt.
+		var phase := fposmod(gait_phase + (0.5 if leg == 1 or leg == 2 else 0.0), 1.0)
+		var swing := phase >= 0.6
+		var progress := (phase - 0.6) / 0.4 if swing else phase / 0.6
+		var travel := lerpf(-1.0, 1.0, smoothstep(0.0, 1.0, progress)) if swing else lerpf(1.0, -1.0, progress)
+		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3], direction.x * travel * reach)
+		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3 + 1], sin(progress * PI) * lift if swing else 0.0)
+		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3 + 2], direction.z * travel * reach)
 
 
 func _build_pivots() -> void:
