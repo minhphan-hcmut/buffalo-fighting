@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cj17gwfqgboc3"
-path="res://.godot/imported/water-buffalo-reference.jpg-dec145b0dd260c127ea5424d57f29b13.ctex"
+path="res://.godot/imported/water-buffalo-reference.jpg-135f2ad8c16b047b5c77ed207a96ff89.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://water-buffalo-reference.jpg"
-dest_files=["res://.godot/imported/water-buffalo-reference.jpg-dec145b0dd260c127ea5424d57f29b13.ctex"]
+source_file="res://references/water-buffalo-reference.jpg"
+dest_files=["res://.godot/imported/water-buffalo-reference.jpg-135f2ad8c16b047b5c77ed207a96ff89.ctex"]
 
 [params]
 

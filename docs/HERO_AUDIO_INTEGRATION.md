@@ -2,7 +2,7 @@
 
 ## Đánh giá
 
-- Nguồn: `ancient_east_water_buffalo_HERO.blend`, giữ nguyên ở gốc repo.
+- Nguồn: `assets/blender/ancient_east_water_buffalo_HERO.blend`, giữ nguyên nội dung nguồn.
 - Hai mesh, tổng 177.132 tam giác (thân 166.924); không armature, không animation action. Texture được packed, không phụ thuộc các đường dẫn Windows trong nguồn.
 - Bản gameplay: `assets/characters/buffalo_hero/buffalo_hero.glb`, 31.810 tam giác, cao khoảng 2,115 m. Có texture base color, normal, ORM và khăn. GLB khoảng 13 MB, nặng hơn model cũ; chưa benchmark FPS/GPU.
 - Đầu nguồn hướng Blender +Y, khi export thành Godot -Z. Scale đồng đều và đặt chân ở Y≈0; không đổi collision/balance để giữ luật chơi.
@@ -12,7 +12,7 @@
 
 ## Âm thanh
 
-Giữ nguyên ZIP nguồn; giải nén 20 file audio vào `assets/audio/`.
+Giữ nguyên ZIP nguồn ở `assets/audio/source/Sound-20261103T033158Z-1-001.zip`; 20 file audio đã giải nén nằm trong `assets/audio/`.
 
 - 17 WAV PCM 16-bit và 3 OGG Vorbis, tất cả 48 kHz, độ dài hợp lệ. Nhạc nền 80 giây; loop khóa sừng 0,83 giây.
 - `GameAudio` autoload tạo bus Music/SFX và pool 16 giọng, nhạc nền xuyên scene. Slider âm lượng hiện có điều khiển các bus này.
@@ -26,7 +26,7 @@ Giữ nguyên ZIP nguồn; giải nén 20 file audio vào `assets/audio/`.
 ## Tái tạo và kiểm tra
 
 ```sh
-blender --background ancient_east_water_buffalo_HERO.blend --python tools/export_hero_buffalo.py
+blender --background assets/blender/ancient_east_water_buffalo_HERO.blend --python tools/export_hero_buffalo.py
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script res://tests/hero_audio_test.gd
 ```

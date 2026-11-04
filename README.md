@@ -25,7 +25,10 @@ Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng F
 - `scripts/ai/`: FSM AI.
 - `scripts/network/`: ENet Host/Join.
 - `scripts/ui/`: menu, lobby và HUD.
-- `assets/characters/buffalo/buffalo.glb`: model gameplay mới nhất, giữ nguyên từ Blender source `assets/blender/buffalo.blend`.
+- `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
+- `assets/characters/buffalo/buffalo.glb`: model dự phòng; nguồn tại `assets/blender/buffalo.blend`.
+- `assets/audio/`: âm thanh gameplay; ZIP nguồn được giữ trong `assets/audio/source/`.
+- `references/`: ảnh tham khảo, bao gồm `water-buffalo-reference.jpg`.
 - `tools/godot-mcp/` và `addons/godot_mcp/`: Godot MCP.
 - `.mcp.json`: đăng ký MCP cho Godot và Blender.
 
