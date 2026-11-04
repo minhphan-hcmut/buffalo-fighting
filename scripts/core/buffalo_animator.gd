@@ -65,8 +65,8 @@ var _shake_roll := 0.0
 var _last_position := Vector3.ZERO
 var _last_yaw := 0.0
 var clash_gait_weight := 0.0
-var _horn_visual_state := -1
-var _horn_visual_time := 0.0
+var _action_visual_state := -1
+var _action_visual_time := 0.0
 
 
 func _ready() -> void:
@@ -104,8 +104,8 @@ func reset_motion() -> void:
 	forward_accel = 0.0
 	turn_rate = 0.0
 	clash_gait_weight = 0.0
-	_horn_visual_state = -1
-	_horn_visual_time = 0.0
+	_action_visual_state = -1
+	_action_visual_time = 0.0
 
 
 # Samples the body's displacement once per physics tick, when its position actually changes.
@@ -137,7 +137,7 @@ func update_pose(delta: float) -> void:
 	if buffalo == null or delta <= 0.0:
 		return
 	time += delta
-	_update_horn_clock(delta)
+	_update_action_clock(delta)
 	_compute_targets()
 	var k := 1.0 - exp(-_target_rate * delta)
 	pose_offset = pose_offset.lerp(_target_offset, k)
@@ -197,17 +197,8 @@ func _compute_targets() -> void:
 			_target_ear_back = deg_to_rad(35.0)
 		Buffalo.State.HORN_STARTUP, Buffalo.State.HORN_ACTIVE, Buffalo.State.HORN_RECOVERY:
 			_compute_horn_targets()
-		Buffalo.State.DASH_ACTIVE:
-			_target_offset = Vector3(0.0, -0.04, -0.12)
-			_target_pitch = deg_to_rad(-12.0)
-			_target_rate = SNAP_RATE
-			_target_ear_back = deg_to_rad(50.0)
-			_target_tail_lift = deg_to_rad(55.0)
-			_gait_weight = 1.4
-		Buffalo.State.DASH_RECOVERY:
-			_target_offset = Vector3(0.0, 0.0, 0.05)
-			_target_pitch = deg_to_rad(4.0)
-			_target_tail_lift = deg_to_rad(25.0)
+		Buffalo.State.DASH_ACTIVE, Buffalo.State.DASH_RECOVERY:
+			_compute_dash_targets()
 		Buffalo.State.STUNNED:
 			var fade := 1.0 - progress
 			_target_offset = Vector3(0.0, 0.0, 0.12 * fade)
@@ -235,24 +226,55 @@ func _compute_targets() -> void:
 
 # Clients receive action names, not state timing. Advance a visual-only clock
 # between snapshots; never advance gameplay states or alter the LAN protocol.
-func _update_horn_clock(delta: float) -> void:
-	if _horn_visual_state != buffalo.state:
-		_horn_visual_state = buffalo.state
-		_horn_visual_time = 0.0
+func _update_action_clock(delta: float) -> void:
+	if _action_visual_state != buffalo.state:
+		_action_visual_state = buffalo.state
+		_action_visual_time = 0.0
 	else:
-		_horn_visual_time += delta
+		_action_visual_time += delta
+
+
+func _action_progress(duration_key: String) -> float:
+	var remote: bool = controller != null and controller.mode == &"LAN" and controller.network != null and not controller.network.is_host
+	var duration := GameBalance.get_number(duration_key) if remote else buffalo.state_duration
+	var elapsed := _action_visual_time if remote else buffalo.state_time
+	return clampf(elapsed / duration, 0.0, 1.0) if duration > 0.0 else 1.0
+
+
+func _compute_dash_targets() -> void:
+	var recovering := buffalo.state == Buffalo.State.DASH_RECOVERY
+	var progress := _action_progress("dash_recovery_s" if recovering else "dash_active_s")
+	var reach := GameBalance.get_number("dash_visual_reach", 0.16)
+	var dip := GameBalance.get_number("dash_visual_dip_deg", 12.0)
+	_target_rate = SNAP_RATE * 1.3
+	if not recovering:
+		# Immediate compression and drive, then unload before recovery. This
+		# never delays the gameplay dash or adds displacement to its physics body.
+		var drive := smoothstep(0.0, 0.3, progress)
+		var unload := smoothstep(0.65, 1.0, progress)
+		_target_offset = Vector3(0.0, lerpf(-0.055, -0.02, drive), -reach * drive)
+		_target_pitch = deg_to_rad(-dip * (1.0 - 0.5 * unload))
+		_target_ear_back = deg_to_rad(50.0)
+		_target_tail_lift = deg_to_rad(55.0)
+		_gait_weight = lerpf(0.6, 1.3, drive)
+	else:
+		var brake := smoothstep(0.0, 0.35, progress)
+		var settle := smoothstep(0.35, 1.0, progress)
+		var recoil := GameBalance.get_number("dash_visual_brake_pitch_deg", 5.0)
+		_target_offset = Vector3(0.0, -0.02 * (1.0 - brake), lerpf(-reach, 0.04, brake) * (1.0 - settle))
+		_target_pitch = deg_to_rad(lerpf(-dip * 0.5, recoil, brake) * (1.0 - settle))
+		_target_ear_back = deg_to_rad(50.0 * (1.0 - progress))
+		_target_tail_lift = deg_to_rad(55.0 * (1.0 - progress))
+		_gait_weight = lerpf(0.5, 1.0, settle)
 
 
 func _compute_horn_targets() -> void:
-	var remote: bool = controller != null and controller.mode == &"LAN" and controller.network != null and not controller.network.is_host
 	var duration_key := "horn_startup_s"
 	if buffalo.state == Buffalo.State.HORN_ACTIVE:
 		duration_key = "horn_active_s"
 	elif buffalo.state == Buffalo.State.HORN_RECOVERY:
 		duration_key = "horn_recovery_s"
-	var duration := GameBalance.get_number(duration_key) if remote else buffalo.state_duration
-	var elapsed := _horn_visual_time if remote else buffalo.state_time
-	var progress := clampf(elapsed / duration, 0.0, 1.0) if duration > 0.0 else 1.0
+	var progress := _action_progress(duration_key)
 	var windup := GameBalance.get_number("horn_visual_windup", 0.12)
 	var reach := GameBalance.get_number("horn_visual_reach", 0.24)
 	var dip := GameBalance.get_number("horn_visual_dip_deg", 10.0)

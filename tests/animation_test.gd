@@ -34,6 +34,7 @@ func run() -> void:
 	_test_body_untouched(buffalo, animator)
 	_test_state_poses(buffalo, animator)
 	_test_horn_sequence(buffalo, animator)
+	_test_dash_sequence(buffalo, animator)
 	_test_walk(buffalo, animator)
 	_test_legs(buffalo, animator)
 	_test_clash_steps(buffalo, animator)
@@ -198,6 +199,70 @@ func _test_horn_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	buffalo.state_duration = 0.0
 	_step(animator, 1)
 	check(animator.transform.is_finite(), "zero-duration horn pose stays finite")
+	_reset(buffalo, animator)
+
+
+func _test_dash_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	var endpoints: Array[Vector2] = []
+	for fps in [30, 60, 120]:
+		_reset(buffalo, animator)
+		_step(animator, 120)
+		var dt: float = 1.0 / fps
+		check(buffalo.start_dash(), "dash starts immediately")
+		check(is_equal_approx(buffalo.velocity.length(), GameBalance.get_number("dash_speed")), "dash visual does not delay gameplay speed")
+		var stamina := buffalo.stamina
+		var cooldown := buffalo.dash_cooldown
+		var deepest := 0.0
+		var forward := 0.0
+		var brake := 0.0
+		for i in int(0.8 * fps):
+			var before := buffalo.global_transform
+			var velocity := buffalo.velocity
+			var state := buffalo.state
+			var elapsed := buffalo.state_time
+			animator.update_pose(dt)
+			if i == 1:
+				check(buffalo.global_transform.is_equal_approx(before) and buffalo.velocity == velocity and buffalo.state == state and buffalo.state_time == elapsed, "dash animator never modifies gameplay")
+			deepest = minf(deepest, animator.pose_pitch)
+			forward = minf(forward, animator.pose_offset.z)
+			if buffalo.state == Buffalo.State.DASH_RECOVERY:
+				brake = maxf(brake, animator.pose_pitch)
+			buffalo.advance_state(dt)
+		check(deepest < deg_to_rad(-7.0) and forward < -0.1, "dash compresses and drives at %d FPS" % fps)
+		check(brake > deg_to_rad(1.0), "dash recovery shows braking at %d FPS" % fps)
+		check(animator.pose_offset.length() < 0.01 and absf(animator.pose_pitch) < 0.01, "dash returns to neutral at %d FPS" % fps)
+		check(is_equal_approx(buffalo.stamina, stamina) and is_equal_approx(buffalo.dash_cooldown, cooldown), "dash visual leaves cost and cooldown untouched")
+		endpoints.append(Vector2(deepest, forward))
+	for endpoint in endpoints:
+		check(endpoint.distance_to(endpoints[1]) < 0.04, "dash motion is comparable across frame rates")
+	for interrupted in [Buffalo.State.STUNNED, Buffalo.State.CLASH, Buffalo.State.NORMAL]:
+		_pose_for(buffalo, animator, Buffalo.State.DASH_ACTIVE)
+		buffalo.state = interrupted
+		buffalo.state_time = 0.0
+		_step(animator, 60)
+		check(animator.transform.is_finite(), "interrupted dash stays finite")
+		buffalo.state = Buffalo.State.NORMAL
+		_step(animator, 120)
+		check(animator.pose_offset.length() < 0.01, "interrupted dash leaves no residual offset")
+	var old_mode := arena.mode
+	var old_host: bool = arena.network.is_host
+	arena.mode = &"LAN"
+	arena.network.is_host = false
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.DASH_ACTIVE
+	buffalo.state_duration = 0.0
+	_step(animator, 10)
+	check(animator.pose_offset.z < -0.1, "LAN dash progresses without replicated state timing")
+	buffalo.state = Buffalo.State.DASH_RECOVERY
+	_step(animator, 45)
+	check(animator.pose_offset.length() < 0.01 and absf(animator.pose_pitch) < 0.01, "LAN dash recovery settles")
+	arena.mode = old_mode
+	arena.network.is_host = old_host
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.DASH_RECOVERY
+	buffalo.state_duration = 0.0
+	_step(animator, 1)
+	check(animator.transform.is_finite(), "zero-duration dash recovery stays finite")
 	_reset(buffalo, animator)
 
 
