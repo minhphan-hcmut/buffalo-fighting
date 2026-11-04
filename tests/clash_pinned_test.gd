@@ -27,6 +27,7 @@ func run() -> void:
 	_test_clash_loss_effects()
 	_test_clash_enter_blend()
 	_test_clash_against_fence()
+	_test_slide_momentum()
 	arena.free()
 	print("CLASH PINNED TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
@@ -219,6 +220,44 @@ func _test_clash_enter_blend() -> void:
 	arena.player.velocity = Vector3(3.0, 0.0, 0.0)
 	arena.clash.end(0.0, &"CLASH_TEST")
 	check(arena.player.velocity.is_zero_approx() and arena.opponent.velocity.is_zero_approx(), "velocity is zero when the CLASH ends")
+
+
+func _test_slide_momentum() -> void:
+	var endpoints: Array[float] = []
+	for fps in [30, 60, 120]:
+		arena.active_clash.clear()
+		_ready_actor(arena.player, Vector3(-1.45, 0.0, 0.0))
+		_ready_actor(arena.opponent, Vector3(1.45, 0.0, 0.0))
+		arena.clash.enter(0.0)
+		var dt: float = 1.0 / fps
+		arena.clash._slide(arena.player, arena.opponent, 1.0, dt)
+		var first := float(arena.active_clash["slide_speed"])
+		check(first > 0.0 and first < GameBalance.get_number("lock_slide_speed"), "clash push accelerates gradually")
+		for i in int(0.5 * fps) - 1:
+			arena.clash._slide(arena.player, arena.opponent, 1.0, dt)
+		check(is_equal_approx(float(arena.active_clash["slide_speed"]), GameBalance.get_number("lock_slide_speed")), "sustained push reaches configured speed")
+		endpoints.append((arena.player.position.x + arena.opponent.position.x) * 0.5)
+		arena.clash._slide(arena.player, arena.opponent, -1.0, dt)
+		check(float(arena.active_clash["slide_speed"]) > 0.0, "opposing push brakes before reversing")
+		for i in int(0.4 * fps):
+			arena.clash._slide(arena.player, arena.opponent, -1.0, dt)
+		check(float(arena.active_clash["slide_speed"]) < 0.0, "sustained opposing push reverses the pair")
+		for i in int(0.3 * fps):
+			arena.clash._slide(arena.player, arena.opponent, 0.0, dt)
+		check(is_zero_approx(float(arena.active_clash["slide_speed"])), "balanced push decelerates to rest")
+		check(absf(arena.player.position.distance_to(arena.opponent.position) - GameBalance.get_number("clash_distance")) < 0.001, "momentum preserves locked separation")
+		check(is_zero_approx(float(arena.active_clash["lock_balance"])), "slide momentum does not change the balance rules")
+	for endpoint in endpoints:
+		check(absf(endpoint - endpoints[1]) < 0.01, "slide travel is consistent across 30/60/120 Hz")
+	# Long pressure at the fence must not accumulate velocity or squeeze the pair.
+	for i in 600:
+		arena.clash._slide(arena.player, arena.opponent, 1.0, 1.0 / 60.0)
+	check(is_zero_approx(float(arena.active_clash["slide_speed"])), "fence discards blocked slide momentum")
+	check(absf(arena.player.position.distance_to(arena.opponent.position) - GameBalance.get_number("clash_distance")) < 0.001, "sustained fence pressure preserves separation")
+	arena.clash.end(0.0, &"CLASH_TEST")
+	arena.clash.enter(0.0)
+	check(is_zero_approx(float(arena.active_clash["slide_speed"])), "new clash starts without residual momentum")
+	arena.clash.end(0.0, &"CLASH_TEST")
 
 
 # A pair locked against the fence keeps clash_distance instead of being squeezed together.

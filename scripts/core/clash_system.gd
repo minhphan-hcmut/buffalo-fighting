@@ -42,6 +42,7 @@ func enter(bias: float) -> void:
 		"time": 0.0,
 		"lock_balance": bias,
 		"blend": 0.0,
+		"slide_speed": 0.0,
 		"from_a": player.global_position,
 		"from_b": opponent.global_position,
 		"to_a": midpoint - direction * half,
@@ -62,7 +63,7 @@ func _blend(a: Buffalo, b: Buffalo, delta: float) -> bool:
 		return false
 	elapsed = minf(duration, elapsed + delta)
 	active["blend"] = elapsed
-	var weight := 1.0 if duration <= 0.0 else elapsed / duration
+	var weight := 1.0 if duration <= 0.0 else smoothstep(0.0, 1.0, elapsed / duration)
 	a.global_position = Vector3(active["from_a"]).lerp(active["to_a"], weight)
 	b.global_position = Vector3(active["from_b"]).lerp(active["to_b"], weight)
 	a.rotation.y = lerp_angle(float(active["yaw_from_a"]), float(active["yaw_to_a"]), weight)
@@ -240,15 +241,25 @@ func _apply_release(releaser: Buffalo) -> void:
 
 
 func _slide(a: Buffalo, b: Buffalo, difference: float, delta: float) -> void:
-	if is_zero_approx(difference):
-		return
+	var target := difference * GameBalance.get_number("lock_slide_speed")
+	var speed := float(active.get("slide_speed", 0.0))
+	var braking := is_zero_approx(target) or speed * target < 0.0 or absf(target) < absf(speed)
+	var rate := GameBalance.get_number("clash_slide_deceleration", 12.0) if braking else GameBalance.get_number("clash_slide_acceleration", 6.0)
+	# A reversal brakes to rest first; it never instantly flips the pair's momentum.
+	var next := move_toward(speed, 0.0 if speed * target < 0.0 else target, rate * delta)
 	var direction := (b.global_position - a.global_position).normalized()
-	var midpoint := (a.global_position + b.global_position) * 0.5
-	midpoint += direction * signf(difference) * GameBalance.get_number("lock_slide_speed") * absf(difference) * delta
+	var before := (a.global_position + b.global_position) * 0.5
+	var travel := (speed + next) * 0.5 * delta
+	var midpoint := before + direction * travel
 	var separation := GameBalance.get_number("clash_distance")
 	a.global_position = midpoint - direction * separation * 0.5
 	b.global_position = midpoint + direction * separation * 0.5
 	_fit_pair(a, b)
+	# Discard blocked momentum instead of banking it against the fence.
+	var actual := ((a.global_position + b.global_position) * 0.5 - before).dot(direction)
+	if absf(actual) + 0.00001 < absf(travel):
+		next = 0.0
+	active["slide_speed"] = next
 
 
 ## Keeps the pair inside the arena by moving both together, so a locked pair never gets squeezed

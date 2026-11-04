@@ -33,8 +33,11 @@ func run() -> void:
 	_test_rest(buffalo, animator)
 	_test_body_untouched(buffalo, animator)
 	_test_state_poses(buffalo, animator)
+	_test_horn_sequence(buffalo, animator)
+	_test_dash_sequence(buffalo, animator)
 	_test_walk(buffalo, animator)
 	_test_legs(buffalo, animator)
+	_test_clash_steps(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
 	_test_result(animator, arena.opponent.visual as BuffaloAnimator)
 	_test_pause(buffalo, animator)
@@ -108,9 +111,9 @@ func _pose_for(buffalo: Buffalo, animator: BuffaloAnimator, state: Buffalo.State
 
 
 func _test_state_poses(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
-	_pose_for(buffalo, animator, Buffalo.State.HORN_STARTUP)
+	_pose_for(buffalo, animator, Buffalo.State.HORN_STARTUP, 1.0)
 	check(animator.pose_pitch < deg_to_rad(-5.0) and animator.pose_offset.z > 0.05, "HORN startup: head dips and body winds back")
-	_pose_for(buffalo, animator, Buffalo.State.HORN_ACTIVE, 0.0)
+	_pose_for(buffalo, animator, Buffalo.State.HORN_ACTIVE, 0.4)
 	check(animator.pose_offset.z < -0.2, "HORN active: body lunges forward")
 	var early := animator.pose_pitch
 	_pose_for(buffalo, animator, Buffalo.State.HORN_ACTIVE, 1.0)
@@ -139,6 +142,128 @@ func _test_state_poses(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	check(animator.pose_offset.z > 0.1, "CLASH: the losing side is pushed back")
 	arena.active_clash.clear()
 	buffalo.state = Buffalo.State.NORMAL
+
+
+func _test_horn_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	var endpoints: Array[Vector2] = []
+	for fps in [30, 60, 120]:
+		_reset(buffalo, animator)
+		_step(animator, 120)
+		var body_before := buffalo.global_transform
+		var dt: float = 1.0 / fps
+		buffalo.start_horn()
+		var stamina_after := buffalo.stamina
+		var deepest := 0.0
+		var farthest := 0.0
+		var previous := animator.position
+		var largest_step := 0.0
+		for i in int(0.7 * fps):
+			animator.update_pose(dt)
+			deepest = minf(deepest, animator.pose_pitch)
+			farthest = minf(farthest, animator.pose_offset.z)
+			largest_step = maxf(largest_step, animator.position.distance_to(previous))
+			previous = animator.position
+			buffalo.advance_state(dt)
+		check(deepest < deg_to_rad(-3.0) and farthest < -0.15, "horn sequence loads then drives at %d FPS" % fps)
+		check(largest_step < 0.4, "horn sequence has bounded frame displacement at %d FPS" % fps)
+		check(animator.pose_offset.length() < 0.01 and absf(animator.pose_pitch) < 0.01, "horn recovery settles at %d FPS" % fps)
+		check(buffalo.global_transform.is_equal_approx(body_before) and buffalo.velocity == Vector3.ZERO, "horn visual never adds root motion")
+		check(is_equal_approx(buffalo.stamina, stamina_after), "horn visual never changes stamina")
+		endpoints.append(Vector2(deepest, farthest))
+	for endpoint in endpoints:
+		check(endpoint.distance_to(endpoints[1]) < 0.06, "horn motion is comparable across frame rates")
+	for interrupted in [Buffalo.State.STUNNED, Buffalo.State.CLASH, Buffalo.State.NORMAL]:
+		_pose_for(buffalo, animator, Buffalo.State.HORN_ACTIVE, 0.7)
+		buffalo.state = interrupted
+		buffalo.state_time = 0.0
+		buffalo.state_duration = 0.2
+		_step(animator, 30)
+		check(animator.transform.is_finite(), "interrupted horn pose stays finite")
+	# LAN snapshots only carry action names: the visual clock must still progress.
+	var old_mode := arena.mode
+	var old_host: bool = arena.network.is_host
+	arena.mode = &"LAN"
+	arena.network.is_host = false
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.HORN_ACTIVE
+	buffalo.state_duration = 0.0
+	_step(animator, 12)
+	check(animator.pose_offset.z < -0.15 and animator.pose_pitch > 0.0, "LAN horn progresses without replicated state timing")
+	buffalo.state = Buffalo.State.HORN_RECOVERY
+	_step(animator, 30)
+	check(animator.pose_offset.length() < 0.01, "LAN horn recovery settles using visual time")
+	arena.mode = old_mode
+	arena.network.is_host = old_host
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.HORN_ACTIVE
+	buffalo.state_duration = 0.0
+	_step(animator, 1)
+	check(animator.transform.is_finite(), "zero-duration horn pose stays finite")
+	_reset(buffalo, animator)
+
+
+func _test_dash_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	var endpoints: Array[Vector2] = []
+	for fps in [30, 60, 120]:
+		_reset(buffalo, animator)
+		_step(animator, 120)
+		var dt: float = 1.0 / fps
+		check(buffalo.start_dash(), "dash starts immediately")
+		check(is_equal_approx(buffalo.velocity.length(), GameBalance.get_number("dash_speed")), "dash visual does not delay gameplay speed")
+		var stamina := buffalo.stamina
+		var cooldown := buffalo.dash_cooldown
+		var deepest := 0.0
+		var forward := 0.0
+		var brake := 0.0
+		for i in int(0.8 * fps):
+			var before := buffalo.global_transform
+			var velocity := buffalo.velocity
+			var state := buffalo.state
+			var elapsed := buffalo.state_time
+			animator.update_pose(dt)
+			if i == 1:
+				check(buffalo.global_transform.is_equal_approx(before) and buffalo.velocity == velocity and buffalo.state == state and buffalo.state_time == elapsed, "dash animator never modifies gameplay")
+			deepest = minf(deepest, animator.pose_pitch)
+			forward = minf(forward, animator.pose_offset.z)
+			if buffalo.state == Buffalo.State.DASH_RECOVERY:
+				brake = maxf(brake, animator.pose_pitch)
+			buffalo.advance_state(dt)
+		check(deepest < deg_to_rad(-7.0) and forward < -0.1, "dash compresses and drives at %d FPS" % fps)
+		check(brake > deg_to_rad(1.0), "dash recovery shows braking at %d FPS" % fps)
+		check(animator.pose_offset.length() < 0.01 and absf(animator.pose_pitch) < 0.01, "dash returns to neutral at %d FPS" % fps)
+		check(is_equal_approx(buffalo.stamina, stamina) and is_equal_approx(buffalo.dash_cooldown, cooldown), "dash visual leaves cost and cooldown untouched")
+		endpoints.append(Vector2(deepest, forward))
+	for endpoint in endpoints:
+		check(endpoint.distance_to(endpoints[1]) < 0.04, "dash motion is comparable across frame rates")
+	for interrupted in [Buffalo.State.STUNNED, Buffalo.State.CLASH, Buffalo.State.NORMAL]:
+		_pose_for(buffalo, animator, Buffalo.State.DASH_ACTIVE)
+		buffalo.state = interrupted
+		buffalo.state_time = 0.0
+		_step(animator, 60)
+		check(animator.transform.is_finite(), "interrupted dash stays finite")
+		buffalo.state = Buffalo.State.NORMAL
+		_step(animator, 120)
+		check(animator.pose_offset.length() < 0.01, "interrupted dash leaves no residual offset")
+	var old_mode := arena.mode
+	var old_host: bool = arena.network.is_host
+	arena.mode = &"LAN"
+	arena.network.is_host = false
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.DASH_ACTIVE
+	buffalo.state_duration = 0.0
+	_step(animator, 10)
+	check(animator.pose_offset.z < -0.1, "LAN dash progresses without replicated state timing")
+	buffalo.state = Buffalo.State.DASH_RECOVERY
+	_step(animator, 45)
+	check(animator.pose_offset.length() < 0.01 and absf(animator.pose_pitch) < 0.01, "LAN dash recovery settles")
+	arena.mode = old_mode
+	arena.network.is_host = old_host
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.DASH_RECOVERY
+	buffalo.state_duration = 0.0
+	_step(animator, 1)
+	check(animator.transform.is_finite(), "zero-duration dash recovery stays finite")
+	_reset(buffalo, animator)
 
 
 func _test_walk(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
@@ -202,6 +327,42 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	var phase := animator.gait_phase
 	_step(animator, 60)
 	check(absf(animator.gait_phase - phase) < 0.001, "stride phase stops advancing at rest")
+
+
+func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if animator.leg_mesh == null:
+		return
+	for direction in [Vector3.FORWARD, Vector3.BACK]:
+		_reset(buffalo, animator)
+		buffalo.state = Buffalo.State.CLASH
+		_step(animator, 120)
+		var lifted := 0.0
+		var reach := 0.0
+		var previous_phase := animator.gait_phase
+		for i in 120:
+			buffalo.position += direction * GameBalance.get_number("lock_slide_speed") * TICK
+			var before := buffalo.global_transform
+			_step(animator, 1)
+			if i == 60:
+				check(buffalo.global_transform.is_equal_approx(before), "clash steps never move the physics body")
+			lifted = maxf(lifted, animator.leg_mesh.get_blend_shape_value(1))
+			reach = maxf(reach, absf(animator.leg_mesh.get_blend_shape_value(2)))
+		check(lifted > 0.025 and lifted <= GameBalance.get_number("clash_gait_hoof_lift") + 0.001, "clash hooves lift in low steps")
+		check(reach > 0.05 and reach <= GameBalance.get_number("clash_gait_step_reach") + 0.001, "clash steps stay short")
+		check(animator.local_velocity.normalized().dot(direction) > 0.99, "clash gait follows push or retreat displacement")
+		check(absf(animator.gait_phase - previous_phase) > 0.01, "moving clash advances stride phase")
+		_step(animator, 180)
+		var planted := true
+		for index in animator.leg_shape_indices:
+			planted = planted and absf(animator.leg_mesh.get_blend_shape_value(index)) < 0.001
+		check(planted, "stationary clash plants every hoof, even while bracing")
+		var phase := animator.gait_phase
+		_step(animator, 60)
+		check(absf(animator.gait_phase - phase) < 0.001, "stationary clash never cycles hooves in place")
+	buffalo.state = Buffalo.State.NORMAL
+	_step(animator, 60)
+	check(animator.clash_gait_weight < 0.001, "leaving clash restores regular gait")
+	_reset(buffalo, animator)
 
 
 func _test_turn_and_teleport(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
