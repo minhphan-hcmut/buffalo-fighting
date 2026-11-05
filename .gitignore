@@ -17,3 +17,18 @@ tools/godot-mcp/server/build/
 *.log
 *.pyc
 __pycache__/
+
+# CCGS studio (symlinked from ../.claude, not part of the game repo)
+.claude/agents
+.claude/docs
+.claude/hooks
+.claude/rules
+.claude/scripts
+.claude/skills
+.claude/settings.json
+.claude/statusline.sh
+production/session-state/
+production/session-logs/
+
+# Download archives are retained locally; game-ready assets are versioned.
+/assets/source/*.zip
