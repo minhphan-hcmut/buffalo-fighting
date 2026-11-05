@@ -4,6 +4,7 @@ extends RefCounted
 ## flag + number identifiers carried by each buffalo.
 
 const BAMBOO_FENCE: PackedScene = preload("res://assets/environment/bamboo_fence.glb")
+const GROUND_MATERIAL: StandardMaterial3D = preload("res://assets/environment/sparse_grass/ground.tres")
 
 
 static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
@@ -11,7 +12,7 @@ static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(GameBalance.get_number("arena_rx") * 2.0 + 4.0, GameBalance.get_number("arena_rz") * 2.0 + 4.0)
 	ground.mesh = plane
-	ground.material_override = material(Color("#8A5A3B"))
+	ground.material_override = GROUND_MATERIAL
 	parent.add_child(ground)
 	for zone in mud_zones:
 		var mud := MeshInstance3D.new()
