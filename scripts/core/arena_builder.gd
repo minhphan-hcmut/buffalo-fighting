@@ -1,7 +1,10 @@
 class_name ArenaBuilder
 extends RefCounted
-## Builds the placeholder oval arena (ground, mud, fence with two gates, light) and the
+## Builds the oval arena (ground, mud, bamboo fence with two gates, light) and the
 ## flag + number identifiers carried by each buffalo.
+
+const BAMBOO_FENCE: PackedScene = preload("res://assets/environment/bamboo_fence.glb")
+const GROUND_MATERIAL: StandardMaterial3D = preload("res://assets/environment/sparse_grass/ground.tres")
 
 
 static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
@@ -9,7 +12,7 @@ static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(GameBalance.get_number("arena_rx") * 2.0 + 4.0, GameBalance.get_number("arena_rz") * 2.0 + 4.0)
 	ground.mesh = plane
-	ground.material_override = material(Color("#8A5A3B"))
+	ground.material_override = GROUND_MATERIAL
 	parent.add_child(ground)
 	for zone in mud_zones:
 		var mud := MeshInstance3D.new()
@@ -81,15 +84,6 @@ static func _build_fence(parent: Node3D) -> void:
 		var segment := _fence_segment(midpoint, tangent.length())
 		segment.rotation.y = atan2(-tangent.z, tangent.x)
 		parent.add_child(segment)
-		var post := MeshInstance3D.new()
-		var post_mesh := CylinderMesh.new()
-		post_mesh.top_radius = 0.11
-		post_mesh.bottom_radius = 0.11
-		post_mesh.height = 1.4
-		post.mesh = post_mesh
-		post.position = p0 + Vector3.UP * 0.7
-		post.material_override = material(Color("#5B3826"))
-		parent.add_child(post)
 
 
 static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:
@@ -101,10 +95,10 @@ static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:
 	shape.size = Vector3(length, 1.5, 0.28)
 	collision.shape = shape
 	body.add_child(collision)
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = shape.size
-	mesh.mesh = box
-	mesh.material_override = material(Color("#5B3826"))
-	body.add_child(mesh)
+	var fence := BAMBOO_FENCE.instantiate() as Node3D
+	fence.name = "BambooFence"
+	# The exported module has unit width/height and its origin at ground level.
+	fence.scale = Vector3(length, shape.size.y, 1.0)
+	fence.position.y = -shape.size.y * 0.5
+	body.add_child(fence)
 	return body

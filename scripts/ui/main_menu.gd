@@ -97,62 +97,10 @@ func _show_settings() -> void:
 	menu_settings_actions = VBoxContainer.new()
 	menu_settings_actions.add_theme_constant_override("separation", 8)
 	content.add_child(menu_settings_actions)
-	_add_menu_audio_slider("Âm lượng tổng", "Master")
-	_add_menu_audio_slider("Nhạc", "Music")
-	_add_menu_audio_slider("Hiệu ứng", "SFX")
-	var sensitivity := HSlider.new()
-	sensitivity.min_value = 0.03
-	sensitivity.max_value = 0.5
-	sensitivity.step = 0.01
-	sensitivity.value = SessionState.get_mouse_sensitivity()
-	sensitivity.value_changed.connect(func(value: float): SessionState.mouse_sensitivity = value)
-	menu_settings_actions.add_child(_menu_labeled_control("Độ nhạy chuột", sensitivity))
-	var fullscreen := CheckButton.new()
-	fullscreen.text = "Toàn màn hình"
-	fullscreen.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
-	fullscreen.toggled.connect(_set_menu_fullscreen)
-	menu_settings_actions.add_child(fullscreen)
-	var shake := CheckButton.new()
-	shake.text = "Rung camera"
-	shake.button_pressed = SessionState.camera_shake_enabled
-	shake.toggled.connect(func(enabled: bool): SessionState.camera_shake_enabled = enabled)
-	menu_settings_actions.add_child(shake)
+	SettingsControls.populate(menu_settings_actions)
 	var close := _button("QUAY LẠI")
 	close.pressed.connect(func(): menu_settings_layer.hide())
 	menu_settings_actions.add_child(close)
-
-
-func _add_menu_audio_slider(label_text: String, bus_name: StringName) -> void:
-	var bus_index := AudioServer.get_bus_index(bus_name)
-	if bus_index < 0:
-		AudioServer.add_bus()
-		bus_index = AudioServer.get_bus_count() - 1
-		AudioServer.set_bus_name(bus_index, bus_name)
-		AudioServer.set_bus_send(bus_index, "Master")
-	var slider := HSlider.new()
-	slider.min_value = 0.0
-	slider.max_value = 100.0
-	slider.step = 1.0
-	slider.value = AudioServer.get_bus_volume_linear(bus_index) * 100.0
-	slider.value_changed.connect(
-		func(value: float): AudioServer.set_bus_volume_linear(bus_index, value / 100.0)
-	)
-	menu_settings_actions.add_child(_menu_labeled_control(label_text, slider))
-
-
-func _menu_labeled_control(label_text: String, control: Control) -> VBoxContainer:
-	var row := VBoxContainer.new()
-	var label := Label.new()
-	label.text = label_text
-	row.add_child(label)
-	row.add_child(control)
-	return row
-
-
-func _set_menu_fullscreen(enabled: bool) -> void:
-	DisplayServer.window_set_mode(
-		DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED
-	)
 
 
 func _make_centered_layout(size: Vector2) -> VBoxContainer:

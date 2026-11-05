@@ -35,11 +35,11 @@ func setup(actor: Buffalo) -> void:
 
 
 func horizontal_forward() -> Vector3:
-	return Vector3(-sin(yaw), 0.0, -cos(yaw))
+	return YawBasis.forward(yaw)
 
 
 func movement_direction(axis: Vector2) -> Vector3:
-	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	var right := YawBasis.right(yaw)
 	return (right * axis.x - horizontal_forward() * axis.y).limit_length()
 
 

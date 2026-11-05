@@ -99,8 +99,7 @@ func _input(event: InputEvent) -> void:
 	if phase != &"PLAYING":
 		return
 	if mode == &"LAN":
-		network.request_pause(not paused)
-		hud.show_pause_wait(not paused)
+		_request_lan_pause(not paused)
 	else:
 		_set_paused(not paused)
 	get_viewport().set_input_as_handled()
@@ -108,18 +107,22 @@ func _input(event: InputEvent) -> void:
 
 func request_pause_from_menu() -> void:
 	if mode == &"LAN":
-		network.request_pause(not paused)
-		hud.show_pause_wait(not paused)
+		_request_lan_pause(not paused)
 		return
 	_set_paused(true)
 
 
 func resume_from_menu() -> void:
 	if mode == &"LAN":
-		network.request_pause(false)
-		hud.show_pause_wait(false)
+		_request_lan_pause(false)
 		return
 	_set_paused(false)
+
+
+## LAN pause needs the peer's consent: ask the host and show the waiting overlay.
+func _request_lan_pause(requested_state: bool) -> void:
+	network.request_pause(requested_state)
+	hud.show_pause_wait(requested_state)
 
 
 func _set_paused(is_paused: bool) -> void:
@@ -147,10 +150,9 @@ func _on_combat_event(event_name: StringName, _source_slot: int, _target_slot: i
 
 
 func _level_config() -> Dictionary:
-	var file := FileAccess.open("res://data/levels.json", FileAccess.READ)
-	if file == null:
+	var levels := DataFile.load_json("res://data/levels.json")
+	if levels.is_empty():
 		return {}
-	var levels: Dictionary = JSON.parse_string(file.get_as_text())
 	return levels.get(String(level_id), levels["L01"])
 
 
@@ -237,8 +239,8 @@ func _opponent_input(delta: float) -> InputFrame:
 
 
 func _simulate_actor(actor: Buffalo, frame: InputFrame, delta: float) -> void:
-	var camera_forward := Vector3(-sin(frame.camera_yaw), 0.0, -cos(frame.camera_yaw))
-	var camera_right := Vector3(cos(frame.camera_yaw), 0.0, -sin(frame.camera_yaw))
+	var camera_forward := YawBasis.forward(frame.camera_yaw)
+	var camera_right := YawBasis.right(frame.camera_yaw)
 	var move_dir := actor.movement_world(frame, camera_forward, camera_right)
 	var terrain_factor := 1.0
 	if ArenaBounds.in_mud(actor.global_position, mud_zones):
@@ -304,10 +306,19 @@ func get_snapshot() -> Dictionary:
 		"clash_active": clash.is_active(),
 		"lock_balance": float(clash.active.get("lock_balance", 0.0)),
 		"clash_time_left": maxf(0.0, GameBalance.get_number("lock_max_s") - float(clash.active.get("time", 0.0))) if clash.is_active() else 0.0,
-		"players": [
-			{"slot": 1, "position": Vector2(player.position.x, player.position.z), "facing": Vector2(player.facing.x, player.facing.z), "spirit": player.spirit, "stamina": player.stamina, "action": player.state_name(), "hooking": player.clash_hooked},
-			{"slot": 2, "position": Vector2(opponent.position.x, opponent.position.z), "facing": Vector2(opponent.facing.x, opponent.facing.z), "spirit": opponent.spirit, "stamina": opponent.stamina, "action": opponent.state_name(), "hooking": opponent.clash_hooked}
-		]
+		"players": [_actor_snapshot(player), _actor_snapshot(opponent)]
+	}
+
+
+func _actor_snapshot(actor: Buffalo) -> Dictionary:
+	return {
+		"slot": actor.slot,
+		"position": Vector2(actor.position.x, actor.position.z),
+		"facing": Vector2(actor.facing.x, actor.facing.z),
+		"spirit": actor.spirit,
+		"stamina": actor.stamina,
+		"action": actor.state_name(),
+		"hooking": actor.clash_hooked
 	}
 
 

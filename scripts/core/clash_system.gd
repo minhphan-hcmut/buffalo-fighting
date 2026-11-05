@@ -68,8 +68,8 @@ func _blend(a: Buffalo, b: Buffalo, delta: float) -> bool:
 	b.global_position = Vector3(active["from_b"]).lerp(active["to_b"], weight)
 	a.rotation.y = lerp_angle(float(active["yaw_from_a"]), float(active["yaw_to_a"]), weight)
 	b.rotation.y = lerp_angle(float(active["yaw_from_b"]), float(active["yaw_to_b"]), weight)
-	a.facing = Vector3(-sin(a.rotation.y), 0.0, -cos(a.rotation.y))
-	b.facing = Vector3(-sin(b.rotation.y), 0.0, -cos(b.rotation.y))
+	a.facing = YawBasis.forward(a.rotation.y)
+	b.facing = YawBasis.forward(b.rotation.y)
 	_fit_pair(a, b)
 	return true
 
@@ -154,8 +154,8 @@ func push_strength(actor: Buffalo, choice: StringName) -> float:
 	if not is_instance_valid(partner):
 		return 0.0
 	var toward := (partner.global_position - actor.global_position).normalized()
-	var camera_forward := Vector3(-sin(actor.input_frame.camera_yaw), 0.0, -cos(actor.input_frame.camera_yaw))
-	var camera_right := Vector3(cos(actor.input_frame.camera_yaw), 0.0, -sin(actor.input_frame.camera_yaw))
+	var camera_forward := YawBasis.forward(actor.input_frame.camera_yaw)
+	var camera_right := YawBasis.right(actor.input_frame.camera_yaw)
 	var move_dir := actor.movement_world(actor.input_frame, camera_forward, camera_right)
 	if move_dir.length_squared() <= 0.001 or move_dir.normalized().dot(toward) < 0.5:
 		return 0.0

@@ -28,9 +28,33 @@ Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng F
 - `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
 - `assets/characters/buffalo/buffalo.glb`: model dự phòng; nguồn tại `assets/blender/buffalo.blend`.
 - `assets/audio/`: âm thanh gameplay; ZIP nguồn được giữ trong `assets/audio/source/`.
+- `assets/environment/`: model rào tre và vật liệu sân đất/cỏ dùng trong game.
+- `assets/blender/bamboo_fence.blend`: nguồn Geometry Nodes của hàng rào tre.
+- `assets/source/`: archive tải về giữ local (không commit ZIP); không được Godot import.
+- `tools/export_bamboo_fence.py`, `tools/import_sparse_grass.py`: chuyển nguồn asset thành tài nguyên game.
+- `production/qa/evidence/`: ảnh kiểm tra giao diện và môi trường trong game.
 - `references/`: ảnh tham khảo, bao gồm `water-buffalo-reference.jpg`.
 - `tools/godot-mcp/` và `addons/godot_mcp/`: Godot MCP.
 - `.mcp.json`: đăng ký MCP cho Godot và Blender.
+
+## Tái tạo asset môi trường
+
+Chạy từ thư mục repo, dùng Blender trong PATH (hoặc thay `blender` bằng đường dẫn bản cài):
+
+```sh
+blender --background --disable-autoexec assets/blender/bamboo_fence.blend \
+  --python tools/export_bamboo_fence.py -- --output assets/environment/bamboo_fence.glb
+blender --background --disable-autoexec --python tools/import_sparse_grass.py -- \
+  --source assets/source/sparse_grass_4k.blend.zip --output assets/environment/sparse_grass
+```
+
+ZIP sân cỏ gốc lớn hơn giới hạn file GitHub thông thường nên chỉ giữ local. Khi clone mới,
+đặt bản tải `sparse_grass_4k.blend.zip` vào `assets/source/` nếu cần tái tạo texture;
+chạy game không cần ZIP hoặc Blender vì tài nguyên đã chuyển đổi được commit đầy đủ.
+Không tự động ghi đè texture `.import`: các map sân cần `mipmaps/generate=true`
+để tránh nhiễu khi nhìn xa. Vật liệu lát theo không gian thế giới, một ô mỗi 4 m.
+Nguồn Blender/ZIP không bị thay đổi khi chạy script. Rào giữ va chạm và hai cổng cũ;
+sân dùng albedo/normal/roughness 2K, không dùng displacement hình học.
 
 ## Chạy và kiểm tra
 
@@ -56,6 +80,7 @@ godot --headless --path . --script res://tests/lan_snapshot_test.gd
 godot --headless --path . --script res://tests/lan_match_host.gd
 godot --headless --path . --script res://tests/lan_match_client.gd
 godot --headless --path . --script res://tests/pause_test.gd
+godot --headless --path . --script res://tests/pause_layout_test.gd
 godot --headless --path . --script res://tests/animation_test.gd
 godot --headless --path . --script res://tests/hero_audio_test.gd
 ```

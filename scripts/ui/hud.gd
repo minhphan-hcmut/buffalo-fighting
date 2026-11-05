@@ -123,10 +123,8 @@ func _build_pause_overlay(root: Control) -> void:
 	shade.color = Color("#17262EE8")
 	pause_overlay.add_child(shade)
 	pause_panel = PanelContainer.new()
-	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
-	pause_panel.position = Vector2(-260, -220)
-	pause_panel.size = Vector2(520, 440)
 	pause_overlay.add_child(pause_panel)
+	_place_pause_panel(Vector2(520, 440))
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 14)
 	pause_panel.add_child(content)
@@ -141,6 +139,16 @@ func _build_pause_overlay(root: Control) -> void:
 	pause_actions = VBoxContainer.new()
 	pause_actions.add_theme_constant_override("separation", 10)
 	content.add_child(pause_actions)
+
+
+## Centres the pause panel at `panel_size`. Uses anchor offsets, not `position`: once the panel is
+## in the tree, `position` is relative to the overlay's top-left corner, not to the centre anchor.
+func _place_pause_panel(panel_size: Vector2) -> void:
+	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_panel.offset_left = -panel_size.x * 0.5
+	pause_panel.offset_top = -panel_size.y * 0.5
+	pause_panel.offset_right = panel_size.x * 0.5
+	pause_panel.offset_bottom = panel_size.y * 0.5
 
 
 func _clear_pause_actions() -> void:
@@ -159,8 +167,7 @@ func _pause_button(text: String, callback: Callable) -> void:
 
 func show_pause() -> void:
 	pause_overlay.visible = true
-	pause_panel.position = Vector2(-260, -220)
-	pause_panel.size = Vector2(520, 440)
+	_place_pause_panel(Vector2(520, 440))
 	pause_title.text = "TẠM DỪNG" if controller.mode == &"SOLO" else "TRẬN LAN ĐANG TẠM DỪNG"
 	pause_detail.text = "Trận solo đã dừng." if controller.mode == &"SOLO" else "Hai người chơi đã đồng ý tạm dừng."
 	_clear_pause_actions()
@@ -176,8 +183,7 @@ func show_pause() -> void:
 
 func show_pause_wait(requested_pause: bool) -> void:
 	pause_overlay.visible = true
-	pause_panel.position = Vector2(-260, -220)
-	pause_panel.size = Vector2(520, 440)
+	_place_pause_panel(Vector2(520, 440))
 	pause_title.text = "ĐANG CHỜ XÁC NHẬN"
 	pause_detail.text = (
 		"Yêu cầu tạm dừng đã gửi tới đối phương."
@@ -191,8 +197,7 @@ func show_pause_wait(requested_pause: bool) -> void:
 
 func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
 	pause_overlay.visible = true
-	pause_panel.position = Vector2(-260, -190)
-	pause_panel.size = Vector2(520, 380)
+	_place_pause_panel(Vector2(520, 380))
 	pause_title.text = "YÊU CẦU TỪ NGƯỜI CHƠI %d" % peer_id
 	pause_detail.text = (
 		"Đối phương muốn tạm dừng trận."
@@ -211,69 +216,16 @@ func hide_pause() -> void:
 
 func show_settings() -> void:
 	pause_overlay.visible = true
-	pause_panel.position = Vector2(-260, -310)
-	pause_panel.size = Vector2(520, 620)
+	_place_pause_panel(Vector2(520, 620))
 	pause_title.text = "CÀI ĐẶT"
 	pause_detail.text = "Âm lượng áp dụng cho các bus audio của project."
 	_clear_pause_actions()
-	_add_audio_slider("Âm lượng tổng", "Master")
-	_add_audio_slider("Nhạc", "Music")
-	_add_audio_slider("Hiệu ứng", "SFX")
-	var sensitivity := HSlider.new()
-	sensitivity.min_value = 0.03
-	sensitivity.max_value = 0.5
-	sensitivity.step = 0.01
-	sensitivity.value = SessionState.get_mouse_sensitivity()
-	pause_actions.add_child(_labeled_control("Độ nhạy chuột", sensitivity))
-	sensitivity.value_changed.connect(_set_mouse_sensitivity)
-	var fullscreen := CheckButton.new()
-	fullscreen.text = "Toàn màn hình"
-	fullscreen.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
-	fullscreen.toggled.connect(_set_fullscreen)
-	pause_actions.add_child(fullscreen)
-	var shake := CheckButton.new()
-	shake.text = "Rung camera"
-	shake.button_pressed = SessionState.camera_shake_enabled
-	shake.toggled.connect(func(enabled: bool): SessionState.camera_shake_enabled = enabled)
-	pause_actions.add_child(shake)
+	SettingsControls.populate(pause_actions, _set_mouse_sensitivity)
 	_pause_button("QUAY LẠI", show_pause)
 
 
-func _add_audio_slider(label_text: String, bus_name: StringName) -> void:
-	var bus_index := AudioServer.get_bus_index(bus_name)
-	if bus_index < 0:
-		AudioServer.add_bus()
-		bus_index = AudioServer.get_bus_count() - 1
-		AudioServer.set_bus_name(bus_index, bus_name)
-		AudioServer.set_bus_send(bus_index, "Master")
-	var slider := HSlider.new()
-	slider.min_value = 0.0
-	slider.max_value = 100.0
-	slider.step = 1.0
-	slider.value = AudioServer.get_bus_volume_linear(bus_index) * 100.0
-	slider.value_changed.connect(
-		func(value: float): AudioServer.set_bus_volume_linear(bus_index, value / 100.0)
-	)
-	pause_actions.add_child(_labeled_control(label_text, slider))
-
-
-func _labeled_control(label_text: String, control: Control) -> VBoxContainer:
-	var row := VBoxContainer.new()
-	var label := Label.new()
-	label.text = label_text
-	row.add_child(label)
-	row.add_child(control)
-	return row
-
-
-func _set_fullscreen(enabled: bool) -> void:
-	DisplayServer.window_set_mode(
-		DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED
-	)
-
-
+## Applies a new sensitivity to the live camera (SessionState is updated by SettingsControls).
 func _set_mouse_sensitivity(value: float) -> void:
-	SessionState.mouse_sensitivity = value
 	controller.get_node("CameraRig").mouse_sensitivity = value
 
 
