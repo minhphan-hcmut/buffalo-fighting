@@ -9,14 +9,21 @@ var streams: Dictionary = {}
 var settings: Dictionary = {}
 
 
+## Index of the audio bus `bus_name`, creating it (routed to Master) when missing.
+static func ensure_bus(bus_name: StringName) -> int:
+	var index := AudioServer.get_bus_index(bus_name)
+	if index < 0:
+		AudioServer.add_bus()
+		index = AudioServer.get_bus_count() - 1
+		AudioServer.set_bus_name(index, bus_name)
+		AudioServer.set_bus_send(index, "Master")
+	return index
+
+
 func _ready() -> void:
-	settings = JSON.parse_string(FileAccess.get_file_as_string("res://data/audio.json"))
+	settings = DataFile.load_json("res://data/audio.json")
 	for bus_name in ["Music", "SFX"]:
-		if AudioServer.get_bus_index(bus_name) < 0:
-			AudioServer.add_bus()
-			var index := AudioServer.get_bus_count() - 1
-			AudioServer.set_bus_name(index, bus_name)
-			AudioServer.set_bus_send(index, "Master")
+		ensure_bus(bus_name)
 	music = AudioStreamPlayer.new()
 	music.bus = &"Music"
 	add_child(music)

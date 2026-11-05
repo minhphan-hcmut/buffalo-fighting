@@ -13,11 +13,9 @@ func _ready() -> void:
 static func _load_values() -> void:
 	if not values.is_empty():
 		return
-	var file := FileAccess.open(PATH, FileAccess.READ)
-	if file == null:
+	values = DataFile.load_json(PATH)
+	if values.is_empty():
 		push_error("Missing balance data: %s" % PATH)
-		return
-	values = JSON.parse_string(file.get_as_text())
 
 
 static func get_number(key: String, fallback: float = 0.0) -> float:

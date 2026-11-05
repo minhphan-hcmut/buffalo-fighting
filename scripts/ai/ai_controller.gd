@@ -24,9 +24,8 @@ var profile_data: Dictionary = {}
 
 
 func _ready() -> void:
-	var file := FileAccess.open("res://data/ai_profiles.json", FileAccess.READ)
-	if file != null:
-		var profiles: Dictionary = JSON.parse_string(file.get_as_text())
+	var profiles := DataFile.load_json("res://data/ai_profiles.json")
+	if not profiles.is_empty():
 		profile_data = profiles.get(String(profile), profiles["EASY"])
 	rng.seed = 31 + int(profile)
 
@@ -136,8 +135,8 @@ func _recover_move(delta: float, distance: float, toward: Vector3) -> Vector2:
 	if tangent.dot(away) < 0.0 or (is_zero_approx(tangent.dot(away)) and strafe_sign < 0.0):
 		tangent = -tangent
 	var yaw := atan2(-toward.x, -toward.z)
-	var camera_forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
-	var camera_right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	var camera_forward := YawBasis.forward(yaw)
+	var camera_right := YawBasis.right(yaw)
 	return Vector2(tangent.dot(camera_right), -tangent.dot(camera_forward))
 
 

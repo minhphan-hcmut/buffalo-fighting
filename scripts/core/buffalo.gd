@@ -321,7 +321,7 @@ func update_facing(delta: float) -> void:
 	var target_yaw := camera_yaw
 	var max_step := GameBalance.get_angle("turn_rate_deg_s") * delta
 	rotation.y = wrapf(rotation.y + clampf(angle_difference(rotation.y, target_yaw), -max_step, max_step), -PI, PI)
-	facing = Vector3(-sin(rotation.y), 0.0, -cos(rotation.y)).normalized()
+	facing = YawBasis.forward(rotation.y)
 
 
 func mark_flee() -> void:
