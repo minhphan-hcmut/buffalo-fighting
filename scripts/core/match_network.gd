@@ -67,6 +67,9 @@ func upload_input(delta: float, sampled_frame: InputFrame) -> void:
 
 ## Client: ease both buffaloes toward the latest host positions.
 func interpolate(delta: float) -> void:
+	# After RESULT the local outro moves the buffaloes.
+	if controller.finished:
+		return
 	for slot in remote_targets:
 		var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
 		var target_position: Vector3 = remote_targets[slot]
@@ -147,6 +150,11 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		controller.finished = true
 		controller.winner_slot = int(snapshot.get("winner_slot", 0))
 		controller.end_reason = StringName(snapshot.get("end_reason", "NONE"))
+		# Start the outro from the host's final positions, as the host does.
+		for slot in remote_targets:
+			var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
+			actor.global_position = remote_targets[slot]
+		controller.outro.start()
 		if is_instance_valid(controller.hud):
 			controller.hud.show_result(controller.winner_slot, controller.end_reason)
 

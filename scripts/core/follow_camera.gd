@@ -11,6 +11,11 @@ var gameplay_enabled := true
 var shake_elapsed := 1.0
 var shake_duration := 0.0
 var shake_strength := 0.0
+## Seconds since the RESULT overview started, or -1 while following the buffalo.
+var overview_time := -1.0
+var _overview_from := Vector3.ZERO
+var _overview_yaw_from := 0.0
+var _overview_yaw_to := 0.0
 @onready var arm: SpringArm3D = $SpringArm3D
 @onready var camera: Camera3D = $SpringArm3D/Camera3D
 
@@ -43,7 +48,43 @@ func movement_direction(axis: Vector2) -> Vector3:
 	return (right * axis.x - horizontal_forward() * axis.y).limit_length()
 
 
+## RESULT: rise from the buffalo to a high view of the whole arena. The view looks across the
+## arena from the long side nearest the current view, so both gates (on the X axis) stay in frame.
+func show_overview() -> void:
+	if overview_time >= 0.0:
+		return
+	overview_time = 0.0
+	_overview_from = global_position
+	_overview_yaw_from = yaw
+	_overview_yaw_to = 0.0 if absf(angle_difference(yaw, 0.0)) <= PI * 0.5 else PI
+	gameplay_enabled = false
+	# High above both buffaloes and the fence: nothing for the arm to collide with.
+	arm.collision_mask = 0
+
+
+## World position the camera ends at in the overview.
+func overview_camera_position() -> Vector3:
+	var pitch := GameBalance.get_angle("result_camera_pitch_deg", 60.0)
+	var length := GameBalance.get_number("result_camera_distance", 22.0)
+	return Vector3.UP * (height + length * sin(pitch)) - YawBasis.forward(_overview_yaw_to) * length * cos(pitch)
+
+
+func _follow_overview() -> void:
+	var blend := GameBalance.get_number("result_camera_blend_s", 1.2)
+	var weight := 1.0 if blend <= 0.0 else smoothstep(0.0, 1.0, overview_time / blend)
+	global_position = _overview_from.lerp(Vector3.UP * height, weight)
+	yaw = lerp_angle(_overview_yaw_from, _overview_yaw_to, weight)
+	global_rotation = Vector3(0.0, yaw, 0.0)
+	arm.position = Vector3.ZERO
+	var pitch := lerpf(GameBalance.get_angle("camera_pitch_deg", 45.0), GameBalance.get_angle("result_camera_pitch_deg", 60.0), weight)
+	arm.rotation = Vector3(-pitch, 0.0, 0.0)
+	arm.spring_length = lerpf(distance, GameBalance.get_number("result_camera_distance", 22.0), weight)
+
+
 func follow_target() -> void:
+	if overview_time >= 0.0:
+		_follow_overview()
+		return
 	if not is_instance_valid(target):
 		return
 	# Follow position only, independent of body heading and Visual animation.
@@ -64,6 +105,8 @@ func follow_target() -> void:
 
 func _physics_process(delta: float) -> void:
 	shake_elapsed += delta
+	if overview_time >= 0.0:
+		overview_time += delta
 	follow_target()
 
 

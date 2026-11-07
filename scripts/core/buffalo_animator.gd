@@ -314,6 +314,8 @@ func _clash_advantage() -> float:
 func _result_for_self() -> int:
 	if controller == null or not controller.finished or controller.winner_slot == 0:
 		return 0
+	if controller.outro.is_revealing_lot():
+		return 0
 	if buffalo.state == Buffalo.State.FLEE:
 		return 0
 	return 1 if controller.winner_slot == buffalo.slot else -1

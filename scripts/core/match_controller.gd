@@ -35,6 +35,7 @@ var mud_zones: Array[StringName] = []
 var local_slot := 1
 var combat := CombatResolver.new(self)
 var clash := ClashSystem.new(self)
+var outro := MatchOutro.new(self)
 var local_input := MatchInput.new()
 ## Null outside LAN.
 var lan: MatchNetwork
@@ -44,6 +45,10 @@ var active_clash: Dictionary:
 		return clash.active
 	set(value):
 		clash.active = value
+## True once the match is over and its outro has played; the result screen waits for this.
+var result_ready: bool:
+	get:
+		return finished and outro.is_done()
 
 
 func _ready() -> void:
@@ -173,7 +178,10 @@ func start_playing() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if paused or finished:
+	if paused:
+		return
+	if finished:
+		outro.process(delta)
 		return
 	if phase == &"COUNTDOWN":
 		local_input.update_release_gates()
@@ -283,6 +291,7 @@ func _finish(winner: int, reason: StringName) -> void:
 	end_reason = reason
 	player.freeze()
 	opponent.freeze()
+	outro.start()
 	match_ended.emit(winner_slot, end_reason)
 
 

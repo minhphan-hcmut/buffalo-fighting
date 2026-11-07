@@ -60,6 +60,7 @@ func run() -> void:
 	check(saw_post_clash_stun, "client shows the loser STUNNED right after the CLASH")
 	check(playing_states_normal, "client states are NORMAL/NORMAL with no CLASH before the match ends")
 	check(arena.end_reason == &"FLEE" and arena.winner_slot == 1, "client receives RESULT: slot 1 wins by FLEE (got %s / %d)" % [arena.end_reason, arena.winner_slot])
+	check(arena.outro.running and arena.opponent.state == Buffalo.State.FLEE, "client plays the outro: slot 2 leaves the arena")
 	manager.leave()
 	print("LAN CLIENT FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)

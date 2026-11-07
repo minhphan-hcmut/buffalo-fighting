@@ -30,7 +30,7 @@ func _process(_delta: float) -> void:
 	if not scene is MatchController:
 		hide()
 		return
-	var is_solo_result: bool = SessionState.mode == &"SOLO" and scene.get("phase") == &"RESULT"
+	var is_solo_result: bool = SessionState.mode == &"SOLO" and scene.get("phase") == &"RESULT" and scene.get("result_ready")
 	visible = is_solo_result
 	if is_solo_result:
 		var result_key := "%s:%s:%s" % [

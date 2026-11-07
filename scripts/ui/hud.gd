@@ -289,7 +289,13 @@ func _process(_delta: float) -> void:
 	opponent_spirit.value = controller.opponent.spirit
 	opponent_stamina.value = controller.opponent.stamina
 	timer_label.text = "%02d:%02d" % [int(controller.remaining_time) / 60, int(controller.remaining_time) % 60]
-	center_label.text = "CÒN %.1f" % controller.countdown_time if controller.phase == &"COUNTDOWN" else ""
+	if controller.phase == &"COUNTDOWN":
+		center_label.text = "CÒN %.1f" % controller.countdown_time
+	elif controller.outro.is_revealing_lot():
+		center_label.text = "BỐC THĂM" + ".".repeat(1 + int(controller.outro.time * 4.0) % 3)
+	else:
+		center_label.text = ""
+	result_label.visible = controller.mode == &"LAN" and controller.result_ready
 	if controller.phase == &"PLAYING":
 		tutorial_label.text = "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · Esc Tạm dừng"
 	elif controller.phase == &"RESULT":
@@ -322,5 +328,5 @@ func show_result(winner_slot: int, reason: StringName) -> void:
 		&"TIME": "THẮNG THỜI GIAN · KHÍ THẾ CAO HƠN",
 		&"LOT": "BỐC THĂM · LOT"
 	}.get(reason, "TRẬN KẾT THÚC")
-	result_label.visible = controller.mode == &"LAN"
+	# Shown by _process once the outro has played.
 	result_label.text = "%s\n%s" % [winner, reason_text]

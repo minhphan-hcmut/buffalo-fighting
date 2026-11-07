@@ -14,6 +14,16 @@ static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
 	ground.mesh = plane
 	ground.material_override = GROUND_MATERIAL
 	parent.add_child(ground)
+	# Gate corridors (GDD 4.1): ground the loser walks out on after the match.
+	var corridor_length := GameBalance.get_number("gate_corridor_length", 6.0)
+	for side in [-1.0, 1.0]:
+		var corridor := MeshInstance3D.new()
+		var corridor_plane := PlaneMesh.new()
+		corridor_plane.size = Vector2(corridor_length, GameBalance.get_number("gate_width") + 2.0)
+		corridor.mesh = corridor_plane
+		corridor.material_override = GROUND_MATERIAL
+		corridor.position = Vector3(side * (GameBalance.get_number("arena_rx") + corridor_length * 0.5), -0.005, 0.0)
+		parent.add_child(corridor)
 	for zone in mud_zones:
 		var mud := MeshInstance3D.new()
 		var cylinder := CylinderMesh.new()
