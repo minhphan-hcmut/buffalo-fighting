@@ -27,7 +27,7 @@ Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng F
 - `scripts/ui/`: menu, lobby và HUD.
 - `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
 - `assets/characters/buffalo/buffalo.glb`: model dự phòng; nguồn tại `assets/blender/buffalo.blend`.
-- `assets/audio/`: âm thanh gameplay; ZIP nguồn được giữ trong `assets/audio/source/`.
+- `assets/audio/`: âm thanh gameplay; ZIP nguồn chỉ giữ local trong `assets/audio/source/` (không commit).
 - `assets/environment/`: model rào tre và vật liệu sân đất/cỏ dùng trong game.
 - `assets/blender/bamboo_fence.blend`: nguồn Geometry Nodes của hàng rào tre.
 - `assets/source/`: archive tải về giữ local (không commit ZIP); không được Godot import.
