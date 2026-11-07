@@ -25,6 +25,7 @@ func connect_signals() -> void:
 	network.input_received.connect(_on_remote_input)
 	network.snapshot_received.connect(_on_snapshot_received)
 	network.connection_lost.connect(_on_connection_lost)
+	network.event_received.connect(_on_event_received)
 	network.pause_request_received.connect(controller._on_pause_request_received)
 	network.pause_state_changed.connect(controller._on_pause_state_changed)
 
@@ -39,6 +40,11 @@ func broadcast_snapshot(delta: float, snapshot: Dictionary) -> void:
 	if snapshot_accumulator >= SEND_INTERVAL:
 		network.send_snapshot(snapshot)
 		snapshot_accumulator = fmod(snapshot_accumulator, SEND_INTERVAL)
+
+
+## Host: the snapshot that ends the match goes out once and reliably; no snapshot follows RESULT.
+func send_result(snapshot: Dictionary) -> void:
+	network.send_event({"type": "RESULT", "snapshot": snapshot})
 
 
 ## Client: merge this tick's input (edges are OR-ed so none are lost) and upload at 30 Hz.
@@ -109,6 +115,11 @@ func _on_remote_input(_peer_id: int, payload: Dictionary) -> void:
 		else:
 			remote_frame.guard_held = false
 			remote_frame.guard_pressed = false
+
+
+func _on_event_received(payload: Dictionary) -> void:
+	if payload.get("type") == "RESULT" and payload.get("snapshot") is Dictionary:
+		_on_snapshot_received(payload["snapshot"])
 
 
 func _on_snapshot_received(snapshot: Dictionary) -> void:

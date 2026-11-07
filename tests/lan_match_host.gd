@@ -58,6 +58,13 @@ func run() -> void:
 	check(is_equal_approx(a.spirit, 100.0) and is_equal_approx(b.spirit, 86.0), "host final SPIRIT is 100/86")
 	check(saw_post_clash_stun, "host loser was STUNNED after the CLASH")
 	check(a.state == Buffalo.State.NORMAL and b.state == Buffalo.State.NORMAL, "host final states are NORMAL/NORMAL")
+	# End the match on a tick that skips the 30 Hz snapshot slot: RESULT must still reach the client.
+	arena.lan.snapshot_accumulator = 0.0
+	b.spirit = 0.0
+	await physics_frame
+	check(arena.phase == &"RESULT" and arena.winner_slot == 1 and arena.end_reason == &"FLEE", "host ends the match: slot 1 wins by FLEE")
+	for wait in 30:
+		await physics_frame
 	root.get_node("NetworkManager").leave()
 	print("LAN HOST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)

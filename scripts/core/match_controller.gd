@@ -217,7 +217,10 @@ func _physics_process(delta: float) -> void:
 	var snapshot := get_snapshot()
 	snapshot_changed.emit(snapshot)
 	if lan != null:
-		lan.broadcast_snapshot(delta, snapshot)
+		if finished:
+			lan.send_result(snapshot)
+		else:
+			lan.broadcast_snapshot(delta, snapshot)
 
 
 func _process(delta: float) -> void:
