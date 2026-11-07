@@ -1,6 +1,6 @@
 # Chọi trâu — Tóm tắt triển khai
 
-**Nguồn thiết kế:** [GDD Skeleton Chọi Trâu v0.4](GDD_Skeleton_Choi_Trau_v0.4.docx). DOCX là tài liệu thiết kế chuẩn; trang này chỉ tóm tắt đối chiếu với repo, không thay thế hay sao chép GDD.
+**Nguồn thiết kế:** [GDD Skeleton Chọi Trâu v0.4](GDD_Skeleton_Choi_Trau_v0.4.docx) (đã có bản mới hơn: [GDD v0.7](GDD_Choi_Trau_v0.7.md)). Trang này chỉ tóm tắt đối chiếu với repo, không thay thế hay sao chép GDD.
 
 ## Định hướng
 
