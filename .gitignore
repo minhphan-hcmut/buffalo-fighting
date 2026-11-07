@@ -29,6 +29,12 @@ __pycache__/
 .claude/statusline.sh
 production/session-state/
 production/session-logs/
+docs/engine-reference
+.claude/settings.local.json
 
 # Download archives are retained locally; game-ready assets are versioned.
 /assets/source/*.zip
+/assets/*/source/*.zip
+
+# Export output
+/build/
