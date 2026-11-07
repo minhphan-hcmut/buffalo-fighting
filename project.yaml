@@ -63,3 +63,7 @@ commands:
   test: "bash tools/run_tests.sh"
   run: "godot --path . --windowed --resolution 1280x720"
   smoke: "godot --headless --path . --quit-after 5"
+
+modes:
+  rigor: standard
+  automation: guided
