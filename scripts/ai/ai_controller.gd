@@ -21,13 +21,18 @@ var retreat_stalled := false
 var cached_clash_action: StringName = &"PUSH"
 var rng := RandomNumberGenerator.new()
 var profile_data: Dictionary = {}
+var observed_attack := -1
+var parry_delay := -1.0
+var counter_decided := false
+var wants_counter := false
 
 
 func _ready() -> void:
 	var profiles := DataFile.load_json("res://data/ai_profiles.json")
 	if not profiles.is_empty():
 		profile_data = profiles.get(String(profile), profiles["EASY"])
-	rng.seed = 31 + int(profile)
+	var match_controller := get_parent() as MatchController
+	rng.seed = match_controller.match_seed if match_controller != null else 31
 
 
 func build_input(delta: float) -> InputFrame:
@@ -41,6 +46,7 @@ func build_input(delta: float) -> InputFrame:
 	var distance := offset.length()
 	var toward := offset.normalized() if distance > 0.001 else actor.forward()
 	frame.camera_yaw = atan2(-toward.x, -toward.z)
+	_observe_attack()
 	if actor.state == Buffalo.State.CLASH:
 		if decision_time <= 0.0:
 			decision_time = _param("reaction_s", 0.65)
@@ -51,12 +57,52 @@ func build_input(delta: float) -> InputFrame:
 		return frame
 	if actor.state in [Buffalo.State.STUNNED, Buffalo.State.FLEE]:
 		return frame
+	if actor.counter_window <= 0.0:
+		counter_decided = false
+		wants_counter = false
+	elif not counter_decided:
+		counter_decided = true
+		wants_counter = rng.randf() < _param("counter_chance", 0.0)
+	if wants_counter and actor.counter_window > 0.0:
+		frame.move = Vector2(0.0, -1.0)
+		if ArenaBounds.head_gap(actor, target) <= GameBalance.get_number("horn_reach"):
+			frame.horn_pressed = actor.horn_cooldown <= 0.0 and actor.stamina >= GameBalance.get_number("horn_cost")
+		return frame
+	if parry_delay >= 0.0:
+		parry_delay -= delta
+		if parry_delay <= 0.000001:
+			frame.parry_pressed = actor.state in [Buffalo.State.NORMAL, Buffalo.State.GUARD] and actor.parry_cooldown <= 0.0 and actor.stamina >= GameBalance.get_number("parry_stamina_cost")
+			parry_delay = -1.0
+		return frame
 	if decision_time <= 0.0:
 		decision_time = _param("reaction_s", 0.65)
 		_decide(frame, distance, toward)
 	frame.move = _recover_move(delta, distance, toward) if recovering and state == State.RECOVER else held_move
 	frame.guard_held = held_guard
 	return frame
+
+
+## Roll once at the start of each attack; scheduling bypasses the ordinary reaction timer.
+func _observe_attack() -> void:
+	if target.attack_serial == observed_attack:
+		return
+	observed_attack = target.attack_serial
+	parry_delay = -1.0
+	if not target.is_committed() or not _target_faces_actor():
+		return
+	var roll := rng.randf()
+	if roll >= _param("parry_chance", 0.0):
+		return
+	if actor.state not in [Buffalo.State.NORMAL, Buffalo.State.GUARD] or actor.parry_cooldown > 0.0 or actor.stamina < GameBalance.get_number("parry_stamina_cost"):
+		return
+	var arrival := maxf(0.0, target.state_duration - target.state_time)
+	if target.attack_kind == &"DASH":
+		arrival = maxf(0.0, ArenaBounds.head_gap(target, actor) - GameBalance.get_number("dash_hit_gap")) / GameBalance.get_number("dash_speed")
+		if arrival > target.state_duration - target.state_time:
+			return
+	elif ArenaBounds.head_gap(target, actor) > GameBalance.get_number("horn_reach"):
+		return
+	parry_delay = maxf(0.0, arrival - GameBalance.get_number("ai_parry_lead_s"))
 
 
 func _param(key: String, fallback: float) -> float:

@@ -46,16 +46,17 @@ func stream_for(cue: String) -> AudioStream:
 	return streams[cue] as AudioStream
 
 
-func play_sfx(cue: String) -> void:
+func play_sfx(cue: String) -> AudioStreamPlayer:
 	var stream := stream_for(cue)
 	if stream == null:
-		return
+		return null
 	for voice in voices:
-		if not voice.playing:
+		if not voice.playing and not voice.stream_paused:
 			voice.stream = stream
 			voice.volume_db = float(settings.get("sfx_db", -8.0))
 			voice.play()
-			return
+			return voice
+	return null
 
 
 func play_music(cue: String, looped := false) -> void:

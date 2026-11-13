@@ -61,6 +61,7 @@ func _test_decision_behaviour() -> void:
 	# GUARD is held for the whole decision window, not a single tick.
 	ai.profile = &"NORMAL"
 	ai.profile_data = _profile("NORMAL")
+	ai.profile_data["parry_chance"] = 0.0 # Isolate the existing held-GUARD check.
 	arena.player.position = Vector3.ZERO
 	arena.opponent.position = Vector3(3.0, 0.0, 0.0)
 	arena.player.state = Buffalo.State.HORN_STARTUP

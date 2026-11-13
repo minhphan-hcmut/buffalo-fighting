@@ -45,7 +45,7 @@ func run() -> void:
 	arena.player.begin_input(frame)
 	check(arena.player.state == Buffalo.State.HORN_STARTUP, "HORN starts startup")
 	check(arena.player.stamina == 80.0, "HORN costs stamina")
-	arena.player.advance_state(0.12)
+	arena.player.advance_state(GameBalance.get_number("horn_startup_s"))
 	check(arena.player.state == Buffalo.State.HORN_ACTIVE, "HORN startup becomes active")
 	check(arena.get_snapshot().has("players"), "MatchSnapshot contract exists")
 	arena.free()

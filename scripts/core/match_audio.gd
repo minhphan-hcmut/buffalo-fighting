@@ -1,16 +1,18 @@
 extends Node
-## Audio observer: state transitions also work on LAN clients receiving snapshots.
+## Match sounds: countdown, announcer intro, crowd, and one sound per combat event.
+## Combat sounds follow `combat_event`, which the host forwards to LAN clients, so
+## both machines hear the same thing. Presentation only.
 
 @onready var GameAudio := get_node("/root/GameAudio") as FestivalAudio
 var controller: MatchController
 var previous_phase: StringName = &""
 var previous_count := -1
 var previous_clash := false
-var states: Dictionary = {}
-var spirits: Dictionary = {}
 var positions: Dictionary = {}
 var step_times: Dictionary = {}
 var struggle: AudioStreamPlayer
+var intro_voice: AudioStreamPlayer
+var intro_played := false
 
 
 func _ready() -> void:
@@ -25,14 +27,27 @@ func _ready() -> void:
 	struggle.volume_db = float(GameAudio.settings.get("struggle_db", -14.0))
 	add_child(struggle)
 	GameAudio.play_music("music_festival_loop", true)
-	GameAudio.play_sfx("announcer_intro_vi")
+	if controller.mode == &"LAN":
+		GameAudio.play_sfx("announcer_intro_vi")
 	controller.combat_event.connect(_combat_event)
 
 
 func _process(delta: float) -> void:
 	struggle.stream_paused = controller.paused
+	if is_instance_valid(intro_voice):
+		if (not intro_voice.playing and not intro_voice.stream_paused) or intro_voice.stream != GameAudio.stream_for("announcer_intro_vi"):
+			intro_voice = null
+		else:
+			intro_voice.stream_paused = controller.paused
+			if not controller.announcer_active():
+				intro_voice.stop()
+				intro_voice.stream_paused = false
+				intro_voice = null
 	if controller.paused:
 		return
+	if controller.announcer_active() and not intro_played:
+		intro_played = true
+		intro_voice = GameAudio.play_sfx("announcer_intro_vi")
 	if controller.phase != previous_phase:
 		previous_phase = controller.phase
 		if controller.phase == &"PLAYING":
@@ -59,17 +74,6 @@ func _process(delta: float) -> void:
 			struggle.stop()
 	for actor: Buffalo in [controller.player, controller.opponent]:
 		var slot := actor.slot
-		var old_state: int = states.get(slot, actor.state)
-		if old_state != actor.state:
-			if actor.state == Buffalo.State.HORN_STARTUP:
-				GameAudio.play_sfx("buffalo_snort")
-			elif actor.state == Buffalo.State.DASH_ACTIVE:
-				GameAudio.play_sfx("buffalo_dash_steps")
-		# Snapshot-only clients have no combat_event signal; resource drops are the fallback.
-		if controller.lan != null and controller.lan.is_client() and actor.spirit < float(spirits.get(slot, actor.spirit)):
-			GameAudio.play_sfx("buffalo_block" if actor.guarding else "buffalo_horn_hit")
-		spirits[slot] = actor.spirit
-		states[slot] = actor.state
 		var last: Vector3 = positions.get(slot, actor.global_position)
 		var distance := actor.global_position.distance_to(last)
 		positions[slot] = actor.global_position
@@ -80,7 +84,22 @@ func _process(delta: float) -> void:
 			step_times[slot] = float(GameAudio.settings.get("step_interval_s", 0.3))
 
 
+func _exit_tree() -> void:
+	if is_instance_valid(intro_voice) and intro_voice.stream == GameAudio.stream_for("announcer_intro_vi"):
+		intro_voice.stop()
+		intro_voice.stream_paused = false
+
+
 func _combat_event(event: StringName, _source: int, target: int, _value: float) -> void:
+	if event in [&"HORN_START", &"COUNTER_START"]:
+		GameAudio.play_sfx("buffalo_snort")
+	elif event == &"DASH_START":
+		GameAudio.play_sfx("buffalo_dash_steps")
+	elif event == &"PARRY_SUCCESS":
+		GameAudio.play_sfx("buffalo_block")
+		GameAudio.play_sfx("buffalo_horn_hit")
+	elif event == &"COUNTER_HIT":
+		GameAudio.play_sfx("crowd_cheer")
 	if event not in [&"HORN_HIT", &"DASH_HIT"]:
 		return
 	var actor := controller.player if target == 1 else controller.opponent

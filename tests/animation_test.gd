@@ -157,7 +157,8 @@ func _test_horn_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 		var farthest := 0.0
 		var previous := animator.position
 		var largest_step := 0.0
-		for i in int(0.7 * fps):
+		var sequence_s := GameBalance.get_number("horn_startup_s") + GameBalance.get_number("horn_active_s") + GameBalance.get_number("horn_whiff_recovery_s") + 0.3
+		for i in int(sequence_s * fps):
 			animator.update_pose(dt)
 			deepest = minf(deepest, animator.pose_pitch)
 			farthest = minf(farthest, animator.pose_offset.z)

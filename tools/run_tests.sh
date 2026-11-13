@@ -22,7 +22,7 @@ record() { # name, exit code
 }
 
 run_one() { # script path relative to res://, log name
-	timeout "$TIMEOUT" "$GODOT" --headless --path . --script "res://$1" >"$LOG_DIR/$2.log" 2>&1
+	timeout "$TIMEOUT" "$GODOT" --headless --path . --script "res://$1" -- "${3:-}" >"$LOG_DIR/$2.log" 2>&1
 }
 
 echo "== import"
@@ -38,10 +38,10 @@ done
 
 run_pair() { # host script, client script, name
 	echo "== $3"
-	run_one "$1" "$3_host" &
+	run_one "$1" "$3_host" "${4:-}" &
 	local host=$!
 	sleep 2
-	run_one "$2" "$3_client"
+	run_one "$2" "$3_client" "${5:-}"
 	local client_rc=$?
 	wait "$host"
 	local host_rc=$?
@@ -51,6 +51,7 @@ run_pair() { # host script, client script, name
 
 run_pair tests/network_host_harness.gd tests/network_client_harness.gd network_pair
 run_pair tests/lan_match_host.gd tests/lan_match_client.gd lan_match
+run_pair tests/combat_readability_lan_test.gd tests/combat_readability_lan_test.gd combat_readability_lan --host --client
 
 echo
 printf '%s\n' "${results[@]}"

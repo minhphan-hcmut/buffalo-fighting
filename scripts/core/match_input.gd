@@ -6,6 +6,7 @@ extends RefCounted
 var previous_guard := false
 var horn_blocked_until_release := false
 var dash_blocked_until_release := false
+var parry_blocked_until_release := false
 var guard_blocked_until_release := false
 
 
@@ -14,7 +15,8 @@ static func configure() -> void:
 		"move_left": KEY_A,
 		"move_right": KEY_D,
 		"move_forward": KEY_W,
-		"move_back": KEY_S
+		"move_back": KEY_S,
+		"parry": KEY_G
 	}
 	for action in keys:
 		if not InputMap.has_action(action):
@@ -46,6 +48,7 @@ func arm_release_gates() -> void:
 	previous_guard = false
 	horn_blocked_until_release = Input.is_action_pressed("horn")
 	dash_blocked_until_release = Input.is_action_pressed("dash")
+	parry_blocked_until_release = Input.is_action_pressed("parry")
 	guard_blocked_until_release = Input.is_action_pressed("guard")
 
 
@@ -54,6 +57,8 @@ func update_release_gates() -> void:
 		horn_blocked_until_release = false
 	if not Input.is_action_pressed("dash"):
 		dash_blocked_until_release = false
+	if not Input.is_action_pressed("parry"):
+		parry_blocked_until_release = false
 	if not Input.is_action_pressed("guard"):
 		guard_blocked_until_release = false
 
@@ -64,6 +69,7 @@ func read(slot: int, camera_yaw: float, seq: int) -> InputFrame:
 	frame.camera_yaw = camera_yaw
 	frame.horn_pressed = not horn_blocked_until_release and Input.is_action_just_pressed("horn")
 	frame.dash_pressed = not dash_blocked_until_release and Input.is_action_just_pressed("dash")
+	frame.parry_pressed = not parry_blocked_until_release and Input.is_action_just_pressed("parry")
 	frame.guard_held = not guard_blocked_until_release and Input.is_action_pressed("guard")
 	frame.guard_pressed = frame.guard_held and not previous_guard
 	update_release_gates()

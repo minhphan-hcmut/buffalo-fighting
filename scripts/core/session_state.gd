@@ -1,5 +1,7 @@
 class_name SessionState
 extends RefCounted
+## State that outlives a scene change: mode (SOLO/LAN), current level, Solo progress
+## (L01 → L02 → L03), the last result and the mouse setting. Static, no node needed.
 
 static var mode: StringName = &"SOLO"
 static var level_id: StringName = &"L01"
