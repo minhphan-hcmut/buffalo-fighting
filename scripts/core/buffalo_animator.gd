@@ -1,11 +1,14 @@
 class_name BuffaloAnimator
 extends Node3D
+## Visual-only procedural motion for the unrigged buffalo model (animation stage A).
+## Moves this node, HERO hoof morphs and legacy ear/tail pivots; the physics body is never touched,
+## so gameplay, LAN and combat tests are unaffected. Motion is read from the body's actual
+## displacement, which also works on a LAN client where velocity is not replicated.
 
-# Visual-only procedural motion for the unrigged buffalo model (animation stage A).
-# Moves this node, HERO hoof morphs and legacy ear/tail pivots; the physics body is never touched,
-# so gameplay, LAN and combat tests are unaffected. Motion is read from the body's actual
-# displacement, which also works on a LAN client where velocity is not replicated.
-
+## Multiplies the silver HERO skin texture into a dark slate water buffalo.
+const SKIN_TINT := Color("#3A3735")
+## Minimum roughness after make_matte, so hide and horn read as dry, not plastic.
+const MATTE_ROUGHNESS := 0.82
 const POSE_RATE := 12.0
 const SNAP_RATE := 32.0
 const MOTION_FILTER_RATE := 12.0
@@ -78,17 +81,40 @@ func _ready() -> void:
 	rng.seed = get_instance_id()
 	_build_pivots()
 	_build_leg_shapes()
+	make_matte(self)
 	reset_motion()
 
 
+## Gives every surface of the buffalo model under `root` a non-metallic copy of its
+## material. The HERO export marks skin, horns and eyes as metallic = 1, which renders
+## as chrome without reflection probes; its skin texture is silver, so the skin is
+## also tinted to a water buffalo's slate grey. Call once per model instance, before
+## BuffaloFeedback swaps in the horn shader (it copies the active material).
+static func make_matte(root: Node) -> void:
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		for surface in mesh_instance.mesh.get_surface_count():
+			var source := mesh_instance.get_active_material(surface) as BaseMaterial3D
+			if source == null or source.metallic == 0.0:
+				continue
+			var matte := source.duplicate() as BaseMaterial3D
+			matte.metallic = 0.0
+			matte.metallic_texture = null
+			matte.roughness = maxf(source.roughness, MATTE_ROUGHNESS)
+			matte.roughness_texture = null
+			if source.resource_name.begins_with("SKIN"):
+				matte.albedo_color = SKIN_TINT
+			mesh_instance.set_surface_override_material(surface, matte)
+
+
 func _physics_process(delta: float) -> void:
-	if _is_paused():
+	if _is_paused() or (controller != null and controller.hitstop_ticks > 0):
 		return
 	sample_motion(delta)
 
 
 func _process(delta: float) -> void:
-	if _is_paused():
+	if _is_paused() or (controller != null and controller.hitstop_ticks > 0):
 		return
 	update_pose(delta)
 
@@ -224,8 +250,15 @@ func _compute_targets() -> void:
 			_shake_roll = deg_to_rad(5.0) * sin(time * TAU * 3.0)
 
 
-# Clients receive action names, not state timing. Advance a visual-only clock
-# between snapshots; never advance gameplay states or alter the LAN protocol.
+## LAN client only: called when a snapshot delivers this buffalo's `state_time`.
+## The visual clock then counts the time since that snapshot, so an action's pose
+## keeps moving smoothly until the next snapshot arrives.
+func sync_action_clock() -> void:
+	_action_visual_time = 0.0
+
+
+# Visual-only clock on top of the last snapshot's `state_time`; it never advances
+# gameplay states. Restarts when the state changes or a snapshot syncs it.
 func _update_action_clock(delta: float) -> void:
 	if _action_visual_state != buffalo.state:
 		_action_visual_state = buffalo.state
@@ -236,8 +269,8 @@ func _update_action_clock(delta: float) -> void:
 
 func _action_progress(duration_key: String) -> float:
 	var remote: bool = controller != null and controller.mode == &"LAN" and controller.network != null and not controller.network.is_host
-	var duration := GameBalance.get_number(duration_key) if remote else buffalo.state_duration
-	var elapsed := _action_visual_time if remote else buffalo.state_time
+	var duration := buffalo.state_duration if buffalo.state_duration > 0.0 else GameBalance.get_number(duration_key)
+	var elapsed := _action_visual_time + buffalo.state_time if remote else buffalo.state_time
 	return clampf(elapsed / duration, 0.0, 1.0) if duration > 0.0 else 1.0
 
 
@@ -277,7 +310,7 @@ func _compute_horn_targets() -> void:
 	var progress := _action_progress(duration_key)
 	var windup := GameBalance.get_number("horn_visual_windup", 0.12)
 	var reach := GameBalance.get_number("horn_visual_reach", 0.24)
-	var dip := GameBalance.get_number("horn_visual_dip_deg", 10.0)
+	var dip := GameBalance.get_number("horn_startup_head_pitch_deg")
 	var toss := GameBalance.get_number("horn_visual_toss_deg", 6.0)
 	_target_rate = SNAP_RATE * 1.3
 	match buffalo.state:

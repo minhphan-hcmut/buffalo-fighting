@@ -6,8 +6,19 @@ var player_spirit: ProgressBar
 var player_stamina: ProgressBar
 var opponent_spirit: ProgressBar
 var opponent_stamina: ProgressBar
+var spirit_trails: Array[ProgressBar] = []
+var spirit_labels: Array[Label] = []
+var stamina_labels: Array[Label] = []
+var spirit_tweens: Array[Tween] = []
+var low_stamina: Array[bool] = [false, false]
+var warning_time := 0.0
 var timer_label: Label
 var center_label: Label
+var previous_phase: StringName = &""
+var center_punch_time := 0.0
+var fight_banner_time := INF
+var controls_hint_time := 0.0
+var announcer_label: Label
 var result_label: Label
 var clash_panel: Control
 var clash_title: Label
@@ -15,6 +26,20 @@ var clash_bar: ProgressBar
 var clash_time_label: Label
 var clash_hook_label: Label
 var tutorial_label: Label
+const CONTROLS := "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · G Gạt sừng · Esc Tạm dừng"
+const TUTORIAL := {
+	1: "WASD để đi, chuột để nhìn",
+	2: "Chuột trái để húc khi sừng hướng về đối thủ",
+	3: "Space để hổ lao",
+	4: "Giữ chuột phải để ghìm đòn phía trước",
+	5: "Giữ hướng để đẩy · chuột trái móc · chuột phải nhả",
+	6: "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn"
+}
+var tutorial_seen: Array[int] = []
+var tutorial_queue: Array[int] = []
+var tutorial_current := 0
+var tutorial_time := 0.0
+var tutorial_front_hit := false
 var pause_overlay: Control
 var pause_panel: PanelContainer
 var pause_title: Label
@@ -29,7 +54,7 @@ func _ready() -> void:
 	add_child(root)
 	var top := HBoxContainer.new()
 	top.position = Vector2(24, 20)
-	top.size = Vector2(1232, 90)
+	top.size = Vector2(1232, 140)
 	top.add_theme_constant_override("separation", 26)
 	root.add_child(top)
 	var left := _make_player_panel("ĐỎ · 06 · GIÁP ĐÔNG", Color("#B6453B"))
@@ -37,30 +62,47 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
-	var right := _make_player_panel("XANH · 17 · GIÁP TÂY", Color("#33546D"))
+	var right := _make_player_panel("XANH · 17 · GIÁP TÂY", Color("#477B9C"), true)
 	top.add_child(right)
 	timer_label = Label.new()
-	timer_label.position = Vector2(590, 26)
-	timer_label.size = Vector2(100, 38)
+	timer_label.position = Vector2(574, 26)
+	timer_label.size = Vector2(132, 58)
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	timer_label.add_theme_font_size_override("font_size", 24)
+	timer_label.add_theme_font_size_override("font_size", 30)
+	timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	timer_label.add_theme_stylebox_override("normal", _panel_style())
 	root.add_child(timer_label)
 	center_label = Label.new()
-	center_label.position = Vector2(400, 245)
-	center_label.size = Vector2(480, 90)
+	center_label.size = Vector2(GameBalance.get_number("ui_countdown_label_width"), GameBalance.get_number("ui_countdown_label_height"))
+	center_label.set_anchors_preset(Control.PRESET_CENTER)
+	center_label.position = -center_label.size * 0.5
 	center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	center_label.add_theme_font_size_override("font_size", 42)
 	center_label.add_theme_color_override("font_color", Color("#F2E6CF"))
+	center_label.add_theme_color_override("font_outline_color", Color("#241D18"))
+	center_label.add_theme_constant_override("outline_size", 8)
 	root.add_child(center_label)
-	clash_panel = Control.new()
-	clash_panel.position = Vector2(440, 118)
-	clash_panel.size = Vector2(400, 84)
+	announcer_label = Label.new()
+	announcer_label.position = Vector2(180, 548)
+	announcer_label.size = Vector2(920, 88)
+	announcer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	announcer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	announcer_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	announcer_label.add_theme_font_size_override("font_size", 23)
+	announcer_label.add_theme_color_override("font_color", Color("#F2E6CF"))
+	announcer_label.add_theme_stylebox_override("normal", _panel_style())
+	announcer_label.text = controller.announcer_text()
+	announcer_label.visible = controller.announcer_active()
+	root.add_child(announcer_label)
+	clash_panel = Panel.new()
+	clash_panel.position = Vector2(420, 530)
+	clash_panel.size = Vector2(440, 116)
 	clash_panel.visible = false
 	root.add_child(clash_panel)
 	clash_title = Label.new()
 	clash_title.text = "KHÓA SỪNG"
-	clash_title.position = Vector2(0, 0)
+	clash_title.position = Vector2(20, 6)
 	clash_title.size = Vector2(400, 26)
 	clash_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	clash_title.add_theme_font_size_override("font_size", 22)
@@ -70,40 +112,45 @@ func _ready() -> void:
 	clash_bar.min_value = -GameBalance.get_number("lock_balance_max", 100.0)
 	clash_bar.max_value = GameBalance.get_number("lock_balance_max", 100.0)
 	clash_bar.show_percentage = false
-	clash_bar.position = Vector2(0, 30)
-	clash_bar.size = Vector2(400, 16)
+	clash_bar.position = Vector2(20, 40)
+	clash_bar.size = Vector2(400, 20)
 	clash_bar.add_theme_stylebox_override("fill", _bar_style(Color("#E8BC65")))
 	clash_panel.add_child(clash_bar)
 	clash_time_label = Label.new()
-	clash_time_label.position = Vector2(0, 48)
+	clash_time_label.position = Vector2(20, 64)
 	clash_time_label.size = Vector2(400, 20)
 	clash_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	clash_time_label.add_theme_font_size_override("font_size", 16)
 	clash_panel.add_child(clash_time_label)
 	clash_hook_label = Label.new()
-	clash_hook_label.position = Vector2(0, 66)
+	clash_hook_label.position = Vector2(20, 88)
 	clash_hook_label.size = Vector2(400, 18)
 	clash_hook_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	clash_hook_label.add_theme_font_size_override("font_size", 14)
 	clash_panel.add_child(clash_hook_label)
 	tutorial_label = Label.new()
-	tutorial_label.position = Vector2(24, 665)
-	tutorial_label.size = Vector2(1232, 32)
+	tutorial_label.position = Vector2(24, 658)
+	tutorial_label.size = Vector2(1232, 42)
 	tutorial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tutorial_label.add_theme_font_size_override("font_size", 16)
-	tutorial_label.text = "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · Esc Tạm dừng"
+	tutorial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tutorial_label.add_theme_font_size_override("font_size", 18)
+	tutorial_label.add_theme_stylebox_override("normal", _panel_style())
+	tutorial_label.text = CONTROLS
 	root.add_child(tutorial_label)
 	result_label = Label.new()
-	result_label.position = Vector2(330, 340)
-	result_label.size = Vector2(620, 120)
+	result_label.visible = false
+	result_label.position = Vector2(280, 320)
+	result_label.size = Vector2(720, 160)
 	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	result_label.add_theme_font_size_override("font_size", 30)
 	result_label.add_theme_color_override("font_color", Color("#F2E6CF"))
+	result_label.add_theme_stylebox_override("normal", _panel_style())
 	root.add_child(result_label)
 	# The in-match HUD is display-only: let clicks through so CameraRig can capture the mouse.
 	_ignore_mouse(root)
 	_build_pause_overlay(root)
+	controller.combat_event.connect(_tutorial_event)
 
 
 func _ignore_mouse(control: Control) -> void:
@@ -153,6 +200,7 @@ func _place_pause_panel(panel_size: Vector2) -> void:
 
 func _clear_pause_actions() -> void:
 	for child in pause_actions.get_children():
+		pause_actions.remove_child(child)
 		child.queue_free()
 
 
@@ -222,6 +270,7 @@ func show_settings() -> void:
 	_clear_pause_actions()
 	SettingsControls.populate(pause_actions, _set_mouse_sensitivity)
 	_pause_button("QUAY LẠI", show_pause)
+	pause_actions.get_child(0).get_child(1).grab_focus()
 
 
 ## Applies a new sensitivity to the live camera (SessionState is updated by SettingsControls).
@@ -242,26 +291,64 @@ func _return_to_menu() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
-func _make_player_panel(title: String, color: Color) -> VBoxContainer:
-	var panel := VBoxContainer.new()
-	panel.custom_minimum_size = Vector2(390, 86)
+func _make_player_panel(title: String, color: Color, mirror: bool = false) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(424, 140)
+	panel.add_theme_stylebox_override("panel", _panel_style())
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 6)
+	panel.add_child(content)
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_color_override("font_color", color)
-	title_label.add_theme_font_size_override("font_size", 18)
-	panel.add_child(title_label)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if mirror else HORIZONTAL_ALIGNMENT_LEFT
+	title_label.add_theme_font_size_override("font_size", 22)
+	content.add_child(title_label)
+	var spirit_row := Control.new()
+	spirit_row.custom_minimum_size = Vector2(400, 32)
+	content.add_child(spirit_row)
+	var trail := ProgressBar.new()
+	trail.max_value = GameBalance.get_number("spirit_max")
+	trail.value = trail.max_value
+	trail.show_percentage = false
+	trail.fill_mode = ProgressBar.FILL_END_TO_BEGIN if mirror else ProgressBar.FILL_BEGIN_TO_END
+	trail.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	trail.add_theme_stylebox_override("fill", _bar_style(Color("#F7DDA4")))
+	spirit_row.add_child(trail)
 	var spirit := ProgressBar.new()
-	spirit.max_value = 100.0
-	spirit.custom_minimum_size = Vector2(390, 24)
+	spirit.max_value = trail.max_value
+	spirit.value = spirit.max_value
+	spirit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	spirit.fill_mode = trail.fill_mode
 	spirit.show_percentage = false
-	spirit.add_theme_stylebox_override("fill", _bar_style(color))
-	panel.add_child(spirit)
+	spirit.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	var spirit_fill := _bar_style(color)
+	spirit_fill.border_color = Color("#F2E6CF")
+	spirit_fill.set_border_width_all(1)
+	spirit.add_theme_stylebox_override("fill", spirit_fill)
+	spirit_row.add_child(spirit)
+	var spirit_text := Label.new()
+	spirit_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	spirit_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	spirit_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	spirit_text.add_theme_font_size_override("font_size", 18)
+	spirit_text.add_theme_color_override("font_outline_color", Color("#241D18"))
+	spirit_text.add_theme_constant_override("outline_size", 6)
+	spirit_row.add_child(spirit_text)
+	var stamina_text := Label.new()
+	stamina_text.add_theme_font_size_override("font_size", 16)
+	stamina_text.horizontal_alignment = title_label.horizontal_alignment
+	content.add_child(stamina_text)
 	var stamina := ProgressBar.new()
-	stamina.max_value = 100.0
-	stamina.custom_minimum_size = Vector2(390, 14)
+	stamina.max_value = GameBalance.get_number("stamina_max")
+	stamina.custom_minimum_size = Vector2(400, 10)
+	stamina.fill_mode = trail.fill_mode
 	stamina.show_percentage = false
 	stamina.add_theme_stylebox_override("fill", _bar_style(Color("#E8BC65")))
-	panel.add_child(stamina)
+	content.add_child(stamina)
+	spirit_trails.append(trail)
+	spirit_labels.append(spirit_text)
+	stamina_labels.append(stamina_text)
+	spirit_tweens.append(null)
 	if player_spirit == null:
 		player_spirit = spirit
 		player_stamina = stamina
@@ -269,6 +356,17 @@ func _make_player_panel(title: String, color: Color) -> VBoxContainer:
 		opponent_spirit = spirit
 		opponent_stamina = stamina
 	return panel
+
+
+func _panel_style() -> StyleBoxFlat:
+	var style := _bar_style(Color("#30281F"))
+	style.border_color = Color("#8A5A3B")
+	style.set_border_width_all(2)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	return style
 
 
 func _bar_style(color: Color) -> StyleBoxFlat:
@@ -281,26 +379,145 @@ func _bar_style(color: Color) -> StyleBoxFlat:
 	return style
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not is_instance_valid(controller) or not is_instance_valid(controller.player):
 		return
-	player_spirit.value = controller.player.spirit
-	player_stamina.value = controller.player.stamina
-	opponent_spirit.value = controller.opponent.spirit
-	opponent_stamina.value = controller.opponent.stamina
+	warning_time += delta
+	_update_resources(0, controller.player, player_spirit, player_stamina)
+	_update_resources(1, controller.opponent, opponent_spirit, opponent_stamina)
 	timer_label.text = "%02d:%02d" % [int(controller.remaining_time) / 60, int(controller.remaining_time) % 60]
+	timer_label.add_theme_color_override("font_color", Color("#FF8C76") if controller.remaining_time <= GameBalance.get_number("ui_timer_warning_s") else Color("#F2E6CF"))
+	announcer_label.visible = controller.announcer_active()
+	_update_center(delta)
 	if controller.phase == &"COUNTDOWN":
-		center_label.text = "CÒN %.1f" % controller.countdown_time
-	elif controller.outro.is_revealing_lot():
-		center_label.text = "BỐC THĂM" + ".".repeat(1 + int(controller.outro.time * 4.0) % 3)
-	else:
-		center_label.text = ""
+		controls_hint_time = 0.0
 	result_label.visible = controller.mode == &"LAN" and controller.result_ready
 	if controller.phase == &"PLAYING":
-		tutorial_label.text = "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · Esc Tạm dừng"
+		_update_tutorial(delta)
 	elif controller.phase == &"RESULT":
+		tutorial_label.visible = true
+		tutorial_label.modulate.a = 1.0
 		tutorial_label.text = "Kết quả đã khóa · bấm Esc để thả chuột"
 	_update_clash()
+
+
+func _update_center(delta: float) -> void:
+	var elapsed := 0.0 if controller.paused else delta
+	if previous_phase == &"COUNTDOWN" and controller.phase == &"PLAYING":
+		fight_banner_time = 0.0
+	elif controller.phase == &"PLAYING":
+		fight_banner_time += elapsed
+	previous_phase = controller.phase
+	var text := ""
+	var color := Color("#F2E6CF")
+	var font_size := 42
+	var banner_hold := GameBalance.get_number("ui_fight_banner_s")
+	var banner_fade := GameBalance.get_number("ui_fight_banner_fade_s")
+	if controller.phase == &"COUNTDOWN":
+		text = str(ceili(controller.countdown_time))
+	elif controller.outro.is_revealing_lot():
+		text = "BỐC THĂM" + ".".repeat(1 + int(controller.outro.time * 4.0) % 3)
+	elif controller.phase == &"PLAYING" and fight_banner_time < banner_hold + banner_fade:
+		text = "VÀO TRẬN!"
+		color = Color("#E8BC65")
+	if text != center_label.text:
+		center_punch_time = 0.0
+	else:
+		center_punch_time += elapsed
+	center_label.text = text
+	center_label.scale = Vector2.ONE
+	center_label.modulate.a = 1.0
+	if controller.phase == &"COUNTDOWN" or text == "VÀO TRẬN!":
+		font_size = GameBalance.get_int("ui_countdown_font_size")
+		var duration := GameBalance.get_number("ui_countdown_punch_s")
+		var punch_scale := GameBalance.get_number("ui_countdown_punch_scale")
+		center_label.scale = Vector2.ONE * Tween.interpolate_value(punch_scale, 1.0 - punch_scale, minf(center_punch_time, duration), duration, Tween.TRANS_QUAD, Tween.EASE_OUT)
+		if text == "VÀO TRẬN!" and fight_banner_time > banner_hold:
+			center_label.modulate.a = 1.0 - (fight_banner_time - banner_hold) / banner_fade
+	center_label.add_theme_font_size_override("font_size", font_size)
+	center_label.add_theme_color_override("font_color", color)
+	center_label.pivot_offset = center_label.size * 0.5
+
+
+func _update_resources(index: int, actor: Buffalo, spirit: ProgressBar, stamina: ProgressBar) -> void:
+	var previous := spirit.value
+	spirit.value = actor.spirit
+	stamina.value = actor.stamina
+	spirit_labels[index].text = "KHÍ THẾ  %d / %d" % [roundi(spirit.value), roundi(spirit.max_value)]
+	if spirit.value != previous:
+		if spirit_tweens[index] != null:
+			spirit_tweens[index].kill()
+		if spirit.value < previous:
+			spirit_tweens[index] = create_tween()
+			spirit_tweens[index].tween_property(spirit_trails[index], "value", spirit.value, GameBalance.get_number("ui_spirit_trail_s"))
+		else:
+			spirit_trails[index].value = spirit.value
+	low_stamina[index] = stamina.value < GameBalance.get_number("ui_low_stamina_threshold")
+	var color := Color("#FFAA66") if low_stamina[index] else Color("#E8BC65")
+	var fill := stamina.get_theme_stylebox("fill") as StyleBoxFlat
+	fill.bg_color = color
+	stamina_labels[index].text = "SỨC  %d / %d%s" % [roundi(stamina.value), roundi(stamina.max_value), " · SỨC THẤP" if low_stamina[index] else ""]
+	stamina_labels[index].add_theme_color_override("font_color", color)
+	var pulse := 0.5 + 0.5 * cos(warning_time * TAU * GameBalance.get_number("ui_low_stamina_pulse_hz"))
+	stamina.modulate.a = lerpf(GameBalance.get_number("ui_low_stamina_pulse_min_alpha"), 1.0, pulse) if low_stamina[index] else 1.0
+
+
+func _tutorial_enabled() -> bool:
+	return controller.mode == &"SOLO" and controller.level_id == &"L01"
+
+
+func _queue_tutorial(id: int) -> void:
+	if not tutorial_seen.has(id) and not tutorial_queue.has(id):
+		tutorial_queue.append(id)
+		tutorial_queue.sort()
+
+
+func _tutorial_event(event: StringName, source: int, target: int, _value: float) -> void:
+	if not _tutorial_enabled():
+		return
+	if event == &"CLASH_START":
+		_queue_tutorial(5)
+	if target != controller.local_slot or event not in [&"HORN_HIT", &"DASH_HIT", &"CLASH_LOSS"]:
+		return
+	_queue_tutorial(4)
+	if event == &"HORN_HIT":
+		var attacker := controller.player if source == 1 else controller.opponent
+		var victim := controller.player if target == 1 else controller.opponent
+		var toward := (attacker.global_position - victim.global_position).normalized()
+		if victim.forward().dot(toward) >= cos(GameBalance.get_angle("flank_min_deg")):
+			tutorial_front_hit = true
+
+
+func _update_tutorial(delta: float) -> void:
+	tutorial_label.visible = true
+	tutorial_label.modulate.a = 1.0
+	if not _tutorial_enabled():
+		tutorial_label.text = CONTROLS
+		if not controller.paused:
+			controls_hint_time += delta
+		var duration := GameBalance.get_number("ui_controls_hint_s")
+		var fade := GameBalance.get_number("ui_controls_hint_fade_s")
+		tutorial_label.visible = controls_hint_time < duration
+		if tutorial_label.visible and controls_hint_time > duration - fade:
+			tutorial_label.modulate.a = (duration - controls_hint_time) / fade
+		return
+	_queue_tutorial(1)
+	var distance := controller.player.global_position.distance_to(controller.opponent.global_position)
+	if distance <= GameBalance.get_number("tutorial_horn_range"):
+		_queue_tutorial(2)
+	elif distance <= GameBalance.get_number("tutorial_dash_range"):
+		_queue_tutorial(3)
+	if tutorial_front_hit and tutorial_seen.has(4):
+		_queue_tutorial(6)
+	if not controller.paused:
+		tutorial_time = maxf(0.0, tutorial_time - delta)
+	if tutorial_time <= 0.0:
+		tutorial_current = 0
+		if not tutorial_queue.is_empty():
+			tutorial_current = tutorial_queue.pop_front()
+			tutorial_seen.append(tutorial_current)
+			tutorial_time = GameBalance.get_number("tutorial_hint_s")
+	tutorial_label.text = TUTORIAL[tutorial_current] if tutorial_current > 0 else CONTROLS
 
 
 ## Tug-of-war bar: the right half is always the local player's side.
@@ -312,7 +529,7 @@ func _update_clash() -> void:
 	var mirror := 1.0 if controller.local_slot == 1 else -1.0
 	clash_bar.value = float(clash.get("lock_balance", 0.0)) * mirror
 	var time_left := maxf(0.0, GameBalance.get_number("lock_max_s") - float(clash.get("time", 0.0)))
-	clash_time_label.text = "%.1f s" % time_left
+	clash_time_label.text = "ĐỐI PHƯƠNG  ←  %.1f s  →  BẠN" % time_left
 	var hooking: Array[String] = []
 	if controller.player.clash_hooked:
 		hooking.append("ĐỎ đang móc")

@@ -10,6 +10,7 @@ var time := 0.0
 var running := false
 var winner: Buffalo
 var loser: Buffalo
+var handler: Node3D
 ## Remaining points of the loser's path, ending outside the gate.
 var waypoints: Array[Vector3] = []
 
@@ -31,6 +32,8 @@ func start() -> void:
 	loser.mark_flee()
 	winner.freeze()
 	waypoints = exit_path(loser.global_position, winner.global_position, loser.slot)
+	if controller.mode == &"SOLO":
+		handler = ArenaBuilder.add_handler(controller, waypoints[-1])
 	var camera := controller.get_node_or_null("CameraRig")
 	if camera != null:
 		camera.show_overview()
@@ -38,7 +41,12 @@ func start() -> void:
 
 ## True once the draw (if any) and the outro have played; the result screen waits for this.
 func is_done() -> bool:
-	return not running or time >= reveal_duration() + GameBalance.get_number("result_outro_s", 4.0)
+	if not running:
+		return true
+	var elapsed := time - reveal_duration()
+	if controller.mode == &"SOLO":
+		return elapsed >= GameBalance.get_number("result_outro_max_s", 16.0) or (elapsed >= GameBalance.get_number("result_outro_s", 4.0) and (waypoints.is_empty() or not is_instance_valid(loser) or not loser.visible))
+	return elapsed >= GameBalance.get_number("result_outro_s", 4.0)
 
 
 ## True while a LOT result is still being drawn: nobody moves and the winner is not shown yet.
@@ -56,7 +64,12 @@ func process(delta: float) -> void:
 	time += delta
 	if is_revealing_lot():
 		return
+	if controller.mode == &"SOLO" and time - reveal_duration() >= GameBalance.get_number("result_outro_max_s", 16.0):
+		waypoints.clear()
 	_walk_loser(delta)
+	if controller.mode == &"SOLO" and waypoints.is_empty() and is_instance_valid(loser):
+		loser.hide()
+		loser.freeze()
 	_turn_winner(delta)
 
 
@@ -90,6 +103,9 @@ static func exit_path(from: Vector3, obstacle: Vector3, slot: int) -> Array[Vect
 
 
 func _walk_loser(delta: float) -> void:
+	if not is_instance_valid(loser):
+		waypoints.clear()
+		return
 	if waypoints.is_empty():
 		return
 	var position := Vector3(loser.global_position.x, 0.0, loser.global_position.z)

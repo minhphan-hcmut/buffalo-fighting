@@ -1,4 +1,7 @@
 extends Control
+## Main menu (Solo, LAN, settings, quit) and the Solo flow around matches: the opening
+## Phần Lễ before the first match, then a copy of this script stays on the root as
+## "SoloSessionOverlay" to show the result panel, next match and the closing Phần Lễ.
 
 const ARENA_SCENE := "res://scenes/arena.tscn"
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
@@ -9,6 +12,7 @@ var ceremony_layer: Control
 var result_title: Label
 var result_detail: Label
 var result_actions: VBoxContainer
+var result_panel: PanelContainer
 var displayed_result := ""
 var menu_settings_layer: Control
 var menu_settings_actions: VBoxContainer
@@ -32,6 +36,7 @@ func _process(_delta: float) -> void:
 		return
 	var is_solo_result: bool = SessionState.mode == &"SOLO" and scene.get("phase") == &"RESULT" and scene.get("result_ready")
 	visible = is_solo_result
+	scene.hud.visible = not is_solo_result
 	if is_solo_result:
 		var result_key := "%s:%s:%s" % [
 			SessionState.last_match_level,
@@ -44,16 +49,22 @@ func _process(_delta: float) -> void:
 
 func _build_main_menu() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := ColorRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.color = Color("#33546D")
-	add_child(background)
-
-	menu_layout = _make_centered_layout(Vector2(440, 480))
+	_build_backdrop()
+	menu_layout = VBoxContainer.new()
+	menu_layout.anchor_top = 0.5
+	menu_layout.anchor_bottom = 0.5
+	menu_layout.offset_left = 88.0
+	menu_layout.offset_right = 88.0 + 440.0
+	menu_layout.offset_top = -250.0
+	menu_layout.offset_bottom = 250.0
+	menu_layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	menu_layout.add_theme_constant_override("separation", 18)
 	add_child(menu_layout)
-	var title := _make_label("CHỌI TRÂU", 58, Color("#F2E6CF"))
+	var title := _make_label("CHỌI TRÂU", 72, Color("#E8BC65"))
+	title.add_theme_color_override("font_outline_color", Color("#241D18"))
+	title.add_theme_constant_override("outline_size", 10)
 	menu_layout.add_child(title)
-	var subtitle := _make_label("ĐẤU TRƯỜNG LỄ HỘI · 2.5D · GÓC NHÌN 45°", 20, Color("#E8BC65"))
+	var subtitle := _make_label("ĐẤU TRƯỜNG LỄ HỘI", 24, Color("#F2E6CF"))
 	menu_layout.add_child(subtitle)
 
 	var solo := _button("SOLO · MÙA HỘI")
@@ -68,13 +79,56 @@ func _build_main_menu() -> void:
 	var quit := _button("THOÁT")
 	quit.pressed.connect(func(): get_tree().quit())
 	menu_layout.add_child(quit)
-	menu_layout.add_child(_make_label("Vòng loại · Bán kết · Chung kết", 16, Color("#F2E6CF")))
+	menu_layout.add_child(_make_label("Vòng loại · Bán kết · Chung kết", 18, Color("#D9C9A8")))
+	solo.grab_focus()
+
+
+## The festival arena in 3D (MenuBackdrop) behind the menu, darkened on the left so the
+## menu column stays readable.
+func _build_backdrop() -> void:
+	var container := SubViewportContainer.new()
+	container.name = "Backdrop"
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	container.stretch = true
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(container)
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.msaa_3d = Viewport.MSAA_2X
+	container.add_child(viewport)
+	var backdrop := MenuBackdrop.new()
+	backdrop.name = "MenuBackdrop"
+	viewport.add_child(backdrop)
+	add_child(_make_left_shade())
+
+
+## Full-screen shade, dark on the left fading to clear past the middle: keeps a left
+## column of text readable over a 3D scene (menu backdrop, Solo result winner shot).
+func _make_left_shade() -> TextureRect:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.38, 0.62])
+	gradient.colors = PackedColorArray([Color("#17120EE6"), Color("#17120EB0"), Color("#17120E00")])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.width = 256
+	texture.height = 4
+	var shade := TextureRect.new()
+	shade.name = "LeftShade"
+	shade.texture = texture
+	shade.stretch_mode = TextureRect.STRETCH_SCALE
+	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return shade
 
 
 func _show_settings() -> void:
 	if is_instance_valid(menu_settings_layer):
 		menu_settings_layer.visible = true
+		menu_layout.hide()
+		menu_settings_actions.get_child(0).get_child(1).grab_focus()
 		return
+	menu_layout.hide()
 	menu_settings_layer = Control.new()
 	menu_settings_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(menu_settings_layer)
@@ -83,10 +137,12 @@ func _show_settings() -> void:
 	shade.color = Color("#17262EE8")
 	menu_settings_layer.add_child(shade)
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-260, -310)
-	panel.size = Vector2(520, 620)
 	menu_settings_layer.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.offset_left = -280
+	panel.offset_right = 280
+	panel.offset_top = -310
+	panel.offset_bottom = 310
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	panel.add_child(content)
@@ -99,18 +155,13 @@ func _show_settings() -> void:
 	content.add_child(menu_settings_actions)
 	SettingsControls.populate(menu_settings_actions)
 	var close := _button("QUAY LẠI")
-	close.pressed.connect(func(): menu_settings_layer.hide())
+	close.pressed.connect(func():
+		menu_settings_layer.hide()
+		menu_layout.show()
+		menu_layout.get_child(4).grab_focus()
+	)
 	menu_settings_actions.add_child(close)
-
-
-func _make_centered_layout(size: Vector2) -> VBoxContainer:
-	var layout := VBoxContainer.new()
-	layout.set_anchors_preset(Control.PRESET_CENTER)
-	layout.position = -size * 0.5
-	layout.size = size
-	layout.alignment = BoxContainer.ALIGNMENT_CENTER
-	layout.add_theme_constant_override("separation", 18)
-	return layout
+	menu_settings_actions.get_child(0).get_child(1).grab_focus()
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:
@@ -143,31 +194,10 @@ func _start_solo() -> void:
 
 func _show_opening_ceremony() -> void:
 	menu_layout.hide()
-	ceremony_layer = _make_ceremony_layer(
-		"KHAI HỘI",
-		"Cờ hội được thượng. Trống điểm khai hội.\nCầu mùa hội an toàn, biển lặng, ngư dân ra khơi bình an."
-	)
-	var enter := _button("VÀO MÙA HỘI")
-	enter.pressed.connect(_enter_arena)
-	ceremony_layer.get_node("Content").add_child(enter)
-	add_child(ceremony_layer)
-	enter.grab_focus()
-
-
-func _make_ceremony_layer(title_text: String, body_text: String) -> Control:
-	var layer := Control.new()
-	layer.name = "Ceremony"
-	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := ColorRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.color = Color("#243A45")
-	layer.add_child(background)
-	var content := _make_centered_layout(Vector2(760, 390))
-	content.name = "Content"
-	layer.add_child(content)
-	content.add_child(_make_label(title_text, 40, Color("#E8BC65")))
-	content.add_child(_make_label(body_text, 24, Color("#F2E6CF")))
-	return layer
+	var view := CeremonyView.create(&"opening")
+	view.finished.connect(_enter_arena)
+	ceremony_layer = view
+	add_child(view)
 
 
 func _enter_arena() -> void:
@@ -195,12 +225,22 @@ func _build_session_overlay() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index = 100
 	hide()
-	var background := ColorRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.color = Color("#17262EDC")
-	add_child(background)
-	var content := _make_centered_layout(Vector2(760, 480))
-	add_child(content)
+	# The winner stands in the arena on the right (FollowCamera.show_winner); the result
+	# sits in a left column over a shade, as on the main menu.
+	add_child(_make_left_shade())
+	var panel := PanelContainer.new()
+	result_panel = panel
+	add_child(panel)
+	panel.anchor_top = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = 64.0
+	panel.offset_right = 64.0 + 540.0
+	panel.offset_top = -230.0
+	panel.offset_bottom = 230.0
+	var content := VBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 20)
+	panel.add_child(content)
 	result_title = _make_label("", 40, Color("#E8BC65"))
 	content.add_child(result_title)
 	result_detail = _make_label("", 24, Color("#F2E6CF"))
@@ -241,7 +281,22 @@ func _show_result(result_key: String) -> void:
 	var menu := _button("VỀ MENU")
 	menu.pressed.connect(_return_to_menu)
 	result_actions.add_child(menu)
-	retry.grab_focus()
+	if final_win:
+		_show_closing_ceremony(retry)
+	else:
+		retry.grab_focus()
+
+
+## GDD Bảng 17 closing rite: shown once over the final result, then the result actions return.
+func _show_closing_ceremony(focus_after: Button) -> void:
+	result_panel.hide()
+	var view := CeremonyView.create(&"closing")
+	view.finished.connect(func():
+		view.queue_free()
+		result_panel.show()
+		focus_after.grab_focus()
+	)
+	add_child(view)
 
 
 func _round_name(level: StringName) -> String:

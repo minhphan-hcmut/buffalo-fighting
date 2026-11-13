@@ -1,0 +1,28 @@
+{
+  "duration_s": 15.0,
+  "min_view_s": 0.6,
+  "flag_rise_s": 5.0,
+  "procession_s": 12.0,
+  "camera_drift_deg": 8.0,
+  "skip_hint": "Bấm phím bất kỳ hoặc nhấp chuột để tiếp tục",
+  "opening": {
+    "date": "Mùng 1 tháng 8 âm lịch",
+    "title": "DÂNG HƯƠNG · THƯỢNG CỜ KHAI HỘI",
+    "lines": [
+      "Dân làng dâng hương ở đền, cờ hội được kéo lên trong tiếng trống điểm.",
+      "Cầu cho mùa hội an lành, biển lặng, thuyền ra khơi bình an."
+    ],
+    "button": "VÀO MÙA HỘI",
+    "sfx": "festival_gong"
+  },
+  "closing": {
+    "date": "Mùng 10 tháng 8 âm lịch",
+    "title": "RƯỚC ÔNG TRÂU VÔ ĐỊCH VỀ ĐÌNH",
+    "lines": [
+      "Ông trâu số 06 của giáp Đông thắng thế, được dân làng rước về đình trong tiếng trống chiêng.",
+      "Lễ tạ ơn, tiễn thần khép lại mùa hội."
+    ],
+    "button": "KHÉP MÙA HỘI",
+    "sfx": "match_start_drums"
+  }
+}

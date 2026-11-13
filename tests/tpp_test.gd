@@ -24,7 +24,7 @@ func run() -> void:
 	check(is_equal_approx(camera.fov, GameBalance.get_number("camera_fov_deg")), "camera uses GDD FOV")
 	check(
 		is_equal_approx(camera_rig.arm.rotation.x, -GameBalance.get_angle("camera_pitch_deg")),
-		"camera pitch fixed at 45 degrees"
+		"camera pitch fixed at camera_pitch_deg"
 	)
 	var buffalo_model := arena.player.get_node("Visual/Model")
 	check(buffalo_model != null, "latest buffalo GLB remains in gameplay scene")
@@ -45,6 +45,20 @@ func run() -> void:
 	SessionState.camera_shake_enabled = true
 	camera_rig.trigger_shake(&"HORN_HIT")
 	check(camera_rig.shake_elapsed == 0.0, "hit event starts camera feedback")
+	check(is_equal_approx(camera_rig.arm.position.x, GameBalance.get_number("camera_shoulder_offset")), "camera sits over the right shoulder")
+	camera_rig.set_process(false)
+	camera_rig._process(0.0)
+	var base_fov := GameBalance.get_number("camera_fov_deg")
+	check(camera.fov < base_fov - GameBalance.get_number("camera_punch_fov_deg") * 0.9, "horn hit punches the FOV in")
+	camera_rig.follow_target()
+	check(camera_rig.arm.spring_length < camera_rig.distance, "horn hit pushes the camera toward the buffalo")
+	var horn_punch: float = camera_rig.punch_weight()
+	camera_rig.trigger_shake(&"DASH_HIT")
+	check(camera_rig.punch_weight() > horn_punch, "dash hit punches harder than a horn hit")
+	camera_rig._process(GameBalance.get_number("camera_punch_s"))
+	camera_rig.follow_target()
+	check(is_equal_approx(camera.fov, base_fov) and is_equal_approx(camera_rig.arm.spring_length, camera_rig.distance), "punch returns to the normal view")
+	camera_rig.set_process(true)
 	SessionState.camera_shake_enabled = false
 	camera_rig.shake_elapsed = 1.0
 	camera_rig.trigger_shake(&"DASH_HIT")

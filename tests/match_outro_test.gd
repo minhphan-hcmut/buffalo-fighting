@@ -50,6 +50,7 @@ func _flee_outro() -> void:
 	check(arena.opponent.state == Buffalo.State.FLEE, "loser enters FLEE")
 	check(not arena.result_ready, "result screen waits while the outro plays")
 	check(arena.get_node("CameraRig").overview_time >= 0.0, "camera starts the overview")
+	check(arena.get_node("CameraRig").winner_time < 0.0, "winner shot waits while the outro plays")
 	var closest := INF
 	var seconds := GameBalance.get_number("result_outro_s") + 0.5
 	for frame in int(seconds * Engine.physics_ticks_per_second):
@@ -61,6 +62,15 @@ func _flee_outro() -> void:
 	check(arena.player.global_position.distance_to(winner_start) < 0.01, "winner stays in place")
 	check(closest > GameBalance.get_number("body_radius") * 2.0, "loser never walks through the winner (closest %.2f m)" % closest)
 	check(arena.result_ready, "result screen is ready after the outro")
+	# Solo result: the camera glides down to the winner and looks at it from the front.
+	var rig := arena.get_node("CameraRig")
+	check(rig.winner_time >= 0.0, "Solo result starts the winner shot")
+	for frame in int((GameBalance.get_number("result_winner_blend_s") + 0.2) * Engine.physics_ticks_per_second):
+		await physics_frame
+	var lens: Camera3D = rig.camera
+	var to_winner := (arena.player.global_position + Vector3.UP - lens.global_position)
+	check(absf(to_winner.length() - GameBalance.get_number("result_winner_distance")) < 0.5, "winner shot frames the winner up close (%.2f m)" % to_winner.length())
+	check((-arena.player.global_basis.z).dot(-to_winner.normalized()) > 0.3, "winner shot sees the winner from the front")
 	arena.free()
 
 
