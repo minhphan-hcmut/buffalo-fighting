@@ -147,7 +147,7 @@ lượt giải va chạm) được viết trong code.
 
 | ID | Quyết định | Cơ sở | Trạng thái |
 | --- | --- | --- | --- |
-| DEC-01 | 3D low-poly, góc nhìn thứ ba nghiêng 45°; chuột xoay hướng<br>nhìn; gameplay trên mặt phẳng XZ | PL A.0 | Accepted |
+| DEC-01 | 3D low-poly, góc nhìn thứ ba thấp qua vai phải (nghiêng 22°,<br>sửa ở v0.7.1); chuột xoay hướng nhìn; gameplay trên mặt phẳng XZ | PL A.0 | Accepted |
 | DEC-02 | Godot 4.7.2 (GL Compatibility, Jolt Physics), GDScript,<br>Windows | PL A.0 | Accepted |
 | DEC-03 | Một sới, ba cấu hình trận PvE + LAN 1v1 | PL A.0 | Accepted |
 | DEC-04 | Host-authoritative, chỉ LAN trực tiếp | PL A.0 | Accepted |
@@ -195,7 +195,7 @@ phía rào, và giữ sức cho lúc khóa sừng. Trâu nào hết khí thế s
 
 | Mục | Nội dung |
 | --- | --- |
-| Thể loại | Arena combat / action versus 1v1, góc nhìn thứ ba nghiêng 45° |
+| Thể loại | Arena combat / action versus 1v1, góc nhìn thứ ba thấp qua vai (nghiêng 22°) |
 | Nền tảng &amp; input | Windows, bàn phím + chuột; LAN cho 2 máy; thiết kế ở 1280×720, 16:9 |
 | Người chơi mục tiêu | 12+, thích trận ngắn dễ học nhưng có kỹ năng căn góc và quản lý STAMINA; người<br>quan tâm văn hóa lễ hội |
 | Player fantasy | Chủ trâu của một giáp, dắt ông trâu qua vòng loại, bán kết, chung kết của mùa hội |
@@ -262,7 +262,7 @@ không nằm trong nó.
 
 | Hành động | Phím | Điều kiện |
 | --- | --- | --- |
-| LOOK | Chuột | Xoay camera quanh trâu (nghiêng cố định 45°). Thân trâu xoay theo, tối<br>đa turn_rate_deg_s |
+| LOOK | Chuột | Xoay camera quanh trâu (nghiêng cố định 22°, lệch qua vai phải). Thân trâu xoay theo, tối<br>đa turn_rate_deg_s |
 | MOVE | W/A/S/D | Theo hướng camera: W tiến, A/D đi ngang ×0,7, S lùi ×0,5. Trong<br>CLASH: giữ hướng về đối thủ = đẩy |
 | HORN (húc) | Chuột trái | Không STUNNED, không GUARD, không đang action khác; đủ 20<br>STAMINA; hết cooldown. Trong CLASH: móc |
 | DASH (hổ lao) | Space | Như HORN; đủ 28 STAMINA. Không dùng trong CLASH |
@@ -800,7 +800,7 @@ trong thẻ văn hóa có ghi nguồn.
 ### 5. Art, audio và UI/UX
 #### 5.1 Style guide
 - 3D low-poly cách điệu dựng trong Blender; silhouette thân và sừng đọc được từ
-góc 45°; rig với animation idle, walk, horn, dash, guard, hit, clash, flee, victory.
+góc camera thấp qua vai (22°); rig với animation idle, walk, horn, dash, guard, hit, clash, flee, victory.
 - Nhận diện phe bằng cờ giáp + số hiệu (trên HUD và tấm vải trên lưng trâu); phe
 đỏ viền sáng, phe xanh viền tối (outline shader). Thân trâu giữ màu tự nhiên.
 - Font có dấu tiếng Việt đầy đủ.
@@ -1079,7 +1079,7 @@ Mỗi mục trả lời: vấn đề cần giải là gì, các phương án đ�
 
 | Quyết định | Lập luận | Phương án bỏ |
 | --- | --- | --- |
-| 3D, góc nhìn thứ ba 45°,<br>chuột xoay hướng nhìn | Kỹ năng cốt lõi là căn góc: tách đi (WASD) khỏi<br>nhắm (chuột) cho phép làm cả hai cùng lúc.<br>Camera dài 9 m, FOV 75° thấy khoảng 5,5 m sau<br>lưng và gần hết sới phía trước, nên luôn biết mình<br>có sát rào không | Top-down cố định (không vừa<br>đi ngang vừa giữ sừng hướng<br>đối thủ); camera thấp (mất tầm<br>nhìn rào); chuột xoay thân tức<br>thì (đánh vòng mất giá trị); 2D<br>sprite (phải vẽ nhiều hướng) |
+| 3D, góc nhìn thứ ba thấp<br>qua vai (22°), chuột xoay<br>hướng nhìn | Kỹ năng cốt lõi là căn góc: tách đi (WASD) khỏi<br>nhắm (chuột) cho phép làm cả hai cùng lúc.<br>Camera 5,2 m, FOV 58°, lệch vai phải 1 m: thấy rõ<br>đầu, sừng hai trâu và cú húc có lực; trâu mình<br>không che đối thủ. Tầm nhìn sau lưng ngắn<br>(khoảng 2 m), bù bằng vòng cảnh báo khi bị ép rào<br>và rào hai bên vẫn trong khung (v0.7.1) | Top-down cố định (không vừa<br>đi ngang vừa giữ sừng hướng<br>đối thủ); camera cao 45° / 9 m<br>(bản ≤ v0.7: trâu nhỏ, chỉ thấy<br>lưng, húc thiếu lực); camera<br>thấp không lệch vai (trâu mình<br>che đối thủ); chuột xoay thân tức<br>thì (đánh vòng mất giá trị); 2D<br>sprite (phải vẽ nhiều hướng) |
 | Chuột trái húc, chuột<br>phải ghìm, Space hổ lao | Tay phải cầm chuột; trái/phải là quy ước đánh/đỡ<br>quen thuộc của game góc nhìn thứ ba | J/K (không dùng được cùng<br>chuột) |
 | Một sới, ba cấu hình | Độ khó tăng qua AI và địa hình; asset có hạn | Ba map riêng (gấp ba asset và<br>kiểm thử) |
 | Godot 4.7.2, GL<br>Compatibility, Jolt | Bản Godot nhóm đang dùng; GL Compatibility<br>chạy được trên máy cấu hình thấp; Jolt là physics<br>3D tích hợp sẵn từ Godot 4.4 | Godot 4.4.1 (ghi trong GDD bản<br>cũ); Forward+ (đòi GPU mạnh<br>hơn) |
@@ -1361,7 +1361,7 @@ Giá trị đã đối chiếu với data/balance.json và data/ai_profiles.json
 | lime_offset_x | 10,0 m | Vạch thả |
 | arena_fence_segments / net_interp_rate | 32 / 18 | Số đoạn rào / hệ số nội suy vị trí<br>ở client |
 | match_duration_s * | 90 s | Thời gian trận |
-| Camera * (follow_camera.gd) | 45° / 9,0 m / FOV 75° | Góc nghiêng, khoảng cách, góc<br>nhìn |
+| camera_* (data/presentation.json) | 22° / 5,2 m / FOV 58° / lệch vai 1,0 m | Góc nghiêng, khoảng cách, góc<br>nhìn, lệch qua vai phải |
 
 **Bảng 27. Khóa trong data/ai_profiles.json**
 
@@ -1403,7 +1403,7 @@ Giá trị đã đối chiếu với data/balance.json và data/ai_profiles.json
 | REQ-G08 | Giải quyết hành động đồng thời, đối<br>xứng | Đổi chỗ slot 1 ↔ 2 cho kết quả đối xứng | A |
 | REQ-G09 | CLASH khi đòn gặp đòn đang ra;<br>giải quyết theo cặp; đẩy / móc / nhả | Theo tick trên host: đòn A trúng khi B đang<br>startup/active nhắm đúng → đúng một CLASH;<br>hai trâu trượt về 2,9 m trong 0,1 s, kể cả sát rào.<br>Qua LAN: client thấy thanh KHÓA SỪNG và<br>kết quả giống host. Tỉ lệ vào CLASH khi hai<br>người cùng húc: đo khi playtest | A |
 | REQ-G10 | Sới có rào cứng + PINNED; MVP<br>không cho trâu rời sới (đi ra cổng là<br>SHOULD) | Không trâu nào ra ngoài rào khi đang<br>PLAYING | A/C |
-| REQ-G11 | Camera SpringArm3D sau lưng trâu,<br>45°, 9 m, FOV 75°; tự rút ngắn khi<br>chạm rào | Luôn thấy ≥ 5 m mặt sân sau lưng; camera<br>không xuyên rào; chỉnh được độ nhạy chuột | A/C |
+| REQ-G11 | Camera SpringArm3D sau lưng trâu,<br>lệch vai phải 1 m, 22°, 5,2 m, FOV 58°;<br>tự rút ngắn khi chạm rào; trúng đòn thì<br>giật vào (tắt được cùng rung camera) | Thấy đối thủ phía trước không bị trâu mình<br>che; thấy rào hai bên; camera<br>không xuyên rào; chỉnh được độ nhạy chuột | A/C |
 | REQ-G12 | Hình va chạm hai oval; tách hai trâu<br>đối xứng | Tiếp xúc ở 2,90 / 1,60 / 2,25 / 3,10 m (sai số<br>0,03–0,05 m); đổi slot cho kết quả đối xứng;<br>sau khi tách không còn vận tốc hướng vào nhau | A |
 | REQ-AI01 | AI FSM 3 profile, chỉ tạo InputFrame | Ba profile kết thúc trận trong 90 s; bị đặt sát mà<br>không đánh được thì thoát tới khoảng hở ≥ 0,3<br>m trong reaction_s + 0,5 s; test có đối chứng âm | B |
 | REQ-<br>N01..05 | LAN Host/Join, input, snapshot (gồm<br>trạng thái CLASH), disconnect; công<br>bằng input (N05, SHOULD, chưa<br>làm) | Các test mạng ở mục 3.6; harness hai tiến trình<br>đồng bộ CLASH và trạng thái sau CLASH | B |

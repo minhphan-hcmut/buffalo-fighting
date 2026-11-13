@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gameplay Chọi Trâu</title>
+<style>
+/* Bảng màu theo GDD §5.1 Bảng 18 */
+:root {
+  --dat: #8A5A3B; --do: #B6453B; --cham: #33546D; --vang: #E8BC65; --giay: #F2E6CF;
+  --bg: #F7F0E2; --surface: #FFFBF3; --surface-2: #F2E6CF; --ink: #2A2420; --muted: #6E6258;
+  --line: #DCCDB4; --accent: var(--cham); --new: #2F7D5B; --new-bg: #E3F1EA;
+  --red: var(--do); --blue: var(--cham); --gold: #C9962F;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C1815; --surface: #26211D; --surface-2: #2F2924; --ink: #F2E6CF; --muted: #B5A895;
+    --line: #443B33; --accent: #8FB3CF; --new: #6CCB9C; --new-bg: #1E3329;
+    --red: #E0705F; --blue: #7FA6C6; --gold: #E8BC65;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1C1815; --surface: #26211D; --surface-2: #2F2924; --ink: #F2E6CF; --muted: #B5A895;
+  --line: #443B33; --accent: #8FB3CF; --new: #6CCB9C; --new-bg: #1E3329;
+  --red: #E0705F; --blue: #7FA6C6; --gold: #E8BC65;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.6 "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px 80px; }
+header.top {
+  position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
+}
+header.top .wrap { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+header.top h1 { font-size: 17px; margin: 0; flex: 1; min-width: 180px; }
+header.top h1 small { color: var(--muted); font-weight: 400; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 5px 12px; border: 0; background: transparent; color: var(--muted); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+nav.toc { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 0 0; }
+nav.toc a {
+  font-size: 13px; color: var(--muted); text-decoration: none; padding: 3px 10px;
+  border: 1px solid var(--line); border-radius: 999px;
+}
+nav.toc a:hover { color: var(--ink); border-color: var(--muted); }
+section { padding-top: 36px; }
+h2 { font-size: 22px; margin: 0 0 4px; color: var(--accent); }
+h2 + .lead { margin-top: 0; }
+h3 { font-size: 16px; margin: 20px 0 8px; }
+.lead { color: var(--muted); margin: 4px 0 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.grid { display: grid; gap: 12px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+.tbl { overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.tbl table { min-width:0; border-collapse:separate; border-spacing:0; }
+.tbl tbody tr:last-child > td { border-bottom:0; }
+.tbl kbd { display:inline-block; white-space:nowrap; }
+.tbl td[data-label="Phím"] > div { white-space:nowrap; }
+kbd {
+  font: 600 12px/1 "Be Vietnam Pro", system-ui, sans-serif; padding: 3px 7px; border-radius: 5px;
+  border: 1px solid var(--line); border-bottom-width: 2px; background: var(--surface-2);
+}
+.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; vertical-align: middle; }
+.tag.new { background: var(--new-bg); color: var(--new); }
+.tag.must { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+.tag { background: var(--surface-2); color: var(--muted); }
+a.jump { color: var(--accent); text-decoration: none; }
+a.jump:hover { text-decoration: underline; }
+section { scroll-margin-top: 64px; }
+.changed { box-shadow: inset 3px 0 0 var(--new); }
+.term { color: var(--muted); font-style: italic; font-weight: 400; }
+.note { font-size: 13px; color: var(--muted); }
+
+/* Luồng trận */
+.flow { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.flow .step { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.flow .step b { display: block; color: var(--accent); }
+.flow .arrow { align-self: center; color: var(--muted); }
+
+/* Thanh tài nguyên */
+.bar { height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; margin: 6px 0; }
+.bar > i { display: block; height: 100%; }
+
+/* Thẻ đòn */
+.move h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.move .swatch { width: 12px; height: 12px; border-radius: 3px; }
+.move dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 14px; }
+.move dt { color: var(--muted); }
+.move dd { margin: 0; }
+
+/* Timeline */
+.tl { margin: 10px 0 18px; }
+.tl .row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.tl .row > span { font-size: 13px; color: var(--muted); }
+.tl .track { position: relative; height: 26px; background: var(--surface-2); border-radius: 6px; }
+.tl .seg-b {
+  position: absolute; top: 0; height: 100%; border-radius: 5px; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; color: #2A2420;
+}
+.tl .axis { position: relative; height: 18px; margin-left: 140px; font-size: 11px; color: var(--muted); }
+.tl .axis b { position: absolute; font-weight: 400; transform: translateX(-50%); }
+.s-start { background: #F3D79A; }
+.s-active { background: var(--vang); }
+.s-dash { background: #D97F6F; }
+.s-rec { background: #C9BBA5; }
+.s-whiff { background: repeating-linear-gradient(45deg, #C9BBA5 0 6px, #B3A38B 6px 12px); }
+.s-stun { background: #9DB4C6; }
+.s-win { background: #9FD6B9; }
+.s-cd { background: transparent; border: 1px dashed var(--muted); color: var(--muted) !important; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+
+/* Sơ đồ vùng */
+.diagram { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 720px) { .diagram { grid-template-columns: 1fr; } }
+.diagram svg { width: 100%; height: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.layer-toggles label { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; cursor: pointer; }
+
+/* Khóa sừng */
+.rps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 640px) { .rps { grid-template-columns: 1fr; } }
+.rps .card h3 { margin-top: 0; }
+.beats { font-size: 13px; color: var(--muted); }
+
+/* Máy tính */
+.calc { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .calc { grid-template-columns: 1fr; } }
+.calc fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 0 0 10px; padding: 8px 12px; }
+.calc legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.calc label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; font-size: 14px; cursor: pointer; }
+.calc label.disabled { opacity: .4; cursor: not-allowed; }
+.result-big { font-size: 48px; font-weight: 700; line-height: 1.1; color: var(--red); font-variant-numeric: tabular-nums; }
+.formula { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--surface-2); padding: 8px 10px; border-radius: 8px; overflow-x: auto; }
+
+/* Gói luật chốt */
+.dec { border-left: 4px solid var(--new); }
+.dec h3 { margin-top: 0; }
+.dec ul { margin: 6px 0 0; padding-left: 20px; }
+.chip-text {
+  display: inline-block; font-weight: 700; font-size: 13px; padding: 2px 8px; border-radius: 6px; margin: 2px;
+  background: #2A2420; color: var(--vang); letter-spacing: .02em;
+}
+footer { margin-top: 48px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Sơ đồ dùng chung token sáng/tối, không tải tài nguyên ngoài. */
+:root { --move-dash: #D97F6F; --move-guard: #9DB4C6; --move-parry: #9FD6B9; --horn-white: #E8E5DE; --horn-outline: #2A2420; }
+.visual { display:block; width:100%; height:auto; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.visual text { font:14px "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif; fill:currentColor; }
+.visual .edge-label { font-size:13px; fill:var(--muted); }
+.visual .node { fill:var(--surface-2); stroke:var(--line); stroke-width:1.5; }
+.visual .horn { fill:color-mix(in srgb, var(--vang) 26%, var(--surface)); stroke:var(--gold); }
+.visual .dash { fill:color-mix(in srgb, var(--move-dash) 26%, var(--surface)); stroke:var(--move-dash); }
+.visual .guard { fill:color-mix(in srgb, var(--move-guard) 26%, var(--surface)); stroke:var(--move-guard); }
+.visual .parry { fill:color-mix(in srgb, var(--move-parry) 26%, var(--surface)); stroke:var(--new); }
+.visual .punish { fill:color-mix(in srgb, var(--red) 18%, var(--surface)); stroke:var(--red); stroke-width:2; }
+.visual .counter { fill:color-mix(in srgb, var(--vang) 30%, var(--surface)); stroke:var(--ink); stroke-width:3; }
+.connector { fill:none; stroke:var(--muted); stroke-width:1.5; }
+.arrow-tip { fill:none; stroke:var(--muted); stroke-width:1.5; marker-end:url(#arrowhead); }
+.horn-stroke { stroke-width:5; stroke-linecap:round; }
+.visual .horn-stroke { fill:none; }
+#tom-tat > .visual, #dieu-khien > .visual { max-width:600px; margin:16px auto; }
+.visual .horn-stroke.horn { stroke:var(--vang); }
+.visual .horn-stroke.parry { stroke:var(--move-parry); }
+.visual .horn-stroke.dash { stroke:var(--move-dash); }
+.visual .horn-stroke.guard { stroke:var(--horn-white); opacity:.65; }
+.visual .buffalo-id { fill:var(--giay); font-weight:700; }
+.visual-defs { position:absolute; width:0!important; height:0; overflow:hidden; border:0; }
+.shot-grid, .comic, .relations, .head-grid { display:grid; gap:12px; margin:16px 0; }
+.shot-grid, .relations { grid-template-columns:repeat(2,minmax(0,1fr)); }
+figure { margin:0; min-width:0; }
+figure img { display:block; width:100%; max-width:100%; height:auto; border-radius:12px; border:1px solid var(--line); }
+figcaption { margin-top:8px; font-size:13px; color:var(--muted); }
+.comic { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.comic.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.comic figure { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px; }
+.comic figcaption { color:var(--ink); }
+.head-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.head-grid figcaption { text-align:center; }
+.decision { max-width:540px; margin:16px auto; }
+.decision > .visual { margin-top:4px; }
+.decision .next { display:block; text-align:center; color:var(--muted); font-size:13px; }
+.stamina-demo { display:flex; height:46px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+.stamina-demo span { display:flex; align-items:center; justify-content:center; min-width:0; font-size:13px; background:var(--vang); color:var(--ink); border-right:2px solid var(--surface); }
+.stamina-demo .dash { background:var(--move-dash); }
+.stamina-demo .parry { background:var(--move-parry); }
+.stamina-demo .rest { background:var(--surface-2); }
+.pipeline { padding-left:28px; }
+.pipeline li { margin:10px 0; padding-left:6px; }
+summary { cursor:pointer; font-weight:600; color:var(--accent); }
+.counter-flash { animation:counter-pulse 1s ease-in-out infinite; }
+@keyframes counter-pulse { 50% { opacity:.4; } }
+@media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .counter-flash { animation:none; } }
+.s-stun { background:var(--red); color:var(--surface)!important; }
+.s-whiff { background:repeating-linear-gradient(45deg, color-mix(in srgb, var(--red) 30%, var(--surface)) 0 6px, color-mix(in srgb, var(--red) 50%, var(--surface)) 6px 12px); }
+.s-start,.s-active { background:var(--vang); }
+.s-dash { background:var(--move-dash); }
+.s-win { background:var(--move-parry); }
+.grid > *, .calc > *, .diagram > * { min-width:0; }
+@media (max-width:640px) {
+  .shot-grid,.relations,.comic,.comic.three { grid-template-columns:1fr; }
+  .head-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .g2,.g3 { grid-template-columns:1fr; }
+  .move dl { grid-template-columns:90px minmax(0,1fr); gap:4px 8px; }
+  .tl .row { grid-template-columns:88px minmax(0,1fr); gap:6px; }
+  .tl .axis { margin-left:94px; }
+  header.top h1 { flex-basis:100%; }
+  section { scroll-margin-top:152px; }
+}
+
+
+/* Bảng mới xuống từng dòng trên điện thoại, dùng lại token của trang. */
+.tag.watch,.tag.changed { background:color-mix(in srgb, var(--gold) 18%, var(--surface)); color:var(--ink); }
+.tag.changed { box-shadow:none; }
+.mobile-rows a { font-weight:600; }
+#so-do-k text { font-size:14px; }
+@media (max-width:640px) {
+  .mobile-rows { min-width:0!important; }
+  .mobile-rows thead { display:none; }
+  .mobile-rows tbody,.mobile-rows tr { display:block; }
+  .mobile-rows tr { padding:8px 0; border-bottom:1px solid var(--line); }
+  .mobile-rows tr:last-child { border-bottom:0; }
+  .mobile-rows td { display:grid; grid-template-columns:82px minmax(0,1fr); gap:8px; border:0; padding:5px 10px; overflow-wrap:anywhere; }
+  .mobile-rows td::before { content:attr(data-label); color:var(--muted); font-size:12px; }
+  .mobile-rows .tag { justify-self:start; }
+  section { scroll-margin-top:118px; }
+}
+
+/* Lối đọc và hình tóm tắt, dùng cùng bảng màu của trang. */
+nav.toc { display:grid; gap:10px; }
+.toc-group { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.toc-group > b { flex-basis:100%; font-size:12px; color:var(--muted); }
+.reading-paths { margin-top:16px; }
+.reading-paths h3 { margin:0 0 6px; }
+.reading-paths p { margin:6px 0; font-size:14px; }
+#tom-tat > .visual, #dieu-khien > .visual, #cay-g, #so-do-k > .visual { max-width:320px; margin:16px auto; }
+.matchup th[scope="row"] { color:var(--ink); width:18%; }
+.matchup td { width:20.5%; }
+.matchup .a-favored { background:color-mix(in srgb, var(--new) 26%, var(--surface)); }
+.matchup .b-favored { background:color-mix(in srgb, var(--red) 26%, var(--surface)); }
+.matchup .blocked { background:var(--surface-2); }
+.matchup .neutral { background:var(--surface); }
+.matchup td .term, .matchup td::before { color:var(--ink); }
+.matchup th, .matchup td { border-right:1px solid var(--line); }
+.matchup tr > :last-child { border-right:0; }
+.matchup tbody tr:last-child > th { border-bottom:0; }
+.matchup-legend { margin:8px 0; }
+.matchup-legend .a-key { background:var(--new); }
+.matchup-legend .b-key { background:var(--red); }
+.matchup-legend .neutral-key { background:var(--surface-2); border:1px solid var(--line); }
+.hits-chart { display:grid; gap:14px; }
+.hits-label { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:4px; font-size:14px; }
+.hits-bar { display:flex; height:24px; overflow:hidden; border:1px solid var(--line); border-radius:6px; background:var(--surface-2); }
+.hits-bar > i { flex:none; background:var(--red); border-right:2px solid var(--surface); }
+.hits-bar > i:last-child { border-right:0; background:color-mix(in srgb, var(--red) 35%, var(--surface)); }
+.formula-steps { display:flex; gap:8px; align-items:stretch; padding:0; margin:16px 0; list-style:none; }
+.formula-steps li { display:flex; align-items:center; gap:8px; flex:1; min-width:0; font-size:13px; }
+.formula-steps li:nth-child(3) { flex:2; }
+.formula-steps li + li::before { content:"→"; color:var(--muted); }
+.formula-steps li > div { flex:1; height:100%; padding:10px; background:var(--surface); border:1px solid var(--line); border-radius:10px; }
+.formula-steps b { display:block; color:var(--accent); }
+.formula-steps kbd { display:inline-block; white-space:nowrap; }
+details.card { margin-top:16px; }
+details.card > .tbl, details.card > ul { margin-top:12px; }
+@media (max-width:640px) {
+  .matchup th[scope="row"] { display:block; width:auto; border:0; padding:5px 10px; font-size:15px; }
+  .matchup td { width:auto; border:0; grid-template-columns:100px minmax(0,1fr); }
+  .formula-steps { flex-direction:column; }
+  .formula-steps li { flex-direction:column; align-items:stretch; }
+  .formula-steps li + li::before { content:"↓"; text-align:center; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Gameplay Chọi Trâu <small>· rà soát 11/11/2026</small></h1>
+    <div class="seg" role="group" aria-label="Giao diện">
+      <button data-theme-btn="light" aria-pressed="false">Sáng</button>
+      <button data-theme-btn="dark" aria-pressed="false">Tối</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap"><svg class="visual-defs" viewBox="0 0 1 1" style="width:100%" role="img" aria-label="Định nghĩa mũi tên sơ đồ"><defs><marker id="arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="var(--muted)"/></marker></defs></svg>
+  <nav class="toc" aria-label="Nội dung">
+    <div class="toc-group"><b>Cơ bản</b><a href="#tom-tat">Gameplay trong 1 phút</a><a href="#diem-moi">Nút bấm</a><a href="#thuat-ngu">Thuật ngữ</a><a href="#tran">Một trận</a><a href="#dieu-khien">Điều khiển</a><a href="#tai-nguyen">Tài nguyên</a><a href="#don">Các đòn</a><a href="#doc-don">Vòng đọc đòn</a></div>
+    <div class="toc-group"><b>Chiến đấu chi tiết</b><a href="#timeline">Timeline</a><a href="#vung">Vùng đánh</a><a href="#tuong-tac">Khi đòn chạm</a><a href="#clash">Khóa sừng</a><a href="#nhan-dien">Nhận diện đòn</a></div>
+    <div class="toc-group"><b>Cân bằng &amp; phụ lục</b><a href="#tick">Cho lập trình viên</a><a href="#tinh">Tính thử</a><a href="#can-bang">Cân bằng</a><a href="#phat-hanh">Đánh giá trước phát hành</a><a href="#ai">AI</a><a href="#thay-doi">Phụ lục</a><a href="#de-xuat">DEC-17…21</a></div>
+  </nav>
+  <div class="card reading-paths">
+    <h3>Đọc theo vai trò</h3>
+    <p><b>Mới vào / tester:</b> <a class="jump" href="#tom-tat">Gameplay trong 1 phút</a> → <a class="jump" href="#diem-moi">Nút bấm</a> → <a class="jump" href="#don">Các đòn</a> → <a class="jump" href="#doc-don">Vòng đọc đòn</a>.</p>
+    <p><b>Game designer:</b> <a class="jump" href="#tuong-tac">Khi đòn chạm</a> → <a class="jump" href="#timeline">Timeline</a> → <a class="jump" href="#can-bang">Cân bằng</a> → <a class="jump" href="#phat-hanh">Đánh giá trước phát hành</a>.</p>
+    <p><b>Lập trình viên:</b> <a class="jump" href="#tick">Cho lập trình viên</a> → <a class="jump" href="#tinh">Tính thử</a> → <a class="jump" href="#thay-doi">Phụ lục (DEC-17…21)</a>.</p>
+  </div>
+
+<section id="tom-tat"><h2>Gameplay trong 1 phút</h2><p class="lead">Bạn điều khiển trâu, tìm lúc đối thủ sơ hở để húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> và chọn cách đỡ khi họ đánh tới.</p><ul>
+<li>Làm đối thủ hết <b>Khí thế <span class="term">(SPIRIT)</span></b> là thắng. Mỗi trâu có 100 điểm và thanh này không tự hồi.</li>
+<li>Bạn có tối đa <b>90 s</b> để thắng một trận. Đừng ra đòn liên tục: cần nghỉ để hồi Sức <span class="term">(Stamina)</span>.</li>
+<li>Thấy đối thủ cúi đầu, bạn có thể gạt rồi húc lại. Húc báo trước <span class="term">(Telegraph)</span> 0,25 s; Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> ra ngay nên phải đoán.</li>
+<li>Bốn lựa chọn khắc nhau: Húc trúng trâu không đỡ. Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> chặn Húc. Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> trị Húc, nhưng gạt hụt thì bị phạt. Đi vòng đánh sườn thắng Ghìm.</li>
+</ul><h3>Ai khắc ai</h3>
+<p class="note">Hàng là lựa chọn của A, cột là lựa chọn của B. Các số mất là Khí thế; chi phí giữ Ghìm tính bằng Sức.</p>
+<div class="legend matchup-legend"><span><i class="a-key"></i>Xanh · A lợi</span><span><i class="b-key"></i>Đỏ · B lợi</span><span><i class="neutral-key"></i>Xám · Đỡ được (trung tính)</span></div>
+<div class="tbl"><table class="mobile-rows matchup"><thead><tr><th scope="col">A làm gì ↓ / B làm gì →</th><th scope="col">Không đỡ</th><th scope="col">Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd><br><span class="note">A phía trước</span></th><th scope="col">Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd><br><span class="note">Đúng lúc</span></th><th scope="col">Gạt hụt<br><span class="note">Bấm sớm</span></th></tr></thead><tbody>
+<tr><th scope="row">Húc <kbd>Chuột trái</kbd></th><td class="a-favored" data-label="Không đỡ"><div><b>A lợi:</b> B mất 18, choáng 0,30 s</div></td><td class="blocked" data-label="Ghìm (A phía trước)"><div><b>Đỡ được:</b> mất ×0,45 = 8, không choáng</div></td><td class="b-favored" data-label="Gạt đúng lúc"><div><b>B lợi:</b> mất 0, A choáng 0,50 s, B có Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd> 23</div></td><td class="a-favored" data-label="Gạt hụt (bấm sớm)"><div><b>A lợi:</b> B sơ hở 0,60 s, trúng đầy đủ 18</div></td></tr>
+<tr><th scope="row">Hổ lao <kbd>Space</kbd></th><td class="a-favored" data-label="Không đỡ"><div><b>A lợi:</b> B mất 14</div></td><td class="blocked" data-label="Ghìm (A phía trước)"><div><b>Đỡ được:</b> mất ×0,45, không choáng</div></td><td class="b-favored" data-label="Gạt đúng lúc"><div><b>B lợi:</b> A choáng 0,70 s</div></td><td class="a-favored" data-label="Gạt hụt (bấm sớm)"><div><b>A lợi:</b> trúng đầy đủ</div></td></tr>
+<tr><th scope="row">Đi vòng, húc sườn / lưng <kbd>Chuột trái</kbd></th><td class="a-favored" data-label="Không đỡ"><div><b>A lợi:</b> ×1,25 = 23</div></td><td class="a-favored" data-label="Ghìm (A phía trước)"><div><b>A lợi:</b> Ghìm không che, 23</div></td><td class="a-favored" data-label="Gạt đúng lúc"><div><b>A lợi:</b> gạt không tác dụng, 23</div></td><td class="a-favored" data-label="Gạt hụt (bấm sớm)"><div><b>A lợi:</b> 23</div></td></tr>
+<tr><th scope="row">Chờ, không ra đòn</th><td class="neutral" data-label="Không đỡ"><div>—</div></td><td class="a-favored" data-label="Ghìm (A phía trước)"><div><b>A lợi:</b> B hao 12 Sức/s</div></td><td class="neutral" data-label="Gạt đúng lúc"><div>—</div></td><td class="a-favored" data-label="Gạt hụt (bấm sớm)"><div><b>A lợi:</b> B sơ hở 0,60 s, A húc phạt</div></td></tr>
+</tbody></table></div>
+<p class="note">Hai trâu cùng húc thẳng vào nhau → Khóa sừng <span class="term">(Clash)</span>, không ai mất Khí thế.</p>
+<h3>Vòng lặp trận</h3><svg class="visual" viewBox="0 0 340 430" style="width:100%" role="img" aria-label="A — vòng lặp quan sát, chọn, va chạm, cập nhật và hai nhánh kết thúc"><rect x="10" y="12" width="146" height="92" rx="10" class="node neutral"/><text x="83.0" y="37" text-anchor="middle"><tspan x="83.0" dy="0">Quan sát</tspan><tspan x="83.0" dy="19">Khoảng cách, góc</tspan><tspan x="83.0" dy="19">Đối thủ cúi đầu?</tspan></text><rect x="184" y="12" width="146" height="92" rx="10" class="node neutral"/><text x="257.0" y="37" text-anchor="middle"><tspan x="257.0" dy="0">Chọn</tspan><tspan x="257.0" dy="19">Đi, Húc, Hổ lao</tspan><tspan x="257.0" dy="19">Ghìm<tspan>, Gạt sừng</tspan></tspan></text><rect x="184" y="153" width="146" height="92" rx="10" class="node neutral"/><text x="257.0" y="178" text-anchor="middle"><tspan x="257.0" dy="0">Va chạm</tspan><tspan x="257.0" dy="19">Trúng<tspan> / bị gạt</tspan></tspan><tspan x="257.0" dy="19">Khóa sừng / hụt</tspan></text><rect x="10" y="153" width="146" height="92" rx="10" class="node neutral"/><text x="83.0" y="178" text-anchor="middle"><tspan x="83.0" dy="0">Cập nhật</tspan><tspan x="83.0" dy="19">Khí thế, Sức</tspan><tspan x="83.0" dy="19">Vị trí</tspan></text><path d="M156 56 H181" class="connector"/><path d="M156 56 H181" class="arrow-tip"/><path d="M257 104 V150" class="connector"/><path d="M257 104 V150" class="arrow-tip"/><path d="M184 197 H159" class="connector"/><path d="M184 197 H159" class="arrow-tip"/><path d="M83 153 V107" class="connector"/><path d="M83 153 V107" class="arrow-tip"/><path d="M83 245 V286 H168" class="connector"/><path d="M83 245 V286 H168" class="arrow-tip"/><rect x="12" y="300" width="316" height="47" rx="10" class="node punish"/><text x="170.0" y="325" text-anchor="middle"><tspan x="170.0" dy="0">Khí thế = 0 → Chịu thua</tspan></text><rect x="12" y="364" width="316" height="47" rx="10" class="node neutral"/><text x="170.0" y="389" text-anchor="middle"><tspan x="170.0" dy="0">90 s → Hết giờ</tspan></text><path d="M170 286 V297" class="connector"/><path d="M170 286 V297" class="arrow-tip"/><path d="M328 215 H336 V387 H330" class="connector"/><path d="M328 215 H336 V387 H330" class="arrow-tip"/></svg></section>
+
+<section id="diem-moi"><h2>Nút bấm và điểm mới so với GDD v0.7</h2><p class="lead">Mọi nút trong trận ở một bảng; cột cuối cho biết nút nào mới hoặc đã đổi so với GDD v0.7.</p>
+<div class="tbl"><table class="mobile-rows"><thead><tr><th scope="col">Nút</th><th scope="col">Đòn</th><th scope="col">Làm gì</th><th scope="col">So với GDD v0.7</th></tr></thead><tbody>
+<tr><td data-label="Nút"><div><kbd>W A S D</kbd></div></td><td data-label="Đòn"><div><a class="jump" href="#don">Đi</a></div></td><td data-label="Làm gì"><div>Đi theo hướng camera; đi ngang ×0,7, lùi ×0,5</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div>Rê chuột</div></td><td data-label="Đòn"><div><a class="jump" href="#don">Xoay</a></div></td><td data-label="Làm gì"><div>Xoay camera và thân trâu (tối đa 540°/s)</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Chuột trái</kbd></div></td><td data-label="Đòn"><div><a class="jump" href="#don">Húc <span class="term">(Basic attack)</span></a></div></td><td data-label="Làm gì"><div>Đòn chính: 18 Khí thế, 20 Sức</div></td><td data-label="So với GDD v0.7"><div><span class="tag changed">Đổi</span>: lấy đà 0,12 → 0,25 s; húc hụt hồi 0,20 → 0,40 s; sừng sáng vàng</div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Chuột trái</kbd> trong 0,5 s sau khi gạt trúng</div></td><td data-label="Đòn"><div><a class="jump" href="#doc-don">Phản đòn <span class="term">(Counter attack)</span></a></div></td><td data-label="Làm gì"><div>Húc ra nhanh (lấy đà 0,08 s), mạnh ×1,3 = 23</div></td><td data-label="So với GDD v0.7"><div><span class="tag new">Mới</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Space</kbd></div></td><td data-label="Đòn"><div><a class="jump" href="#don">Hổ lao <span class="term">(Dash attack)</span></a></div></td><td data-label="Làm gì"><div>Lao 3,6 m, ra ngay; 14 Khí thế, 28 Sức</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span>; thêm sừng sáng đỏ</div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Chuột phải</kbd> (giữ)</div></td><td data-label="Đòn"><div><a class="jump" href="#don">Ghìm <span class="term">(Block)</span></a></div></td><td data-label="Làm gì"><div>Đỡ phía trước: chỉ mất ×0,45, không choáng; tốn 12 Sức/s</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>G</kbd></div></td><td data-label="Đòn"><div><a class="jump" href="#don">Gạt sừng <span class="term">(Parry)</span></a></div></td><td data-label="Làm gì"><div>Bấm đúng lúc đòn tới (thế gạt 0,15 s): mất 0, đối thủ choáng 0,50 s; hụt thì sơ hở 0,60 s; 10 Sức</div></td><td data-label="So với GDD v0.7"><div><span class="tag new">Mới</span>; bấm được cả khi đang giữ Ghìm</div></td></tr>
+<tr><td data-label="Nút"><div>Giữ <kbd>W A S D</kbd> về phía đối thủ (trong khóa sừng)</div></td><td data-label="Đòn"><div><a class="jump" href="#clash">Đẩy <span class="term">(Push)</span></a></div></td><td data-label="Làm gì"><div>Dồn thanh khóa sừng</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Chuột trái</kbd> (trong khóa sừng)</div></td><td data-label="Đòn"><div><a class="jump" href="#clash">Móc <span class="term">(Hook)</span></a></div></td><td data-label="Làm gì"><div>+35 về phía mình; thua Nhả</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Chuột phải</kbd> (trong khóa sừng)</div></td><td data-label="Đòn"><div><a class="jump" href="#clash">Nhả <span class="term">(Release)</span></a></div></td><td data-label="Làm gì"><div>Trúng lúc đối thủ đang móc: họ mất 12</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+<tr><td data-label="Nút"><div><kbd>Esc</kbd></div></td><td data-label="Đòn"><div><a class="jump" href="#don">Tạm dừng</a></div></td><td data-label="Làm gì"><div>LAN: đối phương phải đồng ý</div></td><td data-label="So với GDD v0.7"><div><span class="note">Giữ nguyên</span></div></td></tr>
+</tbody></table></div><h3>Luật khác đã đổi (không gắn với nút)</h3><div class="tbl"><table class="mobile-rows"><thead><tr><th scope="col">Luật</th><th scope="col">GDD v0.7</th><th scope="col">Bây giờ</th></tr></thead><tbody>
+<tr><td data-label="Luật"><div>Đánh sườn / lưng <span class="term">(Flank / Backstab)</span></div></td><td data-label="GDD v0.7"><div>Góc chỉ quyết định Ghìm che được không</div></td><td data-label="Bây giờ"><div>×1,25 khi đánh lệch &gt; 60° (sườn 60–120°, lưng &gt; 120°).</div></td></tr>
+<tr><td data-label="Luật"><div>Thưởng không nhân dồn</div></td><td data-label="GDD v0.7"><div>Dồn rào ×1,5</div></td><td data-label="Bây giờ"><div>Dồn rào, sườn/lưng, phản đòn chỉ lấy thưởng lớn nhất; một cú tối đa 27.<br>Ví dụ húc sườn trâu đang bị dồn rào: chỉ tính ×1,5 → 27, không nhân thêm ×1,25.</div></td></tr>
+<tr><td data-label="Luật"><div>Khựng <span class="term">(Hitstop)</span></div></td><td data-label="GDD v0.7"><div>Không có</div></td><td data-label="Bây giờ"><div>Trúng 4 khung hình; gạt / phản / khóa sừng 6 khung hình.</div></td></tr>
+<tr><td data-label="Luật"><div>Báo trước <span class="term">(Telegraph)</span></div></td><td data-label="GDD v0.7"><div>Chỉ cúi đầu</div></td><td data-label="Bây giờ"><div>Sừng sáng theo màu đòn, chữ nổi, âm thanh.</div></td></tr>
+<tr><td data-label="Luật"><div>AI gạt sừng</div></td><td data-label="GDD v0.7"><div>Không gạt</div></td><td data-label="Bây giờ"><div>EASY 0%, NORMAL 15%, HARD 25%; phản đòn 0 / 50 / 100%.</div></td></tr>
+</tbody></table></div><p class="note">DEC-17…21, đã chốt, chưa code. Chi tiết và lý do ở mục <a class="jump" href="#can-bang">Cân bằng</a> và <a class="jump" href="#thay-doi">Phụ lục</a>.</p></section>
+
+
+
+<section id="thuat-ngu"><h2>Thuật ngữ</h2><p class="lead">Gặp từ chưa quen, bạn có thể tra ở đây rồi quay lại xem đòn.</p><div class="tbl"><table class="mobile-rows"><thead><tr><th>Tên trong game</th><th>Thuật ngữ gamer</th><th>Nghĩa</th></tr></thead><tbody>
+<tr><td data-label="Tên trong game"><div>Khí thế</div></td><td data-label="Gamer"><div><span class="term">(SPIRIT)</span></div></td><td data-label="Nghĩa"><div>Thanh quyết định thắng thua; về 0 là chịu thua, không tự hồi.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Sức</div></td><td data-label="Gamer"><div><span class="term">(Stamina)</span></div></td><td data-label="Nghĩa"><div>Năng lượng để ra đòn; tự hồi khi nghỉ.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Húc <kbd>Chuột trái</kbd></div></td><td data-label="Gamer"><div><span class="term">(Basic attack)</span></div></td><td data-label="Nghĩa"><div>Đòn chính: cúi đầu lấy đà rồi húc, mạnh nhất (18).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Hổ lao <kbd>Space</kbd></div></td><td data-label="Gamer"><div><span class="term">(Dash attack)</span></div></td><td data-label="Nghĩa"><div>Lao thẳng 3,6 m, ra đòn ngay không báo trước, yếu hơn (14).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Ghìm <kbd>Chuột phải</kbd></div></td><td data-label="Gamer"><div><span class="term">(Block)</span></div></td><td data-label="Nghĩa"><div>Giữ chuột phải để đỡ: mất ít Khí thế, an toàn, không cần canh lúc.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Gạt sừng <kbd>G</kbd></div></td><td data-label="Gamer"><div><span class="term">(Parry)</span></div></td><td data-label="Nghĩa"><div>Bấm G đúng lúc đòn tới: không mất gì, đối thủ bị choáng.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Phản đòn <kbd>Chuột trái</kbd></div></td><td data-label="Gamer"><div><span class="term">(Counter attack)</span></div></td><td data-label="Nghĩa"><div>Cú húc ngay sau khi gạt trúng: ra nhanh, mạnh hơn (23).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Khóa sừng</div></td><td data-label="Gamer"><div><span class="term">(Clash)</span></div></td><td data-label="Nghĩa"><div>Hai trâu cùng ra đòn thẳng vào nhau (Húc hoặc Hổ lao) thì mắc sừng, đấu trí bằng Đẩy / Móc / Nhả.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đẩy <kbd>W A S D</kbd> / Móc <kbd>Chuột trái</kbd> / Nhả <kbd>Chuột phải</kbd></div></td><td data-label="Gamer"><div><span class="term">(Push / Hook / Release)</span></div></td><td data-label="Nghĩa"><div>Ba lựa chọn trong khóa sừng, khắc nhau kiểu oẳn tù tì.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Choáng</div></td><td data-label="Gamer"><div><span class="term">(Stun)</span></div></td><td data-label="Nghĩa"><div>Không điều khiển được trong chốc lát.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Bất tử</div></td><td data-label="Gamer"><div><span class="term">(Invincibility / i-frames)</span></div></td><td data-label="Nghĩa"><div>Vừa trúng đòn thì miễn đòn 0,45 s.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đẩy lùi</div></td><td data-label="Gamer"><div><span class="term">(Knockback)</span></div></td><td data-label="Nghĩa"><div>Bị hất lùi khi trúng đòn.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Dồn rào</div></td><td data-label="Gamer"><div><span class="term">(Pinned / cornered)</span></div></td><td data-label="Nghĩa"><div>Bị ép sát rào: mất nhiều Khí thế hơn (×1,5).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đánh sườn / lưng</div></td><td data-label="Gamer"><div><span class="term">(Flank / Backstab)</span></div></td><td data-label="Nghĩa"><div>Đánh vào bên hông hoặc sau lưng: ×1,25, không đỡ được.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Mất Khí thế khi Ghìm</div></td><td data-label="Gamer"><div><span class="term">(Chip damage)</span></div></td><td data-label="Nghĩa"><div>Đỡ rồi vẫn mất một phần nhỏ (8 thay vì 18).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Báo trước</div></td><td data-label="Gamer"><div><span class="term">(Telegraph)</span></div></td><td data-label="Nghĩa"><div>Dấu hiệu đòn sắp ra (cúi đầu, sừng sáng, tiếng thở).</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Chuẩn bị / Gây đòn / Hồi</div></td><td data-label="Gamer"><div><span class="term">(Startup / Active / Recovery)</span></div></td><td data-label="Nghĩa"><div>Ba pha của một đòn.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Hồi chiêu</div></td><td data-label="Gamer"><div><span class="term">(Cooldown)</span></div></td><td data-label="Nghĩa"><div>Thời gian chờ trước khi dùng lại đòn.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đánh hụt / Phạt đòn hụt</div></td><td data-label="Gamer"><div><span class="term">(Whiff / Whiff punish)</span></div></td><td data-label="Nghĩa"><div>Đánh trượt thì bị đối thủ đánh lại lúc đang hồi.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Nhớ phím</div></td><td data-label="Gamer"><div><span class="term">(Input buffer)</span></div></td><td data-label="Nghĩa"><div>Bấm sớm một chút vẫn được ghi nhận.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Khựng</div></td><td data-label="Gamer"><div><span class="term">(Hitstop)</span></div></td><td data-label="Nghĩa"><div>Cả trận đứng hình rất ngắn khi va chạm, cho cảm giác lực.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đứng Ghìm mãi</div></td><td data-label="Gamer"><div><span class="term">(Turtling)</span></div></td><td data-label="Nghĩa"><div>Chỉ đỡ mà không đánh.</div></td></tr>
+<tr><td data-label="Tên trong game"><div>Đoán ý</div></td><td data-label="Gamer"><div><span class="term">(Mind game / mix-up)</span></div></td><td data-label="Nghĩa"><div>Chọn đòn dựa trên đoán đối thủ sẽ làm gì.</div></td></tr>
+</tbody></table></div></section>
+
+<section id="tran">
+    <h2>Một trận đấu</h2>
+    <p class="lead">Bạn vào sới, đấu một trận ngắn rồi xem kết quả; chơi Solo thì gặp AI khó dần qua ba trận.</p>
+    <div class="flow">
+      <div class="step"><b>Vào sới</b>Hai trâu ở vạch thả, cách tâm 10 m.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Đếm ngược 3 s</b>Phím đang giữ phải nhả ra rồi bấm lại.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Thi đấu ≤ 90 s</b>Đi, húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd>, hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd>, ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd>, khóa sừng <span class="term">(Clash)</span>.</div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Kết quả</b>Camera lên cao, trâu thua ra cổng, trâu thắng chào khán giả ~4 s.</div>
+    </div>
+<div class="shot-grid"><figure><img src="../production/qa/evidence/result-outro-flee.png" alt="Trâu thua quay đầu và lui về cổng sới" loading="lazy"><figcaption>Trâu thua quay đầu lui về cổng</figcaption></figure><figure><img src="../production/qa/evidence/result-outro-screen.png" alt="Màn kết quả sau trận chọi trâu" loading="lazy"><figcaption>Màn kết quả</figcaption></figure></div>
+    <h3>Ba cách kết thúc (xét theo thứ tự)</h3>
+    <div class="grid g3">
+      <div class="card"><b>1 · LOT (bốc thăm)</b><br><span class="note">Cả hai cùng về 0 Khí thế <span class="term">(SPIRIT)</span> trong một khung hình (1/60 s), hoặc hết giờ mà bằng nhau tuyệt đối. Bốc thăm theo mã trận, diễn hoạt ≤ 2 s. Trận nào cũng có bên thắng.</span></div>
+      <div class="card"><b>2 · FLEE (chịu thua)</b><br><span class="note">Một trâu Khí thế ≤ 0 thì quay đầu lui sới; bên kia thắng thế.</span></div>
+      <div class="card"><b>3 · TIME (hết giờ)</b><br><span class="note">Hết 90 s; nếu đang khóa sừng thì giải khóa trước, rồi bên còn nhiều Khí thế hơn thắng.</span></div>
+    </div>
+    <h3>Solo: ba trận, AI khó dần</h3>
+    <div class="tbl"><table class="mobile-rows"><thead><tr><th>Trận</th><th>Sới</th><th>AI</th><th>Người chơi học</th></tr></thead><tbody>
+      <tr><td data-label="Trận"><div><b>L01</b> Vòng loại</div></td><td data-label="Sới"><div>Đất khô</div></td><td data-label="AI"><div>EASY</div></td><td data-label="Người chơi học"><div>Đi, húc, hổ lao, ghìm, gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd>, khóa sừng (5 lời nhắc; lời nhắc gạt sừng chưa chốt)</div></td></tr>
+      <tr><td data-label="Trận"><div><b>L02</b> Bán kết — sân lầy</div></td><td data-label="Sới"><div>Bùn A</div></td><td data-label="AI"><div>NORMAL</div></td><td data-label="Người chơi học"><div>Quản lý Sức <span class="term">(Stamina)</span>, né bùn (tốc ×0,8), tránh bị dồn rào <span class="term">(Pinned / cornered)</span></div></td></tr>
+      <tr><td data-label="Trận"><div><b>L03</b> Chung kết</div></td><td data-label="Sới"><div>Bùn A + B</div></td><td data-label="AI"><div>HARD</div></td><td data-label="Người chơi học"><div>Căn góc, thắng khóa sừng, dồn đối thủ tới lúc chịu thua</div></td></tr>
+    </tbody></table></div>
+    <p class="note">Thua trận nào (kể cả thua bốc thăm) thì chơi lại trận đó. LAN 1v1 dùng đúng bộ luật này, host quyết định mọi kết quả.</p>
+  </section>
+
+<section id="dieu-khien">
+    <h2>Điều khiển</h2>
+    <p class="lead">Bạn dùng phím để đi và chuột để xoay trâu, ra đòn hoặc đỡ. Camera bám sau trâu, nghiêng 45°. Thân xoay tối đa 540°/s; phím hiện cố định.</p>
+<svg class="visual" viewBox="0 0 340 375" style="width:100%" role="img" aria-label="B — bàn phím WASD, Space, G, Esc và chuột hai nút"><rect x="10" y="15" width="64" height="43" rx="10" class="node neutral"/><text x="42.0" y="40" text-anchor="middle"><tspan x="42.0" dy="0">Esc</tspan></text><text x="110" y="42" text-anchor="start"><tspan x="110" dy="0">Tạm dừng</tspan></text><rect x="72" y="76" width="56" height="42" rx="10" class="node neutral"/><text x="100.0" y="101" text-anchor="middle"><tspan x="100.0" dy="0">W</tspan></text><rect x="10" y="124" width="56" height="42" rx="10" class="node neutral"/><text x="38.0" y="149" text-anchor="middle"><tspan x="38.0" dy="0">A</tspan></text><rect x="72" y="124" width="56" height="42" rx="10" class="node neutral"/><text x="100.0" y="149" text-anchor="middle"><tspan x="100.0" dy="0">S</tspan></text><rect x="134" y="124" width="56" height="42" rx="10" class="node neutral"/><text x="162.0" y="149" text-anchor="middle"><tspan x="162.0" dy="0">D</tspan></text><text x="101" y="193" text-anchor="middle"><tspan x="101" dy="0">W A S D · Đi</tspan></text><rect x="10" y="219" width="182" height="44" rx="10" class="node dash"/><text x="101.0" y="244" text-anchor="middle"><tspan x="101.0" dy="0">Space · Hổ lao</tspan></text><g><rect x="10" y="282" width="182" height="44" rx="10" class="node parry"/><text x="101.0" y="307" text-anchor="middle"><tspan x="101.0" dy="0">G · Gạt sừng</tspan></text><text x="100" y="352" text-anchor="middle" class="edge-label"><tspan x="100" dy="0">MỚI</tspan></text></g><path d="M226 139 V99 Q226 68 275 68 Q324 68 324 99 V139 Z" class="node horn"/><path d="M275 69 Q324 68 324 99 V139 H275 Z" class="node guard"/><path d="M226 139 V171 Q226 207 275 207 Q324 207 324 171 V139 Z" class="node neutral"/><text x="250" y="109" text-anchor="middle"><tspan x="250" dy="0">Trái</tspan></text><text x="300" y="109" text-anchor="middle"><tspan x="300" dy="0">Phải</tspan></text><text x="269" y="239" text-anchor="middle"><tspan x="269" dy="0">Trái: Húc</tspan><tspan x="269" dy="19">Trong khóa: Móc</tspan></text><text x="269" y="301" text-anchor="middle"><tspan x="269" dy="0">Giữ phải: Ghìm</tspan><tspan x="269" dy="19">Trong khóa: Nhả</tspan></text></svg>
+    <p class="note">Bảng đủ nút ở mục <a class="jump" href="#diem-moi">Nút bấm</a>; bảng này thêm điều kiện để bấm được.</p>
+    <div class="tbl"><table class="mobile-rows"><thead><tr><th>Phím</th><th>Hành động</th><th>Trong khóa sừng <span class="term">(Clash)</span></th><th>Điều kiện</th></tr></thead><tbody>
+      <tr><td data-label="Phím"><div><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></div></td><td data-label="Hành động"><div>Đi theo hướng camera. Ngang ×0,7, lùi ×0,5</div></td><td data-label="Trong khóa sừng"><div>Giữ hướng về đối thủ = <b>Đẩy</b></div></td><td data-label="Điều kiện"><div>—</div></td></tr>
+      <tr><td data-label="Phím"><div>Chuột</div></td><td data-label="Hành động"><div>Xoay nhìn, xoay thân</div></td><td data-label="Trong khóa sừng"><div>Khóa (đối mặt)</div></td><td data-label="Điều kiện"><div>—</div></td></tr>
+      <tr><td data-label="Phím"><div><kbd>Chuột trái</kbd></div></td><td data-label="Hành động"><div><b>Húc <span class="term">(Basic attack)</span></b> · HORN</div></td><td data-label="Trong khóa sừng"><div><b>Móc</b> (HOOK)</div></td><td data-label="Điều kiện"><div>Đủ 20 Sức <span class="term">(Stamina)</span>, hết hồi chiêu <span class="term">(Cooldown)</span>, không đang ghìm <span class="term">(Block)</span></div></td></tr>
+      <tr><td data-label="Phím"><div><kbd>Space</kbd></div></td><td data-label="Hành động"><div><b>Hổ lao <span class="term">(Dash attack)</span></b> · DASH</div></td><td data-label="Trong khóa sừng"><div>Không dùng</div></td><td data-label="Điều kiện"><div>Đủ 28 Sức, hết hồi chiêu</div></td></tr>
+      <tr><td data-label="Phím"><div><kbd>Chuột phải</kbd> (giữ)</div></td><td data-label="Hành động"><div><b>Ghìm</b> · GUARD</div></td><td data-label="Trong khóa sừng"><div>Vừa nhấn = <b>Nhả</b> (RELEASE)</div></td><td data-label="Điều kiện"><div>Sức ≥ 10; hao 12 Sức/s</div></td></tr>
+      <tr class="changed"><td data-label="Phím"><div><kbd>G</kbd></div></td><td data-label="Hành động"><div><b>Gạt sừng <span class="term">(Parry)</span></b> · PARRY <span class="tag new">MỚI</span></div></td><td data-label="Trong khóa sừng"><div>Không dùng</div></td><td data-label="Điều kiện"><div>10 Sức, hồi chiêu 0,8 s; bấm được cả khi đang Ghìm</div></td></tr>
+      <tr><td data-label="Phím"><div><kbd>Esc</kbd></div></td><td data-label="Hành động"><div>Tạm dừng</div></td><td data-label="Trong khóa sừng"><div>—</div></td><td data-label="Điều kiện"><div>LAN: đối phương phải đồng ý</div></td></tr>
+    </tbody></table></div>
+    <p class="note">Nhớ phím <span class="term">(Input buffer)</span>: bấm Húc/Hổ lao sớm tối đa 0,10 s vẫn được ghi nhận; không xếp hàng nhiều đòn. Nếu bấm cùng khung hình, Húc được chọn trước Hổ lao. Trong khóa sừng, Nhả được chọn trước Móc.</p>
+  </section>
+
+<section id="tai-nguyen">
+    <h2>Hai thanh tài nguyên</h2><p class="lead">Bạn cần giữ Khí thế <span class="term">(SPIRIT)</span> để còn đấu và chừa Sức <span class="term">(Stamina)</span> để kịp đỡ hoặc ra đòn.</p>
+    <div class="grid g2">
+      <div class="card">
+        <b style="color:var(--red)">Khí thế · 100</b>
+        <div class="bar"><i style="width:100%;background:var(--do)"></i></div>
+        <p class="note">Mất khi trúng đòn, thua thế trong khóa sừng <span class="term">(Clash)</span>, nhả sai lúc. <b>Không hồi</b> (DEC-12). Về 0 là chịu thua. Khoảng <b>6 cú húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> trúng</b> để thắng.</p>
+      </div>
+      <div class="card">
+        <b style="color:var(--gold)">Sức · 100</b>
+        <div class="bar"><i style="width:100%;background:var(--vang)"></i></div>
+        <p class="note">Chi phí Sức: Húc 20; Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> 28.<br>Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> 12/s; Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> 10.<br>Đẩy 15/s; Móc 20. Hồi <b>18/s</b> sau 0,75 s không tiêu. Tối đa ~5 cú húc liền rồi phải lùi hồi sức. Sức về 0 thì Ghìm tự ngắt. Lực đẩy bằng 0 và không móc được.</p>
+      </div>
+    </div>
+<h3>100 Sức tiêu nhanh thế nào?</h3><div class="stamina-demo" role="img" aria-label="C — thanh 100 Sức: Húc 20, Húc 20, Hổ lao 28, Gạt 10, còn 22"><span style="flex:20">Húc 20</span><span style="flex:20">Húc 20</span><span class="dash" style="flex:28">Hổ lao 28</span><span class="parry" style="flex:10">Gạt 10</span><span class="rest" style="flex:22">…</span></div><p class="note">Minh họa chi phí: khoảng 5 cú húc là cạn. Hồi <b>18/s sau 0,75 s</b> không tiêu.</p><h3>Mấy cú thì thắng</h3>
+<p class="note">Cùng một thanh 100 Khí thế, nếu chỉ trúng một loại cú. Mỗi ô là một cú; ô cuối chạm hết thanh.</p>
+<div class="card hits-chart" role="img" aria-label="Thanh 100 Khí thế: Phản đòn 23 cần 5 cú; Húc 18 cần 6 cú; Hổ lao 14 cần 8 cú; Húc vào Ghìm 8 cần 13 cú.">
+  <div><div class="hits-label"><b>Phản đòn · 23</b><span>Số cú: 5</span></div><div class="hits-bar" aria-hidden="true"><i style="width:23%"></i><i style="width:23%"></i><i style="width:23%"></i><i style="width:23%"></i><i style="width:8%"></i></div></div>
+  <div><div class="hits-label"><b>Húc · 18</b><span>Số cú: 6</span></div><div class="hits-bar" aria-hidden="true"><i style="width:18%"></i><i style="width:18%"></i><i style="width:18%"></i><i style="width:18%"></i><i style="width:18%"></i><i style="width:10%"></i></div></div>
+  <div><div class="hits-label"><b>Hổ lao · 14</b><span>Số cú: 8</span></div><div class="hits-bar" aria-hidden="true"><i style="width:14%"></i><i style="width:14%"></i><i style="width:14%"></i><i style="width:14%"></i><i style="width:14%"></i><i style="width:14%"></i><i style="width:14%"></i><i style="width:2%"></i></div></div>
+  <div><div class="hits-label"><b>Húc vào Ghìm · 8</b><span>Số cú: 13</span></div><div class="hits-bar" aria-hidden="true"><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:8%"></i><i style="width:4%"></i></div></div>
+</div>
+<p class="note hits-note">Ô nhạt: cú cuối chỉ cần làm mất phần còn lại.</p>
+</section>
+
+<section id="don">
+    <h2>Các đòn</h2>
+    <p class="lead">Bạn chọn Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> để đánh gần, Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> để áp sát, Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> để đỡ chắc hoặc Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> khi đọc được đòn. Cùng thao tác trong cùng tình huống luôn cho cùng kết quả.</p>
+    <div class="grid g3">
+      <div class="card move">
+        <h3><span class="swatch" style="background:var(--vang)"></span>Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd></h3><p><b>Dùng khi:</b> Đối thủ đứng trong tầm và không đỡ.</p>
+        <dl>
+          <dt>Sát thương</dt><dd class="num">18 Khí thế <span class="term">(SPIRIT)</span></dd>
+          <dt>Chi phí</dt><dd>20 Sức <span class="term">(Stamina)</span> · hồi chiêu <span class="term">(Cooldown)</span> 0,75 s</dd>
+          <dt>Tầm</dt><dd>Đầu cách thân đối thủ ≤ 0,5 m.<br>Đối thủ nằm trong góc ±40° quanh hướng mặt bạn.</dd>
+          <dt>Chuẩn bị</dt><dd><span class="num">0,25 s <span class="tag new">MỚI</span></span></dd>
+          <dt>Gây đòn</dt><dd>0,18 s</dd>
+          <dt>Hồi</dt><dd><span>0,20 s · <b>hụt: 0,40 s</b> <span class="tag new">MỚI</span></span></dd>
+          <dt>Di chuyển</dt><dd>Tốc độ đi ×0,30 khi đang ra đòn, ×0,50 khi đang hồi</dd>
+        </dl>
+      </div>
+      <div class="card move">
+        <h3><span class="swatch" style="background:var(--move-dash)"></span>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></h3><p><b>Dùng khi:</b> Áp sát từ xa hoặc bắt đối thủ đoán.</p>
+        <dl>
+          <dt>Sát thương</dt><dd class="num">14 Khí thế</dd>
+          <dt>Chi phí</dt><dd>28 Sức · hồi chiêu 1,2 s</dd>
+          <dt>Quãng lao</dt><dd>Tốc độ 16,25 m/s.<br>Lao 0,22 s, đi được ≈ 3,6 m.</dd>
+          <dt>Trúng khi</dt><dd>Trong lúc lao, đầu tới cách thân đối thủ ≤ 0,15 m.<br>Đối thủ nằm trong góc ±50° quanh hướng mặt bạn.</dd>
+          <dt>Hồi</dt><dd>0,25 s giảm tốc</dd>
+          <dt>Khóa sừng <span class="term">(Clash)</span></dt><dd>Nếu thành khóa sừng, thanh lợi thế bắt đầu lệch <b>+20</b> về phía bạn</dd>
+          <dt>Chạm rào</dt><dd>Lao vào rào thì dừng lại và vào pha hồi ngay</dd>
+        </dl>
+      </div>
+      <div class="card move">
+        <h3><span class="swatch" style="background:var(--move-guard)"></span>Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> <span class="note">(giữ)</span></h3><p><b>Dùng khi:</b> Chưa chắc đối thủ làm gì.</p>
+        <dl>
+          <dt>Che</dt><dd>Chỉ đỡ đòn từ phía trước: trâu ra đòn nằm trong góc ±60° quanh hướng mặt bạn.<br>Đòn từ sườn hoặc lưng vẫn trúng đầy đủ.</dd>
+          <dt>Hiệu quả</dt><dd>Khí thế mất ×0,45 (Húc 18 → 8) · đẩy lùi <span class="term">(Knockback)</span> chỉ ×0,60 · không choáng <span class="term">(Stun)</span></dd>
+          <dt>Chi phí</dt><dd>12 Sức/s, chặn hồi Sức (giữ tối đa ~8 s)</dd>
+          <dt>Di chuyển</dt><dd>×0,55, không húc/lao được</dd>
+          <dt>Cách dùng</dt><dd>Giữ để đỡ an toàn, không cần canh thời điểm</dd>
+        </dl>
+      </div>
+      <div class="card move changed">
+        <h3><span class="swatch" style="background:var(--move-parry)"></span>Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> <span class="tag new">MỚI</span></h3><p><b>Dùng khi:</b> Bạn đọc được cú húc sắp tới.</p>
+        <dl>
+          <dt>Cửa sổ</dt><dd>Gạt trong 0,15 s sau khi bấm.<br>Che góc ±60° phía trước như Ghìm.</dd>
+          <dt>Gạt trúng</dt><dd>Bạn mất <b>0 Khí thế</b>.<br>Đối thủ choáng 0,50 s (Hổ lao 0,70 s).<br>Giật lùi 2 m/s, lùi ≈ 0,6 m.</dd>
+          <dt>Thưởng</dt><dd>Húc trong <b>0,5 s</b> sau gạt để Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd>.<br>Chuẩn bị 0,08 s; mạnh ×1,3 (23).</dd>
+          <dt>Gạt hụt</dt><dd>Hồi 0,45 s; sơ hở tổng 0,60 s.<br>Tốc độ đi ×0,5; bị đánh lúc này thì trúng đầy đủ.</dd>
+          <dt>Chi phí</dt><dd>10 Sức · hồi chiêu 0,8 s</dd>
+          <dt>Từ Ghìm</dt><dd>Được: đang giữ chuột phải, thấy đòn tới thì bấm G</dd>
+          <dt>Khóa sừng</dt><dd>Không dùng</dd>
+        </dl>
+      </div>
+    </div>
+    <h3>Khi trúng đòn</h3>
+    <p>Trâu bị trúng bị hất lùi với tốc độ <span class="num">8,3 m/s</span> (≈ 2,5 m), bất kể đang đi hướng nào. Bạn bị choáng <b>0,30 s</b> và được bất tử <span class="term">(Invincibility / i-frames)</span> <b>0,45 s</b> từ lúc trúng. Choáng 0,30 s ngắn hơn hồi chiêu Húc 0,75 s nên đối thủ không thể đánh mãi khiến bạn không thoát được. Dồn rào <span class="term">(Pinned / cornered)</span> là lúc thân cách rào ≤ 0,35 m và bị đẩy về phía rào. Khi đó bạn mất Khí thế <b>×1,5</b>.</p>
+  </section>
+
+<section id="doc-don"><h2>Vòng đọc đòn</h2><p class="lead">Bạn nhìn dấu hiệu đòn tới để chọn cách đỡ, rồi đánh lại khi đối thủ sơ hở.</p><p class="note">A là trâu ra đòn, B là trâu đỡ; sau khi gạt hoặc né, B có thể đánh lại.</p><div><h3>Chọn gì để khắc chế?</h3><div class="relations"><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Húc → Gạt trúng"><rect x="10" y="12" width="142" height="46" rx="10" class="node horn"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Húc</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node parry"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Gạt trúng</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">bị</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">B gạt → mất 0 Khí thế</tspan><tspan x="170" dy="19">A bị gạt → choáng 0,50 s</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Gạt trúng → Phản đòn"><rect x="10" y="12" width="142" height="46" rx="10" class="node parry"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Gạt trúng</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node counter"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Phản đòn</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">mở</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">B gạt trúng → có 0,5 s</tspan><tspan x="170" dy="19">B húc: 0,08 s · ×1,3 = 23</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Húc → Ghìm"><rect x="10" y="12" width="142" height="46" rx="10" class="node horn"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Húc</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node guard"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Ghìm</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">chặn</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">B đỡ → mất ×0,45 = 8</tspan><tspan x="170" dy="19">Không choáng; tốn 12 Sức/s</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Gạt hụt → Bị húc trọn"><rect x="10" y="12" width="142" height="46" rx="10" class="node parry"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Gạt hụt</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node punish"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Bị húc trọn</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">chịu</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">B gạt hụt → hồi 0,45 s</tspan><tspan x="170" dy="19">Mất 18 Khí thế</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Húc hụt → Bị húc phạt"><rect x="10" y="12" width="142" height="46" rx="10" class="node horn"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Húc hụt</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node punish"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Bị húc phạt</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">chịu</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">A húc hụt → hồi 0,40 s</tspan><tspan x="170" dy="19">B có cơ hội húc lại</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Đi vòng → Sườn / lưng"><rect x="10" y="12" width="142" height="46" rx="10" class="node neutral"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Đi vòng</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node horn"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Sườn / lưng</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">đánh</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">B đi vòng → ×1,25 Khí thế</tspan><tspan x="170" dy="19">Ghìm và Gạt không che</tspan></text></svg><svg class="visual" viewBox="0 0 340 125" style="width:100%" role="img" aria-label="D — Húc gặp Húc → Khóa sừng"><rect x="10" y="12" width="142" height="46" rx="10" class="node horn"/><text x="81.0" y="37" text-anchor="middle"><tspan x="81.0" dy="0">Húc gặp Húc</tspan></text><rect x="188" y="12" width="142" height="46" rx="10" class="node horn"/><text x="259.0" y="37" text-anchor="middle"><tspan x="259.0" dy="0">Khóa sừng</tspan></text><path d="M153 39 H185" class="connector"/><path d="M153 39 H185" class="arrow-tip"/><text x="170" y="27" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">vào</tspan></text><text x="170" y="89" text-anchor="middle"><tspan x="170" dy="0">Hai trâu húc thẳng → mắc sừng</tspan><tspan x="170" dy="19">Không ai mất Khí thế</tspan></text></svg></div><h3>Một pha gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd></h3><div class="comic" id="tranh-e"><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="E1 — A cúi đầu chuẩn bị Húc"><g transform="translate(75 110) rotate(90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(-90)" class="buffalo-id">A</text></g><g transform="translate(225 110) rotate(-90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke guard"/>
+      <text y="5" text-anchor="middle" transform="rotate(90)" class="buffalo-id">B</text></g><text x="75" y="35" text-anchor="middle"><tspan x="75" dy="0">HÚC</tspan><tspan x="75" dy="19">18°</tspan></text></svg><figcaption><b>t = 0</b> — A bấm Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd>: cúi đầu 18°, sừng vàng, chữ nổi HÚC. B đang Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> (sừng trắng mờ).</figcaption></figure><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="E2 — B bấm G và vào thế gạt"><g transform="translate(75 110) rotate(90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(-90)" class="buffalo-id">A</text></g><g transform="translate(225 110) rotate(-90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke parry"/>
+      <text y="5" text-anchor="middle" transform="rotate(90)" class="buffalo-id">B</text></g><text x="225" y="35" text-anchor="middle"><tspan x="225" dy="0">G</tspan><tspan x="225" dy="19">GẠT</tspan></text></svg><figcaption><b>t = 0,12 s</b> — B thấy cúi đầu, bấm <kbd>G</kbd>: sừng lóe xanh lá; thế gạt kéo dài tới 0,27 s nếu chưa chạm đòn.</figcaption></figure><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="E3 — B gạt trúng, A bị choáng"><g transform="translate(75 100) rotate(90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(-90)" class="buffalo-id">A</text></g><g transform="translate(225 100) rotate(-90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" stroke="var(--horn-outline)" stroke-width="9" stroke-linecap="round"/><path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn counter-flash"/>
+      <text y="5" text-anchor="middle" transform="rotate(90)" class="buffalo-id">B</text></g><text x="150" y="25" text-anchor="middle"><tspan x="150" dy="0">GẠT SỪNG!</tspan></text><text x="65" y="151" text-anchor="middle"><tspan x="65" dy="0">Choáng 0,50 s</tspan><tspan x="65" dy="19">Giật lùi ≈ 0,6 m</tspan></text><text x="235" y="151" text-anchor="middle"><tspan x="235" dy="0">B mất 0</tspan><tspan x="235" dy="19">Khựng 6 khung hình</tspan></text></svg><figcaption><b>t = 0,25 s</b> — A húc tới → B gạt trúng, mất 0. Cả trận khựng <span class="term">(Hitstop)</span> 6 khung hình. A choáng <span class="term">(Stun)</span> 0,50 s. A giật lùi 2 m/s, lùi ≈ 0,6 m. Sừng B nhấp nháy vàng → có thể Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd>.</figcaption></figure><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="E4 — B húc phản đòn vào A còn choáng"><g transform="translate(75 100) rotate(90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(-90)" class="buffalo-id">A</text></g><g transform="translate(225 100) rotate(-90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(90)" class="buffalo-id">B</text></g><text x="150" y="25" text-anchor="middle"><tspan x="150" dy="0">PHẢN ĐÒN!</tspan></text><text x="65" y="155" text-anchor="middle"><tspan x="65" dy="0">−23</tspan></text><text x="235" y="151" text-anchor="middle"><tspan x="235" dy="0">Chuẩn bị</tspan><tspan x="235" dy="19">0,08 s</tspan></text></svg><figcaption><b>t ≈ 0,35 s</b> — B bắt đầu húc → chuẩn bị 0,08 s. Đòn trúng ở <b>t ≈ 0,43 s</b> khi A còn choáng → A mất <b>23</b> Khí thế <span class="term">(SPIRIT)</span>.</figcaption></figure></div><p class="note">Mốc minh họa, chưa tính khựng; sau gạt trúng, cả trận khựng thêm 6 khung hình (mỗi khung 1/60 s). Phản đòn vẫn cần đủ tầm chạm.</p><h3>Húc hụt bị phạt</h3><div class="comic three"><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="F1 — B ở ngoài tầm Húc của A"><g transform="translate(150 151) rotate(0)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(0)" class="buffalo-id">A</text></g><g transform="translate(150 28) rotate(180)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke guard"/>
+      <text y="5" text-anchor="middle" transform="rotate(-180)" class="buffalo-id">B</text></g><text x="53" y="88" text-anchor="middle"><tspan x="53" dy="0">HỤT</tspan></text></svg><figcaption><b>1 · HỤT</b> — A húc khi B ngoài tầm → đánh hụt.</figcaption></figure><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="F2 — A mắc kẹt trong recovery 0,40 giây"><g transform="translate(150 96) rotate(0)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(0)" class="buffalo-id">A</text></g><text x="150" y="20" text-anchor="middle"><tspan x="150" dy="0">A đang hồi</tspan></text><rect x="30" y="157" width="240" height="9" rx="4" fill="var(--red)"/><text x="150" y="185" text-anchor="middle"><tspan x="150" dy="0">0 → 0,40 s</tspan></text></svg><figcaption><b>2 · Hồi 0,40 s</b> — A chưa ra đòn tiếp được → B đổi vị trí.</figcaption></figure><figure><svg class="visual" viewBox="0 0 300 190" style="width:100%" role="img" aria-label="F3 — B đi vòng và Húc vào sườn A"><g transform="translate(130 107) rotate(0)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(0)" class="buffalo-id">A</text></g><g transform="translate(237 107) rotate(-90)">
+      <ellipse rx="23" ry="37" fill="var(--dat)" stroke="var(--ink)"/>
+      <ellipse cy="-30" rx="16" ry="19" fill="var(--dat)" stroke="var(--ink)"/>
+      <path d="M-13 -40 Q-37 -61 -28 -69 M13 -40 Q37 -61 28 -69" fill="none" class="horn-stroke horn"/>
+      <text y="5" text-anchor="middle" transform="rotate(90)" class="buffalo-id">B</text></g><path d="M245 35 Q290 55 279 92" class="connector"/><path d="M245 35 Q290 55 279 92" class="arrow-tip"/><text x="150" y="20" text-anchor="middle"><tspan x="150" dy="0">ĐÁNH SƯỜN!</tspan></text><text x="65" y="163" text-anchor="middle"><tspan x="65" dy="0">−23</tspan></text></svg><figcaption><b>3 · ĐÁNH SƯỜN!</b> — B vòng ra sườn A và húc: A mất <b>23</b> (18 × 1,25, làm tròn).</figcaption></figure></div></div></section>
+
+<section id="timeline">
+    <h2>Timeline từng đòn</h2>
+    <p class="lead">Mỗi thanh cho biết một đòn kéo dài bao lâu và lúc nào bạn có thể bị đánh lại.</p>
+    <p class="note">Mỗi hàng bắt đầu từ lúc bấm đòn. Riêng hai hàng Gạt trúng và Trâu bị gạt tính từ cú Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> của A; A là trâu ra đòn, B là trâu đỡ. Chưa tính khựng <span class="term">(Hitstop)</span>.</p><div class="legend">
+      <span><i class="s-start"></i>Chuẩn bị: đã ra đòn, không hủy được; chưa đánh trúng</span>
+      <span><i class="s-active"></i>Gây đòn: có thể đánh trúng</span>
+      <span><i class="s-dash"></i>Lao</span>
+      <span><i class="s-rec"></i>Hồi: chờ ra đòn tiếp</span>
+      <span><i class="s-whiff"></i>Hồi khi hụt: dễ bị đánh lại</span>
+      <span><i class="s-stun"></i>Choáng <span class="term">(Stun)</span>: không điều khiển được</span>
+      <span><i class="s-win"></i>Cửa sổ có lợi: đang gạt, hoặc được Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd></span>
+    </div>
+    <div class="tl" id="tl"></div>
+    
+    <p class="note">Húc chuẩn bị 0,25 s, ngang phản xạ người (~0,25 s). Trâu cúi đầu 18°, sừng vàng và tiếng thở báo đòn ngay từ đầu. Người đã quen có thể nhìn rồi bấm <kbd>G</kbd>; người mới vẫn cần đoán. Cửa sổ gạt 0,15 s phải phủ lên lúc đòn chạm.</p>
+  </section>
+
+<section id="vung">
+    <h2>Vùng đánh nhìn từ trên xuống</h2>
+    <p class="lead">Bạn đi vòng sang hông hoặc lưng để đánh qua thế đỡ phía trước của đối thủ.</p>
+    <p class="note">Trâu trong hình quay mặt lên trên. Tầm húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> đo từ đầu trâu; khi đối mặt, hai tâm cách ≤ 3,4 m là đủ tầm.</p><div class="diagram">
+      <svg style="width:100%" viewBox="-160 -170 320 330" role="img" aria-label="Sơ đồ vùng đánh của trâu">
+        <g id="zones">
+          <path d="M0 0 L-138.6 -80 A160 160 0 0 1 138.6 -80 Z" fill="var(--move-guard)" opacity=".18"/>
+          <path d="M0 0 L138.6 -80 A160 160 0 0 1 138.6 80 Z" fill="var(--vang)" opacity=".28"/>
+          <path d="M0 0 L-138.6 -80 A160 160 0 0 0 -138.6 80 Z" fill="var(--vang)" opacity=".28"/>
+          <path d="M0 0 L138.6 80 A160 160 0 0 1 -138.6 80 Z" fill="var(--red)" opacity=".22"/>
+          <text x="0" y="-146" text-anchor="middle" font-size="12" fill="currentColor">TRƯỚC ×1</text>
+          <text x="118" y="4" text-anchor="middle" font-size="12" fill="currentColor">SƯỜN ×1,25</text>
+          <text x="-118" y="4" text-anchor="middle" font-size="12" fill="currentColor">SƯỜN ×1,25</text>
+          <text x="0" y="135" text-anchor="middle" font-size="12" fill="currentColor">LƯNG ×1,25</text>
+        </g>
+        <g id="guard"><path d="M0 -50 L-103.9 -110 A120 120 0 0 1 103.9 -110 Z" fill="var(--move-guard)" opacity=".22"/></g>
+        <g id="dash"><path d="M0 -50 L-76.6 -114.3 A100 100 0 0 1 76.6 -114.3 Z" fill="var(--red)" opacity=".30"/></g>
+        <g id="horn"><path d="M0 -50 L-51.4 -111.3 A80 80 0 0 1 51.4 -111.3 Z" fill="var(--vang)" opacity=".75"/></g>
+        <ellipse cx="0" cy="8" rx="30" ry="52" fill="var(--dat)"/>
+        <ellipse cx="0" cy="-42" rx="17" ry="20" fill="var(--dat)"/>
+        <path d="M-14 -55 Q-30 -70 -22 -82 M14 -55 Q30 -70 22 -82" stroke="var(--horn-white)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <rect x="-16" y="-8" width="32" height="26" rx="4" fill="var(--red)"/>
+        <text x="0" y="10" text-anchor="middle" font-size="12" font-weight="700" fill="var(--giay)">06</text>
+      </svg>
+      <div>
+        <div class="layer-toggles">
+          <label><input type="checkbox" data-layer="horn" checked> <span><b>Húc</b>: góc ±40°; đầu cách thân đối thủ ≤ 0,5 m</span></label>
+          <label><input type="checkbox" data-layer="dash" checked> <span><b>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></b>: góc ±50°; đầu cách thân đối thủ ≤ 0,15 m</span></label>
+          <label><input type="checkbox" data-layer="guard" checked> <span><b>Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> / Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> che</b>: góc ±60° phía trước</span></label>
+        </div>
+        <p class="note">Vì Ghìm chỉ che phía trước, đòn vào sườn hoặc lưng luôn trúng đầy đủ. Xoay 180° mất ~0,33 s, lâu hơn chuẩn bị húc, nên vòng ra sau đối thủ là cơ hội thật.</p>
+        <p class="note"><span class="tag new">MỚI</span> DEC-19 thêm thưởng cho vị trí: nhìn từ trâu bị đánh, đối thủ lệch &gt; 60° là <b>sườn</b>. Lệch &gt; 120° là <b>lưng</b>. Cả hai làm mất Khí thế <span class="term">(SPIRIT)</span> ×1,25; chọn vị trí tốt thì đòn mạnh hơn.</p>
+      </div>
+    </div>
+  </section>
+
+<section id="tuong-tac">
+    <h2>Khi đòn chạm: ai thắng?</h2>
+    <p class="lead">Bạn nhìn cây quyết định để biết cú đánh sẽ bị chặn, bị gạt hay trúng đầy đủ.</p>
+<p class="note">A là trâu ra đòn, B là trâu đỡ. Hai trâu cùng có thể trúng nhau trong một khung hình; kết quả được xét từ cùng một trạng thái. Nếu cả hai đã ra đòn, không hủy được và nhắm đúng nhau thì khóa sừng <span class="term">(Clash)</span>.</p><div class="decision" id="cay-g"><div><svg class="visual" viewBox="0 0 340 178" style="width:100%" role="img" aria-label="G — 1 · B cũng húc thẳng vào A?"><rect x="8" y="8" width="324" height="62" rx="10" class="node horn"/><text x="170.0" y="33" text-anchor="middle"><tspan x="170.0" dy="0">1 · B cũng húc thẳng vào A?</tspan><tspan x="170.0" dy="19">Húc: lấy đà / đánh; Hổ lao: lao</tspan></text><path d="M211 70 V98" class="connector"/><path d="M211 70 V98" class="arrow-tip"/><text x="237" y="90" text-anchor="middle" class="edge-label"><tspan x="237" dy="0">Có</tspan></text><rect x="90" y="102" width="242" height="62" rx="10" class="node horn"/><text x="211.0" y="127" text-anchor="middle"><tspan x="211.0" dy="0">Khóa sừng</tspan><tspan x="211.0" dy="19">Không ai mất Khí thế</tspan></text><path d="M32 70 V169" class="connector"/><path d="M32 70 V169" class="arrow-tip"/><text x="52" y="94" text-anchor="middle" class="edge-label"><tspan x="52" dy="0">Không</tspan></text></svg><span class="next">↓ Nếu không: xét tiếp</span></div><div><svg class="visual" viewBox="0 0 340 178" style="width:100%" role="img" aria-label="G — 2 · B vừa trúng, còn bất tử?"><rect x="8" y="8" width="324" height="62" rx="10" class="node neutral"/><text x="170.0" y="33" text-anchor="middle"><tspan x="170.0" dy="0">2 · B vừa trúng, còn bất tử?</tspan><tspan x="170.0" dy="19">≤ 0,45 s sau khi bị trúng</tspan></text><path d="M211 70 V98" class="connector"/><path d="M211 70 V98" class="arrow-tip"/><text x="237" y="90" text-anchor="middle" class="edge-label"><tspan x="237" dy="0">Có</tspan></text><rect x="90" y="102" width="242" height="62" rx="10" class="node neutral"/><text x="211.0" y="127" text-anchor="middle"><tspan x="211.0" dy="0">Không mất gì</tspan></text><path d="M32 70 V169" class="connector"/><path d="M32 70 V169" class="arrow-tip"/><text x="52" y="94" text-anchor="middle" class="edge-label"><tspan x="52" dy="0">Không</tspan></text></svg><span class="next">↓ Nếu không: xét tiếp</span></div><div><svg class="visual" viewBox="0 0 340 178" style="width:100%" role="img" aria-label="G — 3 · B gạt đúng lúc (0,15 s)?"><rect x="8" y="8" width="324" height="62" rx="10" class="node parry"/><text x="170.0" y="33" text-anchor="middle"><tspan x="170.0" dy="0">3 · B gạt đúng lúc (0,15 s)?</tspan><tspan x="170.0" dy="19">A phía trước B, lệch ≤ 60°?</tspan></text><path d="M211 70 V98" class="connector"/><path d="M211 70 V98" class="arrow-tip"/><text x="237" y="90" text-anchor="middle" class="edge-label"><tspan x="237" dy="0">Có</tspan></text><rect x="90" y="102" width="242" height="62" rx="10" class="node parry"/><text x="211.0" y="127" text-anchor="middle"><tspan x="211.0" dy="0">B gạt trúng → mất 0</tspan><tspan x="211.0" dy="19">A choáng 0,50 / 0,70 s</tspan></text><path d="M32 70 V169" class="connector"/><path d="M32 70 V169" class="arrow-tip"/><text x="52" y="94" text-anchor="middle" class="edge-label"><tspan x="52" dy="0">Không</tspan></text></svg><span class="next">↓ Nếu không: xét tiếp</span></div><div><svg class="visual" viewBox="0 0 340 178" style="width:100%" role="img" aria-label="G — 4 · B có giữ Ghìm để đỡ?"><rect x="8" y="8" width="324" height="62" rx="10" class="node guard"/><text x="170.0" y="33" text-anchor="middle"><tspan x="170.0" dy="0">4 · B có giữ Ghìm để đỡ?</tspan><tspan x="170.0" dy="19">A phía trước B, lệch ≤ 60°?</tspan></text><path d="M211 70 V98" class="connector"/><path d="M211 70 V98" class="arrow-tip"/><text x="237" y="90" text-anchor="middle" class="edge-label"><tspan x="237" dy="0">Có</tspan></text><rect x="90" y="102" width="242" height="62" rx="10" class="node guard"/><text x="211.0" y="127" text-anchor="middle"><tspan x="211.0" dy="0">×0,45 · đẩy ×0,60</tspan><tspan x="211.0" dy="19">Không choáng</tspan></text><path d="M32 70 V169" class="connector"/><path d="M32 70 V169" class="arrow-tip"/><text x="52" y="94" text-anchor="middle" class="edge-label"><tspan x="52" dy="0">Không</tspan></text></svg><span class="next">↓ Nếu không: xét tiếp</span></div><svg class="visual" viewBox="0 0 340 144" style="width:100%" role="img" aria-label="G — trúng đầy đủ"><rect x="8" y="8" width="324" height="64" rx="10" class="node punish"/><text x="170.0" y="33" text-anchor="middle"><tspan x="170.0" dy="0">5 · Không đỡ được → trúng đủ</tspan><tspan x="170.0" dy="19">Choáng 0,30 s</tspan></text><text x="170" y="98" text-anchor="middle"><tspan x="170" dy="0">Thưởng rào / sườn / phản đòn</tspan></text><g><text x="170" y="122" text-anchor="middle"><tspan x="170" dy="0">Lấy hệ số lớn nhất, tối đa 27</tspan></text></g></svg></div><p class="note">Thứ tự: Khóa sừng → Bất tử <span class="term">(Invincibility / i-frames)</span> → Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> → Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> → Trúng đầy đủ. Đòn chạm trâu đang bất tử không gây gì, kể cả khi nó đang gạt; không gạt trúng, trâu ra đòn không choáng <span class="term">(Stun)</span>, thế gạt vẫn chạy tiếp.</p><details class="card"><summary>Bảng chi tiết</summary>
+    <div class="tbl"><table class="mobile-rows"><thead><tr><th>A làm</th><th>B làm</th><th>Kết quả</th></tr></thead><tbody>
+      <tr><td data-label="A làm"><div>Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd></div></td><td data-label="B làm"><div>Húc, đang ra đòn và nhắm đúng A</div></td><td data-label="Kết quả"><div><b>Khóa sừng</b>; không ai mất Khí thế <span class="term">(SPIRIT)</span></div></td></tr>
+      <tr><td data-label="A làm"><div>Húc</div></td><td data-label="B làm"><div>Húc lệch hoặc chưa ra đòn</div></td><td data-label="Kết quả"><div>A trúng một chiều: B mất 18, bị đẩy lùi <span class="term">(Knockback)</span>, choáng</div></td></tr>
+      <tr><td data-label="A làm"><div>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></div></td><td data-label="B làm"><div>Hổ lao, trực diện</div></td><td data-label="Kết quả"><div><b>Khóa sừng</b>, lợi thế 0</div></td></tr>
+      <tr><td data-label="A làm"><div>Hổ lao</div></td><td data-label="B làm"><div>Húc đang ra đòn, nhắm đúng</div></td><td data-label="Kết quả"><div><b>Khóa sừng</b>, bên Hổ lao lợi <b>+20</b></div></td></tr>
+      <tr><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Ghìm, A ở phía trước</div></td><td data-label="Kết quả"><div>Khí thế ×0,45, đẩy lùi ×0,60, B không choáng</div></td></tr>
+      <tr class="changed"><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div><b>Gạt sừng (G)</b>, đòn tới trong 0,15 s, A ở phía trước <span class="tag new">MỚI</span></div></td><td data-label="Kết quả"><div>B mất <b>0</b>; A choáng 0,50 s (Hổ lao 0,70 s), giật lùi 2 m/s ≈ 0,6 m; B mở <b>Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd> 0,5 s</b></div></td></tr>
+      <tr class="changed"><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Đang <b>gạt hụt</b> (hồi 0,45 s) <span class="tag new">MỚI</span></div></td><td data-label="Kết quả"><div>Trúng đầy đủ, như đánh vào trâu đang hồi</div></td></tr>
+      <tr class="changed"><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Gạt sừng nhưng A ở sườn/sau <span class="tag new">MỚI</span></div></td><td data-label="Kết quả"><div>Gạt không có tác dụng; trúng đầy đủ ×1,25</div></td></tr>
+      <tr><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Ghìm nhưng A ở sườn/sau</div></td><td data-label="Kết quả"><div>Trúng đầy đủ<span> (×1,25 vì sườn/lưng)</span></div></td></tr>
+      <tr><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Đang lấy đà nhưng không nhắm A, đang hồi, hoặc đang choáng</div></td><td data-label="Kết quả"><div>Trúng đầy đủ; đòn đang chuẩn bị của B bị hủy, không hoàn Sức <span class="term">(Stamina)</span></div></td></tr>
+      <tr><td data-label="A làm"><div>Húc / Hổ lao</div></td><td data-label="B làm"><div>Đang bất tử (≤ 0,45 s sau khi trúng)</div></td><td data-label="Kết quả"><div>Không mất gì, kể cả khi đang gạt; không gây gạt trúng. Nếu B đang ra đòn nhắm A thì vẫn xét khóa sừng trước</div></td></tr>
+      <tr><td data-label="A làm"><div>Ghìm</div></td><td data-label="B làm"><div>Ghìm</div></td><td data-label="Kết quả"><div>Không có gì; cả hai hao Sức</div></td></tr>
+    </tbody></table></div></details>
+  </section>
+
+<section id="clash">
+    <h2>Khóa sừng <span class="term">(Clash)</span></h2>
+    <p class="lead">Giống oẳn tù tì trong 1,5 s: Móc thắng Đẩy, Đẩy thắng Nhả, Nhả thắng Móc.</p>
+<p>Hai trâu trượt vào thế đầu chạm đầu trong 0,1 s; hai tâm cách 2,9 m. Thanh lợi thế chạy từ −100 đến +100. Bên dồn được thanh chạm 100 về phía mình là thắng thế; bên kia thua thế.</p><div class="grid g2"><svg class="visual" viewBox="0 0 340 210" style="width:100%" role="img" aria-label="H — tam giác Móc thắng Đẩy, Đẩy thắng Nhả, Nhả thắng Móc"><rect x="105" y="10" width="130" height="44" rx="10" class="node horn"/><text x="170.0" y="35" text-anchor="middle"><tspan x="170.0" dy="0">Móc</tspan></text><rect x="10" y="147" width="130" height="44" rx="10" class="node guard"/><text x="75.0" y="172" text-anchor="middle"><tspan x="75.0" dy="0">Đẩy</tspan></text><rect x="200" y="147" width="130" height="44" rx="10" class="node neutral"/><text x="265.0" y="172" text-anchor="middle"><tspan x="265.0" dy="0">Nhả</tspan></text><path d="M116 56 L66 144" class="connector"/><path d="M116 56 L66 144" class="arrow-tip"/><text x="50" y="90" text-anchor="middle" class="edge-label"><tspan x="50" dy="0">thắng</tspan></text><path d="M142 170 H197" class="connector"/><path d="M142 170 H197" class="arrow-tip"/><text x="170" y="153" text-anchor="middle" class="edge-label"><tspan x="170" dy="0">thắng</tspan></text><path d="M269 144 L222 57" class="connector"/><path d="M269 144 L222 57" class="arrow-tip"/><text x="286" y="90" text-anchor="middle" class="edge-label"><tspan x="286" dy="0">thắng</tspan></text></svg><svg class="visual" viewBox="0 0 340 160" style="width:100%" role="img" aria-label="Thanh khóa sừng từ âm 100 đến dương 100"><rect x="16" y="42" width="154" height="24" rx="5" fill="var(--red)"/><rect x="170" y="42" width="154" height="24" rx="5" fill="var(--blue)"/><path d="M170 36 V74" stroke="var(--ink)" stroke-width="2"/><text x="40" y="26" text-anchor="middle"><tspan x="40" dy="0">06 · đỏ</tspan></text><text x="292" y="26" text-anchor="middle"><tspan x="292" dy="0">17 · xanh</tspan></text><text x="25" y="90" text-anchor="middle"><tspan x="25" dy="0">−100</tspan></text><text x="170" y="90" text-anchor="middle"><tspan x="170" dy="0">0</tspan></text><text x="312" y="90" text-anchor="middle"><tspan x="312" dy="0">+100</tspan></text><text x="170" y="120" text-anchor="middle"><tspan x="170" dy="0">±100 = thua thế: −22 Khí thế</tspan><tspan x="170" dy="19">Choáng 0,6 s · tối đa 1,5 s</tspan></text></svg></div>
+    <p>Chọn Đẩy <kbd>W A S D</kbd> / Móc <kbd>Chuột trái</kbd> / Nhả <kbd>Chuột phải</kbd> <span class="term">(Push / Hook / Release)</span> để đoán ý <span class="term">(Mind game / mix-up)</span> đối thủ.</p><div class="rps">
+      <div class="card"><h3>Đẩy <span class="term">(Push)</span> <kbd>W A S D</kbd> <span class="note">(giữ về phía đối thủ)</span></h3>
+        <p>Lực đẩy = 0,5 + 0,5 × Sức <span class="term">(Stamina)</span> / 100: càng nhiều Sức đẩy càng mạnh. Thanh lợi thế dịch theo chênh lệch lực hai bên × 120 mỗi giây. Đẩy hao 15 Sức/s.</p>
+        <p class="beats">Chỉ đẩy thì tối đa ~90 điểm trong 1,5 s, <b>không đủ</b> thắng thế. Phải móc, có lợi thế Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd>, hoặc đối thủ cạn sức.</p></div>
+      <div class="card"><h3>Móc <span class="term">(Hook)</span> <kbd>Chuột trái</kbd></h3>
+        <p>Móc tốn 20 Sức. Trâu giật nghiêng đầu, chuẩn bị 0,15 s rồi thanh lợi thế dịch <b>+35</b> về phía mình.</p>
+        <p class="beats">Thắng Đẩy. <b>Thua Nhả</b>. Hai bên cùng móc thì triệt tiêu.</p></div>
+      <div class="card"><h3>Nhả <span class="term">(Release)</span> <kbd>Chuột phải</kbd></h3>
+        <p>Nhả <b>trúng lúc</b> đối thủ đang chuẩn bị móc: đối thủ mất 12 Khí thế <span class="term">(SPIRIT)</span>, choáng <span class="term">(Stun)</span> 0,5 s.</p>
+        <p class="beats">Nhả <b>sai lúc</b>: bên nhả mất 10 + 12% × lợi thế đối thủ, choáng 0,3 s. Cùng nhả: tách ra, không ai mất.</p></div>
+    </div>
+    <div class="tbl" style="margin-top:12px"><table class="mobile-rows"><thead><tr><th>Kết thúc khóa</th><th>Hậu quả</th></tr></thead><tbody>
+      <tr><td data-label="Kết thúc khóa"><div>Thanh chạm ±100 (thua thế)</div></td><td data-label="Hậu quả"><div>Bên bị dồn mất <b>22</b>, choáng 0,6 s, đẩy lùi <span class="term">(Knockback)</span> ×1,5</div></td></tr>
+      <tr><td data-label="Kết thúc khóa"><div>Hết 1,5 s</div></td><td data-label="Hậu quả"><div>Bên đang thua thế mất round(0,2 × |lợi thế|), tối thiểu 3. Chỉ khi lợi thế đúng 0 mới không ai mất</div></td></tr>
+      <tr><td data-label="Kết thúc khóa"><div>Sau mọi kiểu kết thúc</div></td><td data-label="Hậu quả"><div>1,0 s không vào khóa lại; bên mất Khí thế mà sát rào thì ×1,5</div></td></tr>
+    </tbody></table></div>
+    <p class="note">DEC-08 (khóa sừng ba lựa chọn) vẫn là <span class="tag">chờ playtest</span> để xem người chơi có hiểu không.</p>
+  </section>
+
+<section id="tick"><p class="lead">Các thao tác của bạn được xử lý cùng một thứ tự để người chơi và LAN nhận cùng kết quả.</p><details class="card"><summary>Cho lập trình viên: thứ tự xử lý mỗi tick (60 Hz, trên host)</summary><ol class="pipeline" aria-label="I — pipeline xử lý một tick"><li>Thu input.</li><li>Bắt đầu action, trừ Sức.</li><li>Nếu đang khóa sừng: chạy khóa sừng, bỏ bước 4–5.</li><li>Di chuyển, tách hai trâu.</li><li>Tính hit hai chiều cùng lúc.</li><li>Trừ giờ, hồi Sức, xét kết thúc, gửi snapshot.</li></ol><p><b>Nhánh Hitstop sau bước 5:</b> trúng (kể cả Ghìm) → đóng băng 4 tick; gạt trúng / phản đòn / vào khóa sừng → 6 tick. Bắt đầu từ tick kế tiếp; nhiều sự kiện cùng tick lấy số tick lớn nhất. Đồng hồ, hồi Sức, cooldown và thời gian buffer đứng yên; input vẫn vào buffer. Rung camera và flash vẫn chạy theo thời gian thực.</p></details></section>
+
+<section id="tinh">
+    <h2>Tính thử một cú đánh</h2>
+    <p class="lead">Bạn chọn một tình huống để xem đối thủ mất bao nhiêu Khí thế <span class="term">(SPIRIT)</span> và cần bao nhiêu cú để hết 100 điểm.</p>
+    <ol class="formula-steps" aria-label="Các bước tính Khí thế mất">
+      <li><div><b>Gốc</b>Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> 18 / Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> 14</div></li>
+      <li><div><b>× Ghìm 0,45</b>Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd>: nếu bị đỡ</div></li>
+      <li><div><b>× thưởng lớn nhất</b>Dồn rào 1,5 · sườn/lưng 1,25 · Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd> 1,3</div></li>
+      <li><div><b>Làm tròn</b></div></li>
+      <li><div><b>Tối đa 27</b></div></li>
+    </ol>
+    <p class="note">Ví dụ húc sườn trâu đang bị dồn rào: chỉ ×1,5 → 27, không nhân thêm ×1,25.</p>
+    <div class="calc card">
+      <div>
+        <fieldset><legend>Đòn</legend>
+          <label><input type="radio" name="atk" value="18" checked><span> Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> · 18</span></label>
+          <label><input type="radio" name="atk" value="14"><span> Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> · 14</span></label>
+        </fieldset>
+        <fieldset><legend>Hướng trúng</legend>
+          <label><input type="radio" name="dir" value="front" checked><span> Trước mặt</span></label>
+          <label><input type="radio" name="dir" value="flank"><span> Đánh sườn / lưng <span class="term">(Flank / Backstab)</span></span></label>
+        </fieldset>
+        <fieldset><legend>Bên bị đánh</legend>
+          <label><input type="radio" name="grd" value="none" checked><span> Không đỡ</span></label>
+          <label><input type="radio" name="grd" value="hold"><span> Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd></span></label>
+          <label><input type="radio" name="grd" value="perfect"><span> Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> trúng <span class="tag new">MỚI</span></span></label>
+        </fieldset>
+        <fieldset><legend>Khác</legend>
+          <label><input type="checkbox" id="pinned"><span> Dồn rào <span class="term">(Pinned / cornered)</span></span></label>
+          <label><input type="checkbox" id="counter"><span> Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd> (sau khi gạt trúng) <span class="tag new">MỚI</span></span></label>
+        </fieldset>
+      </div>
+      <div>
+        <div class="note">Khí thế mất</div>
+        <div class="result-big" id="dmg">18</div>
+        <div id="hits" class="note" style="margin:4px 0 12px"></div>
+        <div class="formula" id="formula"></div>
+        <p class="note" id="extra"></p>
+      </div>
+    </div>
+  </section>
+
+<section id="can-bang"><h2>Cân bằng: vì sao chọn các con số này</h2>
+<p class="lead">Rà soát 11/11/2026: người chơi cần thấy đòn để chọn cách đỡ, và mỗi lựa chọn phải có cái giá tương xứng.</p>
+<h3>Năm khái niệm để đọc các con số</h3><ol>
+<li><b>Chuẩn bị / Gây đòn / Hồi <span class="term">(Startup / Active / Recovery)</span></b>: lấy đà → đòn có thể trúng → chờ ra đòn tiếp. Bạn có thể đánh lại khi đối thủ đang hồi.</li>
+<li><b>Ai hành động lại trước</b>: sau khi trúng hoặc đỡ một đòn, bên hồi trước có cơ hội ra tay trước.</li>
+<li><b>Đánh hụt / Phạt đòn hụt <span class="term">(Whiff / Whiff punish)</span></b>: đối thủ đánh trượt thì mình áp sát và đánh vào lúc họ chưa hồi xong.</li>
+<li><b>Phản xạ</b>: người trung bình cần khoảng 0,25 s để thấy rồi bấm, nên đòn nhanh hơn thường phải đoán.</li>
+<li><b>Số đòn để thắng và cái giá của lựa chọn</b> (TTK): đếm số cú làm hết Khí thế <span class="term">(SPIRIT)</span> và so phần thưởng khi đoán đúng với tổn thất khi đoán sai.</li>
+</ol>
+<h3>Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> phải đủ chậm để nhìn thấy</h3><figure id="so-do-k" style="max-width:600px;margin:16px auto"><svg class="visual" viewBox="0 0 340 360" style="width:100%" role="img" aria-label="K — Startup Húc 0,25 s bằng ngưỡng phản xạ; Húc v0.7 tới trước ngưỡng này">
+<text x="115" y="26">← Phản xạ người ≈ 0,25 s</text>
+<text x="115" y="46" class="edge-label">= lúc đòn bắt đầu trúng</text>
+<path d="M109 14 V165" stroke="var(--red)" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="16" y="50"><tspan x="16">Bấm G lúc</tspan><tspan x="16" dy="18">0,10–0,25 s</tspan></text>
+<path d="M53 92 V86 H109 V92" class="connector"/>
+<rect x="16" y="100" width="93" height="34" class="node horn"/><rect x="109" y="100" width="67" height="34" class="node parry"/><rect x="176" y="100" width="74" height="34" class="node guard"/><rect x="250" y="100" width="74" height="34" fill="none" stroke="var(--red)" stroke-dasharray="4 3"/>
+<text x="62" y="122" text-anchor="middle">0,25 s</text><text x="142" y="122" text-anchor="middle">0,18 s</text><text x="213" y="122" text-anchor="middle">0,20 s</text>
+<text x="62" y="155" text-anchor="middle">Chuẩn bị</text><text x="142" y="179" text-anchor="middle">Gây đòn</text><text x="250" y="155" text-anchor="middle">Hồi</text>
+<text x="16" y="205">Hụt: hồi 0,40 s (nét đứt)</text>
+<g opacity=".55"><text x="16" y="245">GDD v0.7 · chuẩn bị 0,12 s</text>
+<rect x="16" y="260" width="45" height="34" class="node horn"/><rect x="61" y="260" width="67" height="34" class="node parry"/><rect x="128" y="260" width="74" height="34" class="node guard"/>
+<path d="M109 252 V302" stroke="var(--red)" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="16" y="319">Đòn tới trước khi kịp phản xạ:</text><text x="16" y="341">phải đoán thay vì nhìn rồi gạt.</text></g>
+</svg><figcaption>Sơ đồ K · Cùng tỉ lệ thời gian; 60 Hz là 60 khung hình mỗi giây (mỗi khung hình = 1/60 s). Cửa sổ gạt dài 0,15 s nên phải bấm trong 0,15 s cuối trước lúc đòn chạm (khi đối thủ đã đứng trong tầm). Vạch đỏ: phản xạ trung bình tới đúng lúc đòn chạm, nên người phản xạ nhanh hoặc đoán trước một chút mới gạt kịp. Với v0.7, đòn chạm ở 0,12 s, trước vạch đỏ khá xa.</figcaption></figure><h3>Thời gian từng pha (60 Hz)</h3><div class="tbl"><table class="mobile-rows"><thead><tr><th scope="col">Đòn</th><th scope="col">Chuẩn bị</th><th scope="col">Gây đòn</th><th scope="col">Hồi</th><th scope="col">Cooldown</th><th scope="col">Khí thế</th><th scope="col">Sức <span class="term">(Stamina)</span></th></tr></thead><tbody>
+<tr><td data-label="Đòn"><div>Húc</div></td><td data-label="Chuẩn bị"><div>0,25 s (15 f)</div></td><td data-label="Gây đòn"><div>0,18 s (11 f)</div></td><td data-label="Hồi"><div>0,20 s trúng / 0,40 s hụt</div></td><td data-label="Hồi chiêu"><div>0,75 s</div></td><td data-label="Khí thế"><div>18</div></td><td data-label="Sức"><div>20</div></td></tr>
+<tr><td data-label="Đòn"><div>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></div></td><td data-label="Chuẩn bị"><div>0</div></td><td data-label="Gây đòn"><div>0,22 s (13 f)</div></td><td data-label="Hồi"><div>0,25 s (15 f)</div></td><td data-label="Hồi chiêu"><div>1,2 s</div></td><td data-label="Khí thế"><div>14</div></td><td data-label="Sức"><div>28</div></td></tr>
+<tr><td data-label="Đòn"><div>Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd></div></td><td data-label="Chuẩn bị"><div>0</div></td><td data-label="Gây đòn"><div>0,15 s (9 f)</div></td><td data-label="Hồi"><div>0 trúng / 0,45 s hụt</div></td><td data-label="Hồi chiêu"><div>0,8 s</div></td><td data-label="Khí thế"><div>0 nhận</div></td><td data-label="Sức"><div>10</div></td></tr>
+<tr><td data-label="Đòn"><div>Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd></div></td><td data-label="Chuẩn bị"><div>0,08 s (5 f)</div></td><td data-label="Gây đòn"><div>0,18 s</div></td><td data-label="Hồi"><div>0,20 / 0,40 s</div></td><td data-label="Hồi chiêu"><div>như Húc</div></td><td data-label="Khí thế"><div>23</div></td><td data-label="Sức"><div>20</div></td></tr>
+<tr><td data-label="Trạng thái"><div>Trúng đòn</div></td><td colspan="6" data-label="Hiệu ứng"><div>Choáng <span class="term">(Stun)</span> 0,30 s, bất tử <span class="term">(Invincibility / i-frames)</span> 0,45 s, bật lùi ≈ 2,5 m (Ghìm: không choáng, ≈ 1,5 m)</div></td></tr></tbody></table></div><details class="card"><summary>Kết quả rà soát · 16 kiểm tra cân bằng</summary><div class="tbl"><table class="mobile-rows"><thead><tr><th scope="col">#</th><th scope="col">Kiểm tra</th><th scope="col">Kết quả</th><th scope="col">Xử lý</th></tr></thead><tbody>
+<tr><td data-label="#"><div>1</div></td><td data-label="Kiểm tra"><div>Cần bao nhiêu cú để thắng?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Hợp trận 90 s: 6 Húc / 8 Hổ lao. Húc vào Ghìm cần 13 cú; Phản đòn cần 5 cú.</div></td></tr>
+<tr><td data-label="#"><div>2</div></td><td data-label="Kiểm tra"><div>Một cú có làm mất quá nhiều không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>Nhân dồn từng cho 44 một cú. Chỉ lấy thưởng lớn nhất thì tối đa 27.</div></td></tr>
+<tr><td data-label="#"><div>3</div></td><td data-label="Kiểm tra"><div>Có combo đánh mãi không thoát được không?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Choáng 0,30 s ngắn hơn phần đòn còn ≈ 0,38 s. Bật lùi 2,5 m và bất tử 0,45 s giúp hai bên có thể chọn đòn lại.</div></td></tr>
+<tr><td data-label="#"><div>4</div></td><td data-label="Kiểm tra"><div>Cứ đứng Ghìm có thắng được không?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Ghìm mất 8 mỗi cú và bị đẩy 1,5 m nên không kịp húc lại. Giữ ×0,45: đỡ an toàn nhưng cứ đỡ thì thua dần.</div></td></tr>
+<tr><td data-label="#"><div>5</div></td><td data-label="Kiểm tra"><div>Có kịp nhìn Húc rồi gạt không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>Chuẩn bị Húc tăng lên 0,25 s để người quen kịp nhìn rồi gạt.</div></td></tr>
+<tr><td data-label="#"><div>6</div></td><td data-label="Kiểm tra"><div>Gạt trúng có kịp húc lại không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>Đối thủ choáng 0,50 s; giật lùi 2 m/s ≈ 0,6 m. Nhận ra ≈ 0,15 s + bước ≤ 0,6 m trong ≈ 0,17 s + chuẩn bị 0,08 s ≈ 0,40 s &lt; 0,50 s: kịp nếu bấm ngay.</div></td></tr>
+<tr><td data-label="#"><div>7</div></td><td data-label="Kiểm tra"><div>Gạt hụt có bị đánh lại kịp không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>Hồi 0,45 s, sơ hở tổng 0,60 s. Đứng sẵn trong tầm: phản xạ 0,25 + chuẩn bị 0,25 = 0,50 s &lt; 0,60 s nên kịp phạt.</div></td></tr>
+<tr><td data-label="#"><div>8</div></td><td data-label="Kiểm tra"><div>Khi nào nên gạt thay vì Ghìm?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Nếu bạn đoán đúng cú húc từ khoảng 30% số lần trở lên thì gạt lợi hơn Ghìm. Đoán sai vẫn bị phạt rõ.</div></td></tr>
+<tr><td data-label="#"><div>9</div></td><td data-label="Kiểm tra"><div>Húc hụt có phạt được không?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Từ lúc A bấm Húc tới lúc hồi xong mất 0,83 s; 0,40 s cuối là sơ hở. B thấy A hụt rồi húc lại cần ≈ 0,55 s, nên đòn của B tới khi A còn đang hồi.</div></td></tr>
+<tr><td data-label="#"><div>10</div></td><td data-label="Kiểm tra"><div>Gạt một đòn đang được miễn có được thưởng không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>Xét bất tử trước Gạt sừng. Đòn vốn vô hại không tạo phần thưởng.</div></td></tr>
+<tr><td data-label="#"><div>11</div></td><td data-label="Kiểm tra"><div>AI có bấm gạt quá muộn không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>AI chọn khi đòn bắt đầu, bấm trước lúc đòn tới 0,10 s. NORMAL không còn luôn bấm muộn.</div></td></tr>
+<tr><td data-label="#"><div>12</div></td><td data-label="Kiểm tra"><div>HARD có gạt quá nhiều không?</div></td><td data-label="Kết quả"><div><span class="tag new">Đã sửa</span></div></td><td data-label="Xử lý"><div>HARD từng gạt 35%, phản 100%; nay gạt 25%. Tính trung bình, mỗi cú Húc của người chơi vào HARD giờ có lợi +7,8 Khí thế (trước +3,7): HARD vẫn khó nhưng Húc không thành vô dụng.</div></td></tr>
+<tr><td data-label="#"><div>13</div></td><td data-label="Kiểm tra"><div>Hổ lao có quá yếu so với Húc không?</div></td><td data-label="Kết quả"><div><span class="tag watch">Theo dõi khi playtest</span></div></td><td data-label="Xử lý"><div>Mỗi điểm Sức bỏ ra, Hổ lao làm đối thủ mất 0,5 Khí thế, Húc làm mất 0,9. Bù lại Hổ lao không cần lấy đà, giúp áp sát và khóa sừng <span class="term">(Clash)</span>; cần đo khi chơi thử.</div></td></tr>
+<tr><td data-label="#"><div>14</div></td><td data-label="Kiểm tra"><div>Khựng <span class="term">(Hitstop)</span> có quá lâu không?</div></td><td data-label="Kết quả"><div><span class="tag ">Giữ</span></div></td><td data-label="Xử lý"><div>Khựng 4 / 6 khung hình (67 / 100 ms), trong khoảng game đối kháng thường dùng.</div></td></tr>
+<tr><td data-label="#"><div>15</div></td><td data-label="Kiểm tra"><div>Khóa sừng có xảy ra quá nhiều không?</div></td><td data-label="Kết quả"><div><span class="tag watch">Theo dõi khi playtest</span></div></td><td data-label="Xử lý"><div>Từ lúc bấm tới hết pha gây đòn, Húc không hủy được trong 0,43 s (v0.7: 0,30 s), nên hai trâu dễ cùng ra đòn và mắc sừng hơn; cần đo khi chơi thử (REQ-G09).</div></td></tr>
+<tr><td data-label="#"><div>16</div></td><td data-label="Kiểm tra"><div>Người chơi phía client LAN có khó gạt hơn không?</div></td><td data-label="Kết quả"><div><span class="tag watch">Theo dõi khi playtest</span></div></td><td data-label="Xử lý"><div>Client thấy đòn trễ ≈ 50 ms do gửi trạng thái 30 Hz và làm mượt, kể cả mạng nhanh. Cần đo khi làm REQ-N05.</div></td></tr>
+</tbody></table></div></details><aside class="card dec" style="margin-top:16px"><h3>Gạt hay Ghìm?</h3><p>Ghìm vẫn mất <b>8</b> Khí thế mỗi cú. Gạt đúng thì mất <b>0</b>, rồi có cơ hội đánh <b>23</b>. Gạt sai có thể mất <b>18</b> và sơ hở <b>0,60 s</b>. Gạt có lợi khi đoán đúng khoảng <b>25–30%</b>. Mốc 25% là khi phản đòn luôn trúng; mốc 30% là khi trúng 7/10 lần.</p><p class="note">Vì vậy không ai nên chỉ đứng Ghìm, còn bấm G bừa thì bị phạt nặng: người đọc đòn tốt sẽ gạt nhiều, người chưa chắc dùng Ghìm.</p></aside>
+<details class="card"><summary>Nguồn · các bài tham khảo về frame data, phản xạ và cân bằng</summary><ul><li><a class="jump" href="https://www.dustloop.com/w/Template:FrameDataHeader-GBVS" target="_blank" rel="noopener">Dustloop — cách đọc frame data</a></li><li><a class="jump" href="https://inthirdperson.com/2013/07/29/universal-fighting-game-guide-understanding-frame-advantage-as-it-relates-to-safe-on-block" target="_blank" rel="noopener">In Third Person — frame advantage và độ an toàn khi bị chặn</a></li><li><a class="jump" href="https://www.gamedeveloper.com/design/theory-aiding-asymmetrical-balance-with-frame-data" target="_blank" rel="noopener">Game Developer — cân bằng bằng frame data</a></li><li><a class="jump" href="https://ki.infil.net/reaction.html" target="_blank" rel="noopener">Infil — phản xạ của người chơi</a></li><li><a class="jump" href="https://www.sirlin.net/articles/designing-yomi" target="_blank" rel="noopener">Sirlin — oẳn tù tì có phần thưởng khác nhau</a></li></ul></details></section>
+
+<section id="phat-hanh"><h2>Đánh giá trước phát hành</h2>
+<p class="lead">Bạn đã có đủ lựa chọn để đấu một trận 1v1 ngắn; chơi thử sẽ cho biết các lựa chọn đó có vui và dễ hiểu không.</p>
+<p><b>Kết luận:</b> Nếu lên Steam/Epic, vòng chơi lõi đã đủ cho một game đối kháng 1v1 ngắn. Không cần đổi con số nào; cần playtest để xác nhận.</p>
+<h3>Điểm mạnh — giữ</h3><ul>
+<li>Bốn lựa chọn khắc nhau; không có cách nào thắng tuyệt đối. Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> bừa bị phạt lúc hồi 0,40 s. Đứng Ghìm mãi <span class="term">(Turtling)</span> mất 8 mỗi cú. Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> tốn 12 Sức/s và chặn hồi Sức nên giữ tối đa ~8 s. Gạt bừa sơ hở 0,60 s. Đi vòng đánh sườn thắng Ghìm.</li>
+<li>Không có combo đánh mãi không thoát: choáng <span class="term">(Stun)</span> 0,30 s ngắn hơn thời gian ra đòn tiếp. Bất tử <span class="term">(Invincibility / i-frames)</span> 0,45 s giúp trâu vừa trúng đòn có thể thoát.</li>
+<li>Một cú tối đa 27 Khí thế <span class="term">(SPIRIT)</span>, không lật trận bằng một pha. Cần ~4–6 cú để thắng.</li>
+<li>Húc báo trước <span class="term">(Telegraph)</span> 0,25 s, ngang phản xạ. Người giỏi được thưởng khi đọc đòn; người mới vẫn có Ghìm an toàn.</li>
+<li>Người, AI và LAN dùng cùng một bộ luật. Không ngẫu nhiên trong combat.</li>
+</ul><h3>Rủi ro cần đo khi playtest</h3><ul>
+<li>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd> có quá yếu không? Lượng Khí thế làm mất trên mỗi Sức thấp hơn Húc.</li>
+<li>Khóa sừng <span class="term">(Clash)</span> có quá thường không? Húc chậm hơn nên hai trâu dễ va nhau hơn.</li>
+<li>Client LAN có thiệt khi gạt không? Đòn hiển thị trễ ~50 ms.</li>
+<li>Bên dẫn Khí thế có chạy tới hết giờ được không? Cần đo; nếu có, cân nhắc thu nhỏ sới hoặc phạt lùi lâu ở cuối trận.</li>
+</ul><h3>Còn thiếu so với chuẩn phát hành</h3>
+<p class="note">Các mục dưới đây nằm ngoài luật combat, chưa chốt và cần nhóm quyết.</p><ul>
+<li>Đổi phím (key rebinding), hỗ trợ tay cầm / Steam Deck; hiện phím cố định.</li>
+<li>Hỗ trợ mù màu: xanh lá của Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> và đỏ của Hổ lao khó phân biệt với người mù màu đỏ–lục. Đã có chữ nổi; nên thêm bảng màu thay thế.</li>
+<li>Chế độ tập (training): trâu bù nhìn húc đều để luyện canh lúc gạt.</li>
+<li>Hướng dẫn Gạt sừng ở L01; lời nhắc thứ 6 chưa chốt.</li>
+<li>Tùy chọn bật/tắt chữ nổi.</li>
+<li>Chơi qua Internet; hiện chỉ có LAN, ngoài phạm vi môn học.</li>
+</ul></section>
+
+<section id="nhan-dien"><h2>Nhận diện đòn <span class="tag new">MỚI</span></h2><p class="lead">Bạn nhìn động tác, màu sừng và chữ nổi, rồi nghe âm thanh để nhận ra đòn sắp tới. Khi Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> lấy đà, trâu cúi đầu 18° và lùi thân.</p><div class="head-grid"><figure><svg class="visual" viewBox="0 0 170 142" style="width:100%" role="img" aria-label="J — sừng sáng nhận diện Húc / Móc"><ellipse cx="85" cy="86" rx="26" ry="33" fill="var(--dat)" stroke="var(--ink)"/><ellipse cx="85" cy="109" rx="19" ry="11" fill="var(--dat)" stroke="var(--ink)"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" fill="none" stroke="var(--horn-outline)" stroke-width="7" stroke-linecap="round"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" class="horn-stroke horn"/></svg><figcaption>Húc / Móc</figcaption></figure><figure><svg class="visual" viewBox="0 0 170 142" style="width:100%" role="img" aria-label="J — sừng sáng nhận diện Hổ lao"><ellipse cx="85" cy="86" rx="26" ry="33" fill="var(--dat)" stroke="var(--ink)"/><ellipse cx="85" cy="109" rx="19" ry="11" fill="var(--dat)" stroke="var(--ink)"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" fill="none" stroke="var(--horn-outline)" stroke-width="7" stroke-linecap="round"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" class="horn-stroke dash"/></svg><figcaption>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></figcaption></figure><figure><svg class="visual" viewBox="0 0 170 142" style="width:100%" role="img" aria-label="J — sừng sáng nhận diện Ghìm"><ellipse cx="85" cy="86" rx="26" ry="33" fill="var(--dat)" stroke="var(--ink)"/><ellipse cx="85" cy="109" rx="19" ry="11" fill="var(--dat)" stroke="var(--ink)"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" fill="none" stroke="var(--horn-outline)" stroke-width="7" stroke-linecap="round"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" class="horn-stroke guard"/></svg><figcaption>Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd></figcaption></figure><figure><svg class="visual" viewBox="0 0 170 142" style="width:100%" role="img" aria-label="J — sừng sáng nhận diện Gạt sừng"><ellipse cx="85" cy="86" rx="26" ry="33" fill="var(--dat)" stroke="var(--ink)"/><ellipse cx="85" cy="109" rx="19" ry="11" fill="var(--dat)" stroke="var(--ink)"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" fill="none" stroke="var(--horn-outline)" stroke-width="7" stroke-linecap="round"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" class="horn-stroke parry"/></svg><figcaption>Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd></figcaption></figure><figure><svg class="visual" viewBox="0 0 170 142" style="width:100%" role="img" aria-label="J — sừng sáng nhận diện Phản đòn"><ellipse cx="85" cy="86" rx="26" ry="33" fill="var(--dat)" stroke="var(--ink)"/><ellipse cx="85" cy="109" rx="19" ry="11" fill="var(--dat)" stroke="var(--ink)"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" fill="none" stroke="var(--horn-outline)" stroke-width="9" stroke-linecap="round"/><path d="M65 66 Q19 49 31 25 M105 66 Q151 49 139 25" class="horn-stroke horn counter-flash"/></svg><figcaption>Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd></figcaption></figure></div><p class="note">Vàng = Húc/Móc · đỏ = Hổ lao · trắng mờ = Ghìm · xanh lá lóe = Gạt sừng · vàng nhấp nháy, viền đậm = cửa sổ Phản đòn.</p><div aria-label="Chữ nổi trên đầu trâu"><span class="chip-text">HÚC</span><span class="chip-text">HỔ LAO</span><span class="chip-text">GẠT SỪNG!</span><span class="chip-text">PHẢN ĐÒN!</span><span class="chip-text">ĐÁNH SƯỜN!</span><span class="chip-text">ĐÁNH LƯNG!</span><span class="chip-text">HỤT</span><span class="chip-text">MÓC</span><span class="chip-text">NHẢ</span></div><p class="note">Chữ nổi trong 0,6 s, có viền. Âm lấy đà từ file có sẵn: tiếng thở mạnh khi chuẩn bị húc, tiếng chân dồn khi hổ lao, tiếng đỡ + va sừng khi gạt trúng, khán giả reo khi phản đòn trúng.</p></section>
+
+<section id="ai">
+    <h2>Đối thủ AI</h2>
+    <p class="lead">Bạn đấu AI theo cùng luật như đấu người; AI chỉ biết những gì bạn cũng nhìn thấy (P4). Các lựa chọn ngẫu nhiên của AI dùng mã trận cố định để có thể lặp lại kết quả.</p>
+    <div class="tbl"><table class="mobile-rows"><thead><tr><th>Profile</th><th>Phản ứng</th><th>Hổ lao <span class="term">(Dash attack)</span> <kbd>Space</kbd></th><th>Đi vòng / Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd></th><th>Trong khóa sừng <span class="term">(Clash)</span></th>
+        <th>Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> <span class="tag new">MỚI</span></th><th>Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd> <span class="tag new">MỚI</span></th></tr></thead><tbody>
+      <tr><td data-label="Profile"><div><b>EASY</b> · L01</div></td><td data-label="Phản ứng"><div>0,65 s</div></td><td data-label="Hổ lao"><div>Không</div></td><td data-label="Đi vòng / Ghìm"><div>Không / Không</div></td><td data-label="Trong khóa sừng"><div>Chỉ đẩy</div></td><td data-label="Gạt sừng"><div>0%</div></td><td data-label="Phản đòn"><div>0%</div></td></tr>
+      <tr><td data-label="Profile"><div><b>NORMAL</b> · L02</div></td><td data-label="Phản ứng"><div>0,40 s</div></td><td data-label="Hổ lao"><div>Không</div></td><td data-label="Đi vòng / Ghìm"><div>Có / Có</div></td><td data-label="Trong khóa sừng"><div>Móc 35%, đẩy 65%</div></td><td data-label="Gạt sừng"><div>15%</div></td><td data-label="Phản đòn"><div>50%</div></td></tr>
+      <tr><td data-label="Profile"><div><b>HARD</b> · L03</div></td><td data-label="Phản ứng"><div>0,25 s</div></td><td data-label="Hổ lao"><div>Khi cách 2,5–5 m</div></td><td data-label="Đi vòng / Ghìm"><div>Có / Có</div></td><td data-label="Trong khóa sừng"><div>Móc 35%, nhả 25%, đẩy 40%</div></td><td data-label="Gạt sừng"><div>25%</div></td><td data-label="Phản đòn"><div>100%</div></td></tr>
+    </tbody></table></div>
+    <p class="note">Cả ba AI cố giữ đầu cách thân đối thủ 0,1–0,5 m (vừa tầm húc). Sức <span class="term">(Stamina)</span> &lt; 25 thì lùi, giữ cách 5 m tới khi Sức &gt; 60. Bị rào chặn thì đi dọc rào.</p>
+<ul class="note"><li>Mỗi đòn, AI chọn gạt một lần ngay khi đòn bắt đầu; dùng mã trận để lặp lại được lựa chọn.</li><li>Nếu chọn gạt, AI bấm G trước lúc đòn tới 0,10 s. Với Húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd>, đó là 0,15 s sau khi Húc bắt đầu lấy đà; tỉ lệ trong bảng thay cho thời gian phản ứng.</li><li>Sau mỗi lần gạt trúng, AI chọn phản đòn một lần. Vẫn cần đủ Sức và hết hồi chiêu <span class="term">(Cooldown)</span> như người.</li></ul></section>
+
+<section id="thay-doi"><h2>Phụ lục</h2>
+<div id="de-xuat">
+    <h2>Gói đọc đòn DEC-17…21 <span class="tag new">Đã chốt, chưa code</span></h2>
+    <p class="lead">Bạn đọc đòn tốt sẽ được thưởng; bấm liên tục thiếu tính toán sẽ bị đánh lại. Gói này đã chốt thiết kế, chưa code; mọi số liệu sẽ đặt trong <code>data/balance.json</code>.</p>
+    <div class="grid g2">
+      <div class="card dec"><h3>DEC-17 · Gạt sừng <span class="term">(Parry)</span> <kbd>G</kbd> → Phản đòn <span class="term">(Counter attack)</span> <kbd>Chuột trái</kbd></h3>
+        <ul>
+          <li>Gạt sừng dùng phím riêng <kbd>G</kbd>. Ghìm <span class="term">(Block)</span> <kbd>Chuột phải</kbd> (giữ) vẫn là giữ nút để đỡ.</li>
+          <li>Bấm G: gạt trong <b>0,15 s</b>. Đòn từ phía trước tới trong lúc đó thì bạn mất 0 Khí thế <span class="term">(SPIRIT)</span>.</li>
+          <li>Trâu ra đòn choáng <span class="term">(Stun)</span> <b>0,50 s</b> (Hổ lao: 0,70 s). Giật lùi 2 m/s, lùi ≈ 0,6 m.</li>
+          <li>Bạn có <b>0,5 s</b> để bắt đầu Phản đòn. Cú húc <span class="term">(Basic attack)</span> <kbd>Chuột trái</kbd> chỉ chuẩn bị 0,08 s. Đòn mạnh ×1,3 (18 → 23).</li>
+          <li>Gạt hụt: hồi 0,45 s, sơ hở tổng 0,60 s, dễ ăn đòn. Chi phí 10 Sức <span class="term">(Stamina)</span>, hồi chiêu <span class="term">(Cooldown)</span> 0,8 s.</li>
+          <li>Đang Ghìm vẫn bấm G được; trong khóa sừng <span class="term">(Clash)</span> thì không dùng.</li>
+        <li>Gạt có tác dụng ngay khi bấm, không cần lấy đà. Bấm G cùng khung hình (1/60 s) đòn tới vẫn gạt được.</li><li>Trâu bị gạt không được bất tử <span class="term">(Invincibility / i-frames)</span>, nên Phản đòn ăn trọn.</li><li>Cơ hội Phản đòn mất khi bắt đầu húc, hổ lao hoặc gạt. Bị đánh trúng, vào khóa sừng hoặc chờ hết 0,5 s cũng làm mất cơ hội này. Hổ lao trong cửa sổ là hổ lao thường.</li><li>Đánh vào trâu đang gạt không tạo khóa sừng.</li><li>Bất tử được xét trước Gạt sừng. Đòn tới không ảnh hưởng trâu đang bất tử, kể cả khi nó đang gạt. Trâu ra đòn không choáng và thế gạt tiếp tục; không có phần thưởng gạt trúng.</li></ul></div>
+      <div class="card dec"><h3>DEC-18 · Húc hụt bị phạt</h3>
+        <ul>
+          <li>Húc hết pha gây đòn mà không trúng ai và không thành khóa sừng thì hồi <b>0,40 s</b> thay vì 0,20 s.</li>
+          <li>Hổ lao giữ nguyên (đã có hồi chiêu 1,2 s).</li>
+          <li>Tạo cơ hội trừng phạt người spam chuột trái.</li>
+        <li>Trúng Ghìm vẫn tính là trúng (hồi 0,20 s). Bị gạt thì không vào hồi mà bị choáng.</li></ul></div>
+      <div class="card dec"><h3>DEC-19 · Đòn vào sườn / lưng</h3>
+        <ul>
+          <li>Sườn (60°–120°) và lưng (&gt; 120°): ×<b>1,25</b> Khí thế.</li>
+          <li>Công thức: round(base × g × max(p, f, c)).</li>
+          <li>Ví dụ: húc lưng mất 23; nếu bị dồn rào <span class="term">(Pinned / cornered)</span> thì mất 27. Phản đòn làm mất 23; nếu đối thủ bị dồn rào thì mất 27.</li>
+        <li>Chỉ lấy hệ số thưởng lớn nhất: dồn rào p = 1,5. Sườn/lưng f = 1,25; phản đòn c = 1,3. Khi không có thưởng, hệ số tương ứng là 1. Ghìm đúng hướng dùng g = 0,45, còn lại g = 1. Một cú tối đa 27 Khí thế.</li><li>Không áp trong khóa sừng (hai trâu luôn đối mặt).</li></ul></div>
+      <div class="card dec"><h3>DEC-20 · Khựng <span class="term">(Hitstop)</span></h3>
+        <ul>
+          <li>Đòn trúng: khựng cả trận <b>4 khung hình</b> (~0,067 s).</li>
+          <li>Gạt sừng trúng, phản đòn, vào khóa sừng: <b>6 khung hình</b> (~0,1 s).</li>
+          <li>Khựng được tính trên máy host như mọi luật khác, nên hai máy LAN khựng giống nhau.</li>
+        <li>Trong lúc khựng, đồng hồ 90 s dừng. Hồi Sức, hồi chiêu và nhớ phím <span class="term">(Input buffer)</span> cũng dừng. Camera vẫn rung và chớp sáng vẫn chạy theo thời gian thực.</li><li>Nhiều va chạm cùng khung hình: lấy thời gian khựng dài nhất.</li></ul></div>
+      <div class="card dec" style="grid-column:1/-1"><h3>DEC-21 · Báo trước <span class="term">(Telegraph)</span></h3><ul><li>Chuẩn bị Húc <b>0,25 s</b>; cúi đầu 10° → 18° và thân lùi lấy đà.</li><li>Sừng sáng, chữ nổi và âm thanh: xem <a class="jump" href="#nhan-dien">Nhận diện đòn</a>.</li></ul></div>
+    </div>
+    <h3>Còn để mở, cần nhóm quyết</h3>
+    <ul>
+      <li>Tên chính thức cho Gạt sừng: “Gạt sừng” là tên tạm, cần thêm vào Bảng 1 thuật ngữ.</li>
+      <li>Lời nhắc tutorial thứ 6 ở L01: “Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn”. Gợi ý: hiện khi lần đầu bị trúng húc từ phía trước, sau lời nhắc số 4. Chưa chốt.</li>
+      <li>Chữ nổi hiện cho cả hai trâu, hay chỉ cho đối thủ (đỡ rối mắt)? Cần quyết định tùy chọn bật/tắt trong Cài đặt.</li>
+      <li>LAN: client thấy đòn của host trễ ≈ 50 ms (snapshot 30 Hz + làm mượt) và lệnh G đi lên host cũng mất thời gian, nên gạt phía client khó hơn host. Cần đo khi làm REQ-N05 (giả lập trễ 50 ms); nếu lệch rõ, cân nhắc nới cửa sổ gạt cho client.</li>
+      <li>Ghìm có “an toàn quá” khiến không ai dùng G không? Nếu có, chỉnh Ghìm ×0,45 → ×0,6 sau playtest.</li>
+      <li>Hiệu ứng va chạm (bụi, chớp sáng, vệt hổ lao, tia ở sừng) là gói riêng, bắt buộc theo GDD Bảng 19.</li>
+<li>Đổi phím (key rebinding), hỗ trợ tay cầm / Steam Deck; hiện phím cố định.</li>
+<li>Hỗ trợ mù màu đỏ–lục: thêm bảng màu thay thế cho sừng xanh lá và đỏ, bên cạnh chữ nổi.</li>
+<li>Chế độ tập (training): trâu bù nhìn húc đều để luyện canh lúc gạt.</li>
+<li>Chơi qua Internet; hiện chỉ có LAN, ngoài phạm vi môn học.</li>
+    </ul>
+</div><p class="note">Chi tiết đầy đủ: <code>design/quick-specs/combat-readability-addition-2026-11-10.md</code>.</p></section>
+
+  <footer>Nguồn luật và số liệu: <code>design/quick-specs/combat-readability-addition-2026-11-10.md</code>, đã rà soát cân bằng ngày 11/11/2026. DEC-17…21 đã chốt, chưa code; GDD v0.7 chưa cập nhật.</footer>
+</main>
+
+<script>
+(function () {
+  // Giao diện sáng/tối
+  document.querySelectorAll('[data-theme-btn]').forEach(function (btn) {
+    btn.onclick = function () {
+      var t = btn.getAttribute('data-theme-btn');
+      var same = document.documentElement.getAttribute('data-theme') === t;
+      if (same) document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', t);
+      document.querySelectorAll('[data-theme-btn]').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(!same && b === btn));
+      });
+    };
+  });
+
+  // Timeline: mỗi dòng là danh sách [bắt đầu, độ dài, lớp, nhãn]
+  var SCALE = 1.3;
+  function rows() {
+    var hs = 0.25;
+    return [
+      ['Húc trúng', [[0, hs, 's-start', 'lấy đà 0,25'], [hs, 0.18, 's-active', 'gây đòn 0,18'], [hs + 0.18, 0.20, 's-rec', 'hồi 0,20'], [0, 0.75, 's-cd', '']]],
+      ['Húc hụt', [[0, hs, 's-start', 'lấy đà 0,25'], [hs, 0.18, 's-active', 'gây đòn 0,18'], [hs + 0.18, 0.40, 's-whiff', 'hồi 0,40 (phạt)']]],
+      ['Hổ lao', [[0, 0.22, 's-dash', 'lao 0,22'], [0.22, 0.25, 's-rec', 'giảm tốc 0,25'], [0, 1.2, 's-cd', '']]],
+      ['Bị trúng', [[0, 0.30, 's-stun', 'choáng 0,30'], [0, 0.45, 's-cd', '']]],
+      ['Gạt trúng (G)', [[hs - 0.1, 0.1, 's-win', 'gạt'], [hs, 0.5, 's-win', 'cửa sổ Phản đòn 0,5 s']]],
+      ['Trâu bị gạt', [[0, hs, 's-start', 'lấy đà 0,25'], [hs, 0.50, 's-stun', 'choáng 0,50']]],
+      ['Gạt hụt (G)', [[0, 0.15, 's-win', 'gạt 0,15'], [0.15, 0.45, 's-whiff', 'hồi 0,45 (sơ hở 0,60)'], [0, 0.8, 's-cd', '']]],
+      ['Phản đòn', [[0, 0.08, 's-start', '0,08'], [0.08, 0.18, 's-active', 'gây đòn 0,18'], [0.26, 0.20, 's-rec', 'hồi 0,20']]],
+      ['Phản đòn hụt', [[0, 0.08, 's-start', '0,08'], [0.08, 0.18, 's-active', 'gây đòn 0,18'], [0.26, 0.40, 's-whiff', 'hồi 0,40']]]
+    ];
+  }
+  function fmt(x) { return x.toFixed(2).replace('.', ','); }
+  function renderTimeline() {
+    var el = document.getElementById('tl');
+    var html = '';
+    rows().forEach(function (row) {
+      html += '<div class="row"><span>' + row[0] + '</span><div class="track">';
+      row[1].forEach(function (s) {
+        var left = (s[0] / SCALE * 100).toFixed(2), w = (s[1] / SCALE * 100).toFixed(2);
+        html += '<div class="seg-b ' + s[2] + '" style="left:' + left + '%;width:' + w + '%"' +
+          (s[2] === 's-cd' ? ' title="Hồi chiêu / bất tử"' : '') + '>' + s[3] + '</div>';
+      });
+      html += '</div></div>';
+    });
+    html += '<div class="axis">';
+    for (var t = 0; t <= 1.2001; t += 0.2) html += '<b style="left:' + (t / SCALE * 100) + '%">' + fmt(t).replace(',00', '') + ' s</b>';
+    html += '</div><p class="note">Viền đứt là thời gian chờ: Húc 0,75 s; Hổ lao 1,2 s.' +
+      ' Gạt sừng chờ 0,8 s; bất tử kéo dài 0,45 s. Gạt tối đa 0,15 s, dừng khi trúng. Hàng Gạt trúng bấm sớm 0,10 s. Hổ lao bị gạt thì choáng 0,70 s.</p>';
+    el.innerHTML = html;
+  }
+
+  // Lớp sơ đồ
+  document.querySelectorAll('[data-layer]').forEach(function (cb) {
+    cb.onchange = function () { document.getElementById(cb.getAttribute('data-layer')).style.display = cb.checked ? '' : 'none'; };
+  });
+
+  // Máy tính sát thương
+  function val(name) { return document.querySelector('input[name=' + name + ']:checked').value; }
+  function calc() {
+    var base = Number(val('atk'));
+    var dir = val('dir');
+    var grdInputs = document.querySelectorAll('input[name=grd]');
+    // Ghìm chỉ che phía trước
+    grdInputs.forEach(function (i) {
+      var off = dir === 'flank' && i.value !== 'none';
+      i.disabled = off; i.parentElement.classList.toggle('disabled', off);
+      if (off && i.checked) document.querySelector('input[name=grd][value=none]').checked = true;
+    });
+    var counterBox = document.getElementById('counter');
+    var counterOff = base !== 18;
+    counterBox.disabled = counterOff; counterBox.parentElement.classList.toggle('disabled', counterOff);
+    if (counterOff) counterBox.checked = false;
+
+    var grd = val('grd');
+    var g = grd === 'hold' ? 0.45 : grd === 'perfect' ? 0 : 1;
+    var p = document.getElementById('pinned').checked ? 1.5 : 1;
+    var f = dir === 'flank' ? 1.25 : 1;
+    var c = counterBox.checked ? 1.3 : 1;
+    var dmg = Math.round(base * g * Math.max(p, f, c));
+    document.getElementById('dmg').textContent = dmg;
+    document.getElementById('formula').textContent = ('round(' + base + ' × ' + g + ' × max(' + p + '; ' + f + '; ' + c + ')) = ' + dmg).replace(/\./g, ',');
+    document.getElementById('hits').textContent = dmg > 0 ? '≈ ' + Math.ceil(100 / dmg) + ' cú như vậy để làm hết 100 Khí thế' : 'Không mất Khí thế';
+    var extra = '';
+    if (grd === 'perfect') extra = 'Trâu ra đòn choáng ' + (base === 18 ? '0,50' : '0,70') + ' s; bên gạt có 0,5 s để phản đòn.';
+    else if (grd === 'hold') extra = 'Bên ghìm không bị choáng, đẩy lùi ×0,60.';
+    else if (dmg > 0) extra = 'Trâu bị trúng bị hất lùi 8,3 m/s, choáng 0,30 s và bất tử 0,45 s.';
+
+    document.getElementById('extra').textContent = extra;
+  }
+  document.querySelectorAll('.calc input').forEach(function (i) { i.onchange = calc; });
+
+  renderTimeline();
+  calc();
+})();
+</script>
+</body>
+</html>

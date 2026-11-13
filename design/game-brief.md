@@ -19,7 +19,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 **One-sentence pitch:** A 1v1 3D buffalo-fighting duel where you spend STAMINA on HORN, DASH and GUARD, and win the horn-lock CLASH to drain your rival's SPIRIT until they flee.
 
 ## Core loop
-- Move and angle your buffalo around a small oval arena (45° follow camera, mouse-look), spending STAMINA on HORN (18 dmg) and DASH (14 dmg), or holding GUARD to cut damage to 45%.
+- Move and angle your buffalo around a small oval arena (low over-the-shoulder follow camera at 22°, mouse-look), spending STAMINA on HORN (18 dmg) and DASH (14 dmg), or holding GUARD to cut damage to 45%.
 - When two committed attacks meet, a CLASH starts: choose PUSH, HOOK or RELEASE and win the shared balance meter (**confirmed pillar: CLASH is the heart of the game**).
 - Winning trades and clashes drains the opponent's SPIRIT (no regen); pinning them against the fence multiplies damage by 1.5, and mud slows movement to 80%.
 - Repeat until SPIRIT reaches 0 or the 90 s timer runs out.
