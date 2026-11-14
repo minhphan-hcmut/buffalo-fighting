@@ -50,6 +50,8 @@ var pause_panel: PanelContainer
 var pause_title: Label
 var pause_detail: Label
 var pause_actions: VBoxContainer
+## True while the pause overlay shows the settings page (Esc then goes back to the pause menu).
+var showing_settings := false
 
 
 func _ready() -> void:
@@ -249,6 +251,7 @@ func _pause_button(text: String, callback: Callable) -> void:
 
 
 func show_pause() -> void:
+	showing_settings = false
 	pause_overlay.visible = true
 	_place_pause_panel(Vector2(520, 0))
 	pause_title.text = "TẠM DỪNG" if controller.mode == &"SOLO" else "TRẬN LAN ĐANG TẠM DỪNG"
@@ -293,11 +296,13 @@ func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
 
 
 func hide_pause() -> void:
+	showing_settings = false
 	if is_instance_valid(pause_overlay):
 		pause_overlay.visible = false
 
 
 func show_settings() -> void:
+	showing_settings = true
 	pause_overlay.visible = true
 	_place_pause_panel(Vector2(520, 620))
 	pause_title.text = "CÀI ĐẶT"

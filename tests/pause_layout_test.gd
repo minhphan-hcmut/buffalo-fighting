@@ -44,6 +44,18 @@ func run() -> void:
 	await check_centered(hud, "LAN wait")
 	hud.show_pause_confirmation(2, true)
 	await check_centered(hud, "LAN confirmation")
+	# Esc on the pause settings page steps back to the pause menu; a second Esc resumes.
+	arena.mode = &"SOLO"
+	arena.phase = &"PLAYING"
+	arena.call("_set_paused", true)
+	hud.show_settings()
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	arena._input(esc)
+	check(arena.paused and not hud.showing_settings and hud.pause_title.text == "TẠM DỪNG", "Esc in pause settings goes back to the pause menu")
+	arena._input(esc)
+	check(not arena.paused, "Esc in the pause menu resumes the match")
 	arena.free()
 	var menu: Control = load("res://scenes/main_menu.tscn").instantiate()
 	root.add_child(menu)

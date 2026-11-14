@@ -116,6 +116,11 @@ func _input(event: InputEvent) -> void:
 		return
 	if phase != &"PLAYING" and not (mode == &"SOLO" and phase == &"COUNTDOWN"):
 		return
+	# Esc on the settings page steps back to the pause menu, like its QUAY LẠI button.
+	if is_instance_valid(hud) and hud.showing_settings:
+		hud.show_pause()
+		get_viewport().set_input_as_handled()
+		return
 	if mode == &"LAN":
 		_request_lan_pause(not paused)
 	else:

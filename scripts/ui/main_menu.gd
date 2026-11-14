@@ -312,6 +312,8 @@ func _show_result(result_key: String) -> void:
 	displayed_result = result_key
 	# Hidden while a Phần Lễ played over the previous result.
 	result_panel.show()
+	# The match captured the mouse for the camera; the result buttons need it back.
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	for child in result_actions.get_children():
 		result_actions.remove_child(child)
 		child.queue_free()
