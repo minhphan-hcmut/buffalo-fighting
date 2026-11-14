@@ -37,6 +37,20 @@ func run() -> void:
 		check(puddle.r > puddle.g and puddle.g > puddle.b and puddle.get_luminance() < centre.get_luminance() and puddle.get_luminance() < 0.04, "mud water is near-black brown, darker than the wet soil")
 		check(float(material.get_shader_parameter("wet_rim_darken")) > 0.0 and float(material.get_shader_parameter("sheen_sharpness")) >= 16.0, "water uses a dark wet rim and narrow reflection streaks")
 		check(is_equal_approx(float(material.get_shader_parameter("edge_noise")), GameBalance.get_number("mud_edge_noise")), "broken mud rim reads its tuning from presentation data")
+		var albedo := material.get_shader_parameter("mud_albedo") as Texture2D
+		check(albedo != null and material.get_shader_parameter("mud_normal") is Texture2D and material.get_shader_parameter("mud_arm") is Texture2D, "mud uses the scanned albedo, normal and AO/roughness maps")
+		check(albedo != null and albedo.get_image() != null and albedo.get_image().has_mipmaps(), "scanned mud albedo has mipmaps, so its mean colour and far view stay smooth")
+		check(is_equal_approx(float(material.get_shader_parameter("tile_count")), plane.size.x / GameBalance.get_number("mud_texture_tile_m")), "one mud texture tile keeps its real-world size from presentation data")
+	var floor := arena.find_child("EarthFloor", true, false) as MeshInstance3D
+	var earth := floor.material_override as StandardMaterial3D if floor != null else null
+	check(earth != null and earth.albedo_texture != null and earth.normal_texture != null and earth.ao_enabled and earth.albedo_texture.resource_path.contains("sand_01"), "arena floor is the scanned trampled-earth material, not tinted grass")
+	check(earth != null and earth.albedo_texture.get_image().has_mipmaps() and earth.uv1_world_triplanar, "earth floor tiles in world space with mipmaps, so it stays smooth from the high camera")
+	# MultiMesh transforms are not kept by the headless renderer, so check the grove band itself.
+	var grove_counts := arena.find_child("TreeTrunks", true, false) as MultiMeshInstance3D
+	var behind_stands := ArenaDressing.STAND_OFFSET + ArenaDressing.STAND_TIERS * ArenaDressing.TIER_DEPTH
+	var grove_outer := GameBalance.get_number("arena_rx") + behind_stands + GameBalance.get_number("scenery_grove_max_m")
+	var sun := arena.find_child("Sun", true, false) as DirectionalLight3D
+	check(grove_counts != null and grove_counts.multimesh.instance_count > 30 and GameBalance.get_number("scenery_grove_min_m") > 7.0 and grove_outer < sun.directional_shadow_max_distance, "a sparser grove stands past the ring behind the stands, inside the sun's shadow distance")
 
 	for actor: Buffalo in [arena.player, arena.opponent]:
 		check(actor.get_node_or_null("Banner") == null, "slot %d carries no pole or banner through its back" % actor.slot)

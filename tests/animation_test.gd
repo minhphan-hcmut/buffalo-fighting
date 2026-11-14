@@ -37,6 +37,7 @@ func run() -> void:
 	_test_dash_sequence(buffalo, animator)
 	_test_walk(buffalo, animator)
 	_test_legs(buffalo, animator)
+	_test_hooves_stay_above_ground(buffalo, animator)
 	_test_clash_steps(buffalo, animator)
 	_test_led_out_steps(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
@@ -333,6 +334,34 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	check(absf(animator.gait_phase - phase) < 0.001, "stride phase stops advancing at rest")
 
 
+# Horn load, dash dip and clash shove pitch the body nose-down about the rear hooves;
+# the front legs must bend onto the dirt instead of sinking into it (owner report 2026-11-15).
+func _test_hooves_stay_above_ground(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if animator.leg_mesh == null:
+		return
+	for action in ["horn", "dash", "clash"]:
+		_reset(buffalo, animator)
+		_step(animator, 60)
+		if action == "horn":
+			buffalo.start_horn()
+		elif action == "dash":
+			buffalo.start_dash()
+		else:
+			buffalo.state = Buffalo.State.CLASH
+		var lowest := INF
+		var deepest_pitch := 0.0
+		for i in 90:
+			animator.update_pose(TICK)
+			if action != "clash":
+				buffalo.advance_state(TICK)
+			deepest_pitch = minf(deepest_pitch, animator.basis.get_euler().x)
+			for leg in 4:
+				lowest = minf(lowest, animator.hoof_position(leg).y)
+		check(deepest_pitch < deg_to_rad(-6.0), "%s still dips the head clearly" % action)
+		check(lowest > -0.02, "%s keeps every hoof on or above the ground (lowest %.3f m)" % [action, lowest])
+		check(deepest_pitch >= deg_to_rad(-GameBalance.get_number("max_nose_down_deg")) - 0.001, "%s nose-down stays within the kneel-free limit" % action)
+
+
 func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	if animator.leg_mesh == null:
 		return
@@ -356,7 +385,7 @@ func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 		check(animator.local_velocity.normalized().dot(direction) > 0.99, "clash gait follows push or retreat displacement")
 		check(absf(animator.gait_phase - previous_phase) > 0.01, "moving clash advances stride phase")
 		_step(animator, 180)
-		check(_legs_at_rest(animator), "stationary clash plants every hoof, even while bracing")
+		check(_hooves_planted(animator), "stationary clash plants every hoof on the ground, even while bracing nose-down")
 		var phase := animator.gait_phase
 		_step(animator, 60)
 		check(absf(animator.gait_phase - phase) < 0.001, "stationary clash never cycles hooves in place")
@@ -423,6 +452,14 @@ func _test_pause(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	animator._process(TICK)
 	check(is_equal_approx(animator.time, before), "pose freezes while the match is paused")
 	arena.paused = false
+
+
+# No gait step in progress and every hoof on the dirt (the nose-down brace bends the legs).
+func _hooves_planted(animator: BuffaloAnimator) -> bool:
+	for leg in 4:
+		if animator.hoof_offsets[leg].length() > 0.001 or absf(animator.hoof_position(leg).y) > 0.02:
+			return false
+	return true
 
 
 func _legs_at_rest(animator: BuffaloAnimator) -> bool:

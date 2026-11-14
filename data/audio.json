@@ -26,7 +26,7 @@
       "pitch_jitter": 0.06
     },
     "buffalo_block": {
-      "db": -9.0,
+      "db": -11.0,
       "pitch": 0.84,
       "pitch_jitter": 0.05
     },
@@ -85,6 +85,75 @@
     "ui_error": {
       "db": -15.0,
       "pitch_jitter": 0.0
+    },
+    "sfx_horn_whoosh": {
+      "db": -21.0,
+      "pitch": 0.96,
+      "pitch_jitter": 0.08
+    },
+    "sfx_impact_thump": {
+      "db": -21.0,
+      "pitch": 1.0,
+      "pitch_jitter": 0.02
+    },
+    "sfx_impact_thump_heavy": {
+      "db": -17.0,
+      "pitch": 0.82,
+      "pitch_jitter": 0.015,
+      "stream": "sfx_impact_thump"
+    },
+    "sfx_parry_ring": {
+      "db": -19.5,
+      "pitch": 0.92,
+      "pitch_jitter": 0.02
+    },
+    "sfx_dash_burst": {
+      "db": -23.0,
+      "pitch": 0.94,
+      "pitch_jitter": 0.04
+    },
+    "sfx_horn_impact_1": {
+      "db": -15.5,
+      "pitch": 0.94,
+      "pitch_jitter": 0.035
+    },
+    "sfx_horn_impact_2": {
+      "db": -15.5,
+      "pitch": 0.94,
+      "pitch_jitter": 0.035
+    },
+    "sfx_heavy_impact_1": {
+      "db": -11.0,
+      "pitch": 0.83,
+      "pitch_jitter": 0.03
+    },
+    "sfx_heavy_impact_2": {
+      "db": -11.0,
+      "pitch": 0.83,
+      "pitch_jitter": 0.03
+    },
+    "sfx_heavy_crack_1": {
+      "stream": "sfx_horn_impact_1",
+      "db": -12.5,
+      "pitch": 0.9,
+      "pitch_jitter": 0.03
+    },
+    "sfx_heavy_crack_2": {
+      "stream": "sfx_horn_impact_2",
+      "db": -12.5,
+      "pitch": 0.9,
+      "pitch_jitter": 0.03
+    },
+    "sfx_parry_impact": {
+      "db": -17.0,
+      "pitch": 0.94,
+      "pitch_jitter": 0.03
+    },
+    "sfx_dash_earth": {
+      "db": -24,
+      "pitch": 0.9,
+      "pitch_jitter": 0.04
     }
-  }
+  },
+  "sfx_voices": 32
 }

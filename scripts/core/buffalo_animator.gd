@@ -86,6 +86,9 @@ var clash_gait_weight := 0.0
 var _gait_reference_speed := 8.75
 var _action_visual_state := -1
 var _action_visual_time := 0.0
+# Which side the next horn swing's slash VFX sweeps from (+1/-1); flips on every swing.
+# Presentation bookkeeping only: it does not change the pose.
+var _hook_side := -1.0
 
 
 func _ready() -> void:
@@ -192,12 +195,14 @@ func update_pose(delta: float) -> void:
 		+ walk * ROCK_PITCH_DEG * sin(gait_phase * TAU * 2.0 + 0.8)
 		- defeat_weight * 8.0
 	), deg_to_rad(MAX_NOSE_UP_DEG)) + deg_to_rad(victory_weight * 6.0 * sin(time * TAU * VICTORY_HOP_HZ * 2.0))
+	pitch = -_soft_nose_down(-pitch)
 	var roll := pose_roll + deg_to_rad(turn_roll + walk * SWAY_ROLL_DEG * sin(gait_phase * TAU)) + _shake_roll
 	var rotation_basis := Basis.from_euler(Vector3(pitch, pose_yaw, roll))
 	var breath := 1.0 + BREATH_SCALE * sin(time * TAU * BREATH_HZ) * (1.0 - minf(walk, 1.0))
 	var shaped := rotation_basis * Basis.from_scale(Vector3(1.0, breath, 1.0))
 	var origin := PITCH_PIVOT - shaped * PITCH_PIVOT + pose_offset + Vector3(0.0, bob + hop, 0.0)
 	transform = Transform3D(shaped, origin)
+	_ground_legs()
 	_update_ears(delta, result)
 	_update_tail(walk)
 
@@ -259,6 +264,8 @@ func sync_action_clock() -> void:
 # gameplay states. Restarts when the state changes or a snapshot syncs it.
 func _update_action_clock(delta: float) -> void:
 	if _action_visual_state != buffalo.state:
+		if buffalo.state == Buffalo.State.HORN_STARTUP:
+			_hook_side = -_hook_side
 		_action_visual_state = buffalo.state
 		_action_visual_time = 0.0
 	else:
@@ -476,6 +483,65 @@ func _pose_leg(leg: int, offset: Vector3) -> void:
 	leg_skeleton.set_bone_pose_rotation(2 + leg * 2, Quaternion(Vector3.RIGHT, fold_sign * fold))
 
 
+# Nose-down pitch eases into `max_nose_down_deg` past `nose_down_soft_deg`. The body pitches
+# about the rear hooves, so every degree lowers the shoulders: past ~12 deg the grounded
+# front legs fold so far the buffalo reads as kneeling instead of charging.
+func _soft_nose_down(down: float) -> float:
+	var soft := deg_to_rad(GameBalance.get_number("nose_down_soft_deg", 8.0))
+	var cap := deg_to_rad(GameBalance.get_number("max_nose_down_deg", 12.0))
+	if down <= soft or cap <= soft:
+		return minf(down, cap)
+	return soft + (cap - soft) * tanh((down - soft) / (cap - soft))
+
+
+# The body pitches about the rear hooves, so a nose-down pose (horn load, dash dip, clash
+# shove) would push straight front legs about half a metre into the dirt. Once the body
+# is placed, any hoof below the ground is lifted back onto it by bending that leg with a
+# two-bone solve: the knee juts forward on a front leg, the hock backward on a rear leg.
+# Front hooves also reach forward with the dip (`leg_ground_brace`), bracing for the shove.
+# Legs that stay above the ground keep their gait pose untouched.
+func _ground_legs() -> void:
+	if leg_skeleton == null or buffalo == null or not is_inside_tree():
+		return
+	var to_buffalo := buffalo.global_transform.affine_inverse() * leg_skeleton.global_transform
+	var to_skeleton := to_buffalo.affine_inverse()
+	var blend := maxf(GameBalance.get_number("leg_ground_blend_m", 0.03), 0.001)
+	for leg in 4:
+		var joint: Vector4 = LEG_JOINTS[leg]
+		var upper_length := joint.w - joint.y
+		var lower_length := joint.y
+		var shoulder := Vector3(joint.x, joint.w, joint.z)
+		var upper_pose := leg_skeleton.get_bone_pose_rotation(1 + leg * 2)
+		var lower_pose := leg_skeleton.get_bone_pose_rotation(2 + leg * 2)
+		var hoof := shoulder + upper_pose * Vector3(0.0, -upper_length, 0.0) + upper_pose * lower_pose * Vector3(0.0, -lower_length, 0.0)
+		var planted := to_buffalo * hoof
+		var sink := -planted.y
+		if sink <= 0.0:
+			continue
+		var ground := Vector3(planted.x, 0.0, planted.z)
+		if leg < 2:
+			# A charging buffalo braces its front legs ahead of the shoulders rather than
+			# kneeling under them: plant the hoof forward in proportion to the dip.
+			var forward := to_buffalo.basis * Vector3.FORWARD
+			forward.y = 0.0
+			ground += forward.normalized() * sink * GameBalance.get_number("leg_ground_brace", 0.9)
+		var target := to_skeleton * ground
+		var reach := target - shoulder
+		var distance := clampf(reach.length(), absf(upper_length - lower_length) + 0.001, upper_length + lower_length - 0.001)
+		var along := reach.normalized()
+		var pole := Vector3(0.0, 0.0, -1.0 if leg < 2 else 1.0)
+		pole = (pole - along * pole.dot(along)).normalized()
+		var cos_shoulder := clampf((upper_length * upper_length + distance * distance - lower_length * lower_length) / (2.0 * upper_length * distance), -1.0, 1.0)
+		var knee_dir := along * cos_shoulder + pole * sqrt(1.0 - cos_shoulder * cos_shoulder)
+		var knee := shoulder + knee_dir * upper_length
+		var solved_upper := Quaternion(Vector3.DOWN, knee_dir)
+		var solved_lower := Quaternion(Vector3.DOWN, solved_upper.inverse() * (shoulder + along * distance - knee).normalized())
+		# Ease in over the first few centimetres so a hoof grazing the ground never pops.
+		var weight := clampf(sink / blend, 0.0, 1.0)
+		leg_skeleton.set_bone_pose_rotation(1 + leg * 2, upper_pose.slerp(solved_upper, weight))
+		leg_skeleton.set_bone_pose_rotation(2 + leg * 2, lower_pose.slerp(solved_lower, weight))
+
+
 func _build_pivots() -> void:
 	var model_root := get_node_or_null("Model/BuffaloRoot")
 	if model_root == null:
@@ -535,3 +601,18 @@ func _update_tail(walk: float) -> void:
 
 func _is_paused() -> bool:
 	return controller != null and controller.paused
+
+
+## Read-only, for VFX: a point given in the visual's rest space (e.g. the horn tips), in the
+## buffalo body's space after this frame's pose.
+func head_point(rest: Vector3) -> Vector3:
+	return buffalo.to_local(to_global(rest)) if buffalo != null and is_inside_tree() else transform * rest
+
+
+## Read-only, for VFX: where the hoof of `leg` is this frame, in the buffalo body's space.
+func hoof_position(leg: int) -> Vector3:
+	var joint: Vector4 = LEG_JOINTS[leg]
+	if leg_skeleton == null or buffalo == null or not is_inside_tree():
+		return transform * Vector3(joint.x, 0.0, joint.z)
+	var lower := leg_skeleton.get_bone_global_pose(2 + leg * 2)
+	return buffalo.to_local(leg_skeleton.to_global(lower * Vector3(0.0, -joint.y, 0.0)))

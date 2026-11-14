@@ -77,12 +77,16 @@ func run() -> void:
 		child.free()
 	vfx.on_combat_event(&"HORN_HIT", 1, 2)
 	var flash := vfx.bursts.get_child(0) as CPUParticles3D
-	var dust := vfx.bursts.get_child(1) as CPUParticles3D
+	var dust: CPUParticles3D
+	for emitter in vfx.bursts.get_children():
+		if emitter.get_meta("kind") == &"HitDust":
+			dust = emitter
 	var dust_material := dust.mesh.material as StandardMaterial3D
-	var dust_texture := dust_material.albedo_texture as GradientTexture2D
-	check(flash.mesh == vfx.particle_mesh and flash.scale_amount_curve == null and flash.color_initial_ramp == null, "flash keeps original mesh and animation")
-	check(dust.mesh != flash.mesh and dust_texture.width == GameBalance.get_int("vfx_dust_texture_size"), "dust uses its own high-resolution radial sprite")
-	check(dust_texture.fill == GradientTexture2D.FILL_RADIAL and dust_texture.gradient.sample(1.0).a == 0.0 and dust_texture.gradient.sample(0.0).a == 1.0 and dust_texture.gradient.sample(0.5).a < 0.5, "dust texture has transparent edges and soft radial falloff")
+	var dust_texture := dust_material.albedo_texture
+	check(flash.mesh == vfx.particle_mesh and flash.scale_amount_curve == null and flash.color_initial_ramp == null, "star flash keeps its dedicated mesh and stationary animation")
+	check(dust.mesh != flash.mesh and dust_texture != null and dust_texture.resource_path.begins_with("res://assets/vfx/kenney_particle_pack/"), "dust uses its own imported Kenney sprite")
+	var dust_image := dust_texture.get_image()
+	check(dust_image.get_pixel(0, 0).a == 0.0 and dust_image.get_pixel(dust_image.get_width() / 2, dust_image.get_height() / 2).a > 0.0 and dust_image.detect_alpha() == Image.ALPHA_BLEND, "dust sprite has transparent edges and soft translucent smoke")
 	check(dust.scale_amount_curve.sample(0.0) < dust.scale_amount_curve.sample(1.0) and dust.scale_amount_min < dust.scale_amount_max, "dust puffs vary in size and grow over lifetime")
 	check(dust.color_initial_ramp.get_color(0).a < dust.color_initial_ramp.get_color(1).a and dust.color_initial_ramp.get_color(1).a < 1.0 and dust.color_ramp.get_color(1).a == 0.0, "dust varies in opacity and fades away")
 	check(dust.emission_shape == CPUParticles3D.EMISSION_SHAPE_BOX and dust.emission_box_extents.y < dust.global_position.y, "dust spawns above ground in a shallow layer")
