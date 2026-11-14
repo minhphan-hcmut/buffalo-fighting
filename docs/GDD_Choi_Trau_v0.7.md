@@ -776,6 +776,9 @@ vẫn nguyên.
 Thẻ văn hóa (SHOULD): sau mỗi trận mở một thẻ 60–80 chữ, ghi nguồn ở cuối: (1)
 Ông trâu và thần Điểm Tước; (2) Lễ rước nước; (3) Trống hội và múa cờ; (4) Tinh
 thần thượng võ của người miền biển; (5) Di sản văn hóa phi vật thể quốc gia.
+Trạng thái (v0.7.2, 13/11/2026): cả 5 màn Phần Lễ và 5 thẻ văn hóa đã có trong game
+(`data/ceremony.json`, `data/culture_cards.json`); nội dung thẻ chờ duyệt (rủi ro "Sai lệch
+văn hóa", mục 6).
 #### 4.6 Nguyên tắc nội dung (bắt buộc)
 - Không máu, không thương tích, không giết mổ; nghi lễ sau hội chỉ nhắc ở mức
 “tế thần, tạ ơn”, không minh họa.
@@ -1424,7 +1427,8 @@ riêng.
 sừng) thay vì theo giống. Mỗi sở trường là một biến thể bộ đòn, cân bằng được
 bằng số liệu [B11].
 - Diễn hoạt kết thúc trận: trâu thua lui ra cổng, người dắt đón ở hành lang, trâu
-thắng chào khán giả (SHOULD, chưa làm).
+thắng chào khán giả (đã làm từ v0.7.2: lui cổng, quay về khán đài, nhảy mừng trong
+tiếng trống; Solo có thêm góc máy quay quanh trâu thắng).
 - Replay cuối trận, controller.
 
 <a id="trang-41"></a>

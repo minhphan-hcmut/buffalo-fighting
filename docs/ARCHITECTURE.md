@@ -56,14 +56,14 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 | File | Việc của nó |
 |---|---|
 | `match_controller.gd` | Gốc của scene `arena.tscn`: phase (đếm ngược, đấu, kết quả), đồng hồ, tạm dừng, luật thắng, hitstop, tạo các module khác. |
-| `buffalo.gd` | Một con trâu: máy trạng thái hành động (`State`), di chuyển, SPIRIT/STAMINA, bộ đệm input. |
+| `buffalo.gd` | Một con trâu: máy trạng thái hành động (`State`), di chuyển, SPIRIT/STAMINA, bộ đệm input. `use_natural_skin()` cho model dùng da trâu thật thay bản da bạc trong file glb. |
 | `combat_resolver.gd` | Kiểm tra trúng đòn và tính khí thế mất, đẩy lùi. Thứ tự: bất tử → gạt sừng → ghìm → trúng; đánh sườn/lưng ×1,25. |
 | `clash_system.gd` | Khóa sừng: thanh kéo co, móc, nhả, ai thua thì mất khí thế. |
 | `arena_bounds.gd` | Hình học sân bầu dục: va chạm thân/đầu, giới hạn rào, trạng thái bị ép rào, vùng bùn. |
 | `input_frame.gd` | Một tick ý định của một con trâu. |
 | `match_input.gd` | Đọc bàn phím/chuột thành `InputFrame`. |
 | `match_network.gd` | Nối `MatchController` với LAN: gửi/nhận input, snapshot, sự kiện. |
-| `session_state.gd` | Dữ liệu sống qua các lần đổi scene: chế độ, màn hiện tại, kết quả trước. |
+| `session_state.gd` | Dữ liệu sống qua các lần đổi scene: chế độ, màn hiện tại, kết quả trước, thẻ văn hóa và màn Phần Lễ đã xem (`take_rites_before()`). |
 | `game_balance.gd`, `data_file.gd` | Đọc số từ `data/`. |
 | `yaw_basis.gd` | Vector trước/phải theo góc quay. |
 
@@ -71,17 +71,21 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 | File | Việc của nó |
 |---|---|
-| `buffalo_animator.gd` | Chuyển động thủ tục cho model trâu chưa có rig: bước chân, húc, lao, khóa sừng. `make_matte()` bỏ ánh kim loại của model và nhuộm da xám đá. |
-| `buffalo_feedback.gd` | Chữ nổi trên đầu trâu ("HÚC", "GẠT SỪNG!") và màu sừng phát sáng; shader ở `assets/shaders/horn_glow.gdshader`. |
-| `match_vfx.gd` | Hạt hiệu ứng: chớp sáng khi trúng, tia lửa ghìm/gạt, bụi, vòng vàng khi bị ép rào. |
+| `buffalo_animator.gd` | Chuyển động thủ tục cho model trâu: lúc chạy dựng bộ xương 4 chân (đùi + cẳng, skin mềm) cho `HeroBody`, chân xoay quanh hông/gối nên không bị kéo dãn; húc, lao, khóa sừng. Thân chỉ ngửa tối đa `MAX_NOSE_UP_DEG` (3°) để móng trước không nhấc khỏi đất khi bị húc. Lúc bị dắt ra (FLEE), bước chân tính theo tốc độ dắt nên đủ sải. File `.glb` gốc không đổi. |
+| `buffalo_feedback.gd` | Chữ nổi trên đầu trâu, chỉ cho khoảnh khắc đáng gọi tên ("GẠT SỪNG!", "PHẢN ĐÒN!", "ĐÁNH SƯỜN!", "ĐÁNH LƯNG!", "HỤT"), và màu sừng phát sáng; shader ở `assets/shaders/horn_glow.gdshader`. |
+| `match_vfx.gd` | Hiệu ứng chỉ đọc: chớp sáng tại điểm chạm, vòng sóng mặt đất và đất văng khi trúng; bụi/tia lóe định kỳ lúc khóa sừng, tia ghìm/gạt, bụi lao và vòng vàng khi bị ép rào. |
 | `match_audio.gd`, `game_audio.gd` | Âm thanh trận đấu; `GameAudio` là autoload phát nhạc và tiếng, âm lượng theo `data/audio.json`. |
 | `follow_camera.gd` | Camera bám sau trâu, thấp qua vai phải (22°); giật vào và rung khi trúng đòn, zoom khi khóa sừng; cuối trận lên cao nhìn toàn sân, rồi (Solo) hạ xuống quay chậm quanh trâu thắng. |
-| `match_outro.gd` | Đoạn kết: bốc thăm (nếu hòa), trâu thua lui ra cổng, người dẫn trâu đứng chờ. |
+| `match_outro.gd` | Đoạn kết: bốc thăm (nếu hòa), rồi trâu thua ra cổng. Solo: người dắt của bên thua (áo cùng màu) chạy từ cổng vào đầu trâu, trâu đứng chờ, rồi dắt bằng dây thừng ra cổng (`result_lead_*`, `result_handler_*`). LAN: trâu tự đi ra. |
+| `lead_rope.gd` | Dây thừng võng giữa tay người dắt và mũi trâu (vài đoạn trụ mảnh, `result_rope_*`). |
+| `release_handlers.gd` | Hai người dắt trâu đứng ở đầu trâu lúc đếm ngược rồi đi vòng cung bên trái trâu (tránh camera vai phải) ra cổng trước hiệu lệnh (GDD 2.6, 4.6). Chỉ đọc `countdown_time`. `SHIRTS`: màu áo người dắt theo bên, dùng chung với đoạn kết. |
 | `arena_builder.gd` | Phần sân mà trận đấu cần: bùn, hàng rào tre (có va chạm) và hai cổng, mặt trời, bầu trời, cờ trên lưng trâu. |
-| `arena_dressing.gd` | Cảnh lễ hội quanh sân, chỉ để nhìn: bãi cỏ, khán đài và đám đông (MultiMesh), đình trống, cột cờ, cây, đồi. |
-| `low_poly.gd` | Hàm dựng khối dùng chung (hộp, trụ, cầu, người dân đội nón). |
-| `ceremony_diorama.gd` | Cảnh 3D Phần Lễ: đình, bàn thờ, trống, cột cờ, đoàn rước. |
-| `menu_backdrop.gd` | Cảnh 3D sau menu chính: sới lễ hội, hai trâu đỏ/xanh đối đầu, camera lượn chậm. |
+| `arena_dressing.gd` | Cảnh lễ hội quanh sân, chỉ để nhìn: bãi cỏ, khán đài và đám đông đứng (model dân làng dựng sẵn qua `LowPoly.crowd_villager_mesh`, 2 MultiMesh: đứng yên / giơ tay; màu áo và nón theo custom data; shader `crowd_bob`), đình trống, cột cờ và dây cờ đuôi nheo uốn nhẹ bằng shader `flag_wave`, cây tròn xen cau/dừa (Kenney Nature Kit, CC0, tô lại màu qua `_palm_mesh`), đồi. Màu nền cố ý dịu để trâu nổi bật. |
+| `crowd_reaction.gd` | Độ hào hứng của khán giả (0..1) theo sự kiện combat, giảm dần; đẩy vào shader `crowd_bob` để đám đông nhún/reo. Chỉ đọc. |
+| `low_poly.gd` | Hàm dựng khối dùng chung (hộp, trụ, cầu). Người dân: model rig Quaternius "Animated Human" (CC0, `assets/characters/villager/`), đổi màu áo theo bảng màu, nón lá gắn xương đầu, clip Stand/Walk/Run/Working, tư thế đánh trống/cầm cờ (`make_drummer`, `drum_swing`). `crowd_villager_mesh()` nướng model ở tư thế Stand (skinning tính tay) thành mesh tĩnh có nón, gắn nhãn bộ phận ở UV.x cho khán đài. `flag_cloth()` + `flag_material()`: lá cờ chia lưới và vật liệu `flag_wave` dùng chung cho sân và Phần Lễ. |
+| `ceremony_diorama.gd` | Cảnh 3D của 5 màn Phần Lễ theo lịch hội: `opening` (1/8), `water` rước nước (7/8), `giap` các giáp đưa trâu vào hội (8/8), `drums` trống khai hội, múa cờ trên sới (9/8), `closing` (10/8). Cờ dải và cờ hội dùng plane chia nhỏ, shader `flag_wave` giữ mép buộc cố định. Sương nhẹ (`ceremony_fog_density`) và bóng dịu (`ceremony_shadow_opacity`); không dùng tonemap filmic vì làm cảnh bạc màu. |
+| `low_poly.gd` (ghi chú màu) | `LowPoly.tone()` đưa màu bảng palette của vật liệu thường về tông đậm hơn theo `ui_palette_depth` (GL Compatibility hiện albedo thường nhạt hơn màu instance của `multi()`). Dùng cho `material()`, texture dân làng và uniform khán giả. |
+| `menu_backdrop.gd` | Cảnh 3D sau menu chính: sới lễ hội, hai trâu đỏ/xanh đối đầu, người dắt trâu xanh đứng lệch ra cạnh mông trâu (`HANDLER_SPOT`; bên đỏ nằm sau cột nút nên không đặt), camera lượn chậm. |
 
 ### Các thư mục khác
 
@@ -89,11 +93,16 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 |---|---|
 | `scripts/ai/ai_controller.gd` | AI Solo (FSM) tạo `InputFrame` như người chơi; 3 hồ sơ trong `data/ai_profiles.json`. |
 | `scripts/network/network_manager.gd` | Autoload `NetworkManager`: kết nối ENet, tạm dừng hai bên, kênh tin nhắn thô. |
-| `scripts/ui/hud.gd` | HUD trong trận: thanh khí thế/sức, đồng hồ, khóa sừng, tutorial, menu tạm dừng. |
-| `scripts/ui/main_menu.gd` | Menu chính (cột trái trên nền `MenuBackdrop`) và luồng Solo: bảng kết quả cột trái cạnh trâu thắng, trận tiếp, Phần Lễ. |
+| `scripts/ui/hud.gd` | HUD trong trận: thanh khí thế/sức, đồng hồ, khóa sừng (bảng dưới đồng hồ, có dòng phím riêng; thanh gợi ý ẩn khi khóa), tutorial, thanh phím rich text (phím vàng đậm, hành động màu giấy), menu tạm dừng (co theo nội dung). |
+| `scripts/ui/main_menu.gd` | Menu chính (cột trái trên nền `MenuBackdrop`) và luồng Solo: bảng kết quả cột trái cạnh trâu thắng, trận tiếp, Phần Lễ; tạo bảng Cách chơi độc lập và khôi phục menu khi đóng. Nạp sẵn `arena.tscn` ở luồng nền từ lúc mở menu (`_prefetch_arena`), vào trận qua `_go_to_arena` nên không đứng hình. |
+| `scripts/ui/how_to_play.gd` | Bảng Cách chơi 3 tab: Luật chơi (từ khóa vàng), Các đòn, Điều khiển; focus, Esc và nút quay lại. |
+| `scripts/ui/move_demo.gd` | Một SubViewport dựng lười khi mở Các đòn: hai scene trâu thật diễn 6 timeline lặp, không gọi combat; dừng render/animator khi ẩn, giải phóng cùng bảng. Tuning `demo_*` trong `presentation.json`. |
+| `scripts/ui/controls_diagram.gd` | Sơ đồ bàn phím, chuột và phím khóa sừng; keycap dùng chung với minh họa đòn. Tuning `ui_howto_*`. |
+| `scripts/ui/culture_cards.gd` | Chọn thẻ văn hóa chưa xem sau trận Solo; ưu tiên thẻ di sản khi thắng chung kết, lưu danh sách đã xem trong `SessionState`. |
 | `scripts/ui/ceremony_view.gd` | Màn Phần Lễ toàn màn hình: cảnh 3D + chú thích + nút tiếp tục. |
 | `scripts/ui/lobby.gd`, `settings_controls.gd` | Sảnh LAN; các dòng cài đặt dùng chung cho menu và tạm dừng. |
 | `scenes/` | `main_menu.tscn` (scene khởi động), `arena.tscn`, `buffalo.tscn`, `lobby.tscn`. |
+| `assets/shaders/flag_wave.gdshader` | Sóng cờ chỉ đổi đỉnh: mép buộc cố định, biên độ tăng ra mép tự do; pha theo vị trí XZ, màu MultiMesh qua `INSTANCE_CUSTOM` để chạy đúng GL Compatibility. Tuning `flag_*` trong `presentation.json`. |
 | `assets/ui/festival_theme.tres` | Theme mặc định của project (màu nút, panel, chữ). |
 | `tests/` | Test headless; xem mục Test bên dưới. |
 
@@ -105,7 +114,8 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 | `presentation.json` | Cảm giác nhìn/nghe: camera, chuyển động, hiệu ứng, HUD, tutorial, đoạn kết. | Chỉ đổi cách trông, không đổi kết quả trận. |
 | `levels.json` | Ba trận Solo (L01–L03) và trận LAN: tên trận, hồ sơ AI, vùng bùn. | Đổi nội dung mùa hội. |
 | `ai_profiles.json` | Độ khó AI: tốc độ phản xạ, tỉ lệ gạt sừng, phản đòn. | Đổi độ khó. |
-| `ceremony.json` | Chữ và thời lượng hai màn Phần Lễ. | Đổi lời dẫn nghi lễ. |
+| `ceremony.json` | Chữ và thời lượng 5 màn Phần Lễ. `water`/`giap`/`drums` hiện trước L01/L02/L03, mỗi màn một lần mỗi mùa hội. | Đổi lời dẫn nghi lễ. |
+| `culture_cards.json` | Năm thẻ văn hóa, nguồn tư liệu và thẻ ưu tiên khi thắng chung kết. | Chỉ đổi nội dung thẻ sau trận Solo, không đổi kết quả trận. |
 | `audio.json` | Âm lượng nhạc/tiếng và nhịp tiếng bước chân. | Đổi độ to nhỏ. |
 
 Cả `balance.json` và `presentation.json` đều đọc bằng `GameBalance.get_number("tên_key")`.

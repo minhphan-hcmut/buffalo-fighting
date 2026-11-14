@@ -37,6 +37,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 - Solo ladder: L01 (EASY AI), L02 (NORMAL AI, 1 mud zone), L03 (HARD AI, 2 mud zones)
 - Host-authoritative LAN 1v1 (LAN01)
 - Main menu, lobby, HUD and result screen
+- Solo "Mùa hội" (festival, 8th lunar month): five Phần Lễ screens in festival order (opening, rước nước, các giáp, trống khai hội, closing), release handlers in the countdown, winner salute, and a culture card after each Solo match (`data/ceremony.json`, `data/culture_cards.json`)
 
 ## Out of scope — not building this
 - Ring-out win condition (confirmed dropped)
@@ -44,7 +45,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 - 2D presentation (the old GDD v0.1 described 2D; the implementation is 3D)
 
 ## Build order
-Already built. Remaining order is `INTENT UNKNOWN`; the code suggests the feel of CLASH was iterated last (recent commits tune clash entry, push momentum and dash recovery), so CLASH feel is the risk area to re-verify first.
+Already built, Solo/PvE first (owner, 2026-11-13). Solo "Mùa hội" is complete as of 2026-11-13. Next: LAN polish (LAN result has no winner camera shot yet), then any items the owner raises. Culture card text awaits owner review.
 
 ---
 **Who it's for / what they feel:** `INTENT UNKNOWN` — not recoverable from code.
