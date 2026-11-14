@@ -12,7 +12,7 @@
 
 ## Âm thanh
 
-Giữ nguyên ZIP nguồn ở `assets/audio/source/Sound-20261103T033158Z-1-001.zip`; 20 file audio đã giải nén nằm trong `assets/audio/`.
+ZIP nguồn (`Sound-20261103T033158Z-1-001.zip`) chỉ giữ local ở `assets/audio/source/`, không commit; 20 file audio đã giải nén (trùng byte với ZIP) nằm trong `assets/audio/`. Ảnh hướng dẫn âm thanh đi kèm ZIP lưu ở `docs/SOUND_GUIDE.png`.
 
 - 17 WAV PCM 16-bit và 3 OGG Vorbis, tất cả 48 kHz, độ dài hợp lệ. Nhạc nền 80 giây; loop khóa sừng 0,83 giây.
 - `GameAudio` autoload tạo bus Music/SFX và pool 16 giọng, nhạc nền xuyên scene. Slider âm lượng hiện có điều khiển các bus này.

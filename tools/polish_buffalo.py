@@ -203,7 +203,8 @@ scene.view_settings.exposure = -0.7
 # Bake the washes: this Godot importer does not enable vertex colors as albedo.
 from pathlib import Path
 
-out = Path(__file__).resolve().parents[1] / "assets/characters/buffalo"
+out = Path(__file__).resolve().parents[1] / "assets/source/buffalo"
+out.mkdir(parents=True, exist_ok=True)
 bpy.ops.object.select_all(action="DESELECT")
 body.select_set(True)
 bpy.context.view_layer.objects.active = body

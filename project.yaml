@@ -25,3 +25,45 @@ framework:
 # here. `/settings --local <key>=<value>` writes there; `/settings <key>=<value>`
 # edits this file. See `.claude/docs/config-resolution.md` for the full
 # precedence order.
+
+engine:
+  name: "Godot"
+  version: "4.7"
+  language: "GDScript"
+  rendering: "GL Compatibility"
+  physics: "Jolt"
+
+specialists:
+  code: "godot-gdscript-specialist"
+  shader: "godot-shader-specialist"
+  ui: "godot-specialist"
+  additional: []
+
+naming:
+  classes: PascalCase
+  variables: snake_case
+  constants: SCREAMING_SNAKE
+  signals: past_tense
+  files: snake_case
+  scenes: snake_case
+
+platform:
+  multiplayer: true          # LAN 1v1 qua ENet
+  online: false
+  targets: [PC]
+  primary_input: "Keyboard/Mouse"
+
+performance:
+  target_framerate: 60
+  frame_budget_ms: 16.67
+  enforce: warn
+
+commands:
+  build: "godot --headless --export-debug 'Windows Desktop' build/windows/buffalo-fighting.exe"
+  test: "bash tools/run_tests.sh"
+  run: "godot --path . --windowed --resolution 1280x720"
+  smoke: "godot --headless --path . --quit-after 5"
+
+modes:
+  rigor: standard
+  automation: guided
