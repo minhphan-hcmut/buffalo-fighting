@@ -1,5 +1,19 @@
 # Changelog GDD
 
+## v0.7.2 — 13/11/2026
+
+- Bảng 17: làm 3 màn Phần Lễ SHOULD (rước nước trước L01, các giáp đưa trâu vào hội trước L02, trống khai hội và múa cờ trên sới trước L03). Mỗi màn hiện một lần mỗi mùa hội, bỏ qua bằng một phím. Chữ ở `data/ceremony.json`, cảnh ở `scripts/core/ceremony_diorama.gd`.
+- Thẻ văn hóa (SHOULD): 5 thẻ 73–77 chữ, có nguồn [B1]–[B15], mở một thẻ chưa xem sau mỗi trận Solo; thắng chung kết ưu tiên thẻ di sản. Nội dung `data/culture_cards.json` chờ người dùng/giảng viên duyệt.
+- Mục 2.6 và 4.6: hai người dắt đứng ở đầu trâu lúc COUNTDOWN rồi đi ra cổng trước hiệu lệnh (`scripts/core/release_handlers.gd`). Mục 2.5: trâu thắng chào khán giả trong tiếng trống hội. Phụ lục D bỏ ghi "chưa làm".
+- Trâu dùng da trâu thật có sẵn trong model (`Buffalo.use_natural_skin()`), bỏ da bạc/crôm trình diễn.
+
+## v0.7.1 — 13/11/2026
+
+- Camera (DEC-01, REQ-G11, bảng tuning): đổi từ nghiêng 45° / 9 m / FOV 75° sang góc thấp qua vai phải: 22° / 5,2 m / FOV 58°, lệch vai 1 m, tâm nhìn cao 1,7 m. Lý do: ở 45° trâu nhỏ, chỉ thấy lưng, cú húc thiếu lực; camera thấp không lệch vai thì trâu mình che đối thủ. Số nằm ở `camera_*` trong `data/presentation.json`.
+- Đánh đổi: tầm nhìn sau lưng còn khoảng 2 m (trước đây ≥ 5 m), nên REQ-G11 bỏ tiêu chí "≥ 5 m sau lưng"; bị ép rào vẫn có vòng cảnh báo, rào hai bên vẫn trong khung.
+- Trúng đòn: camera giật vào (`camera_punch_*`: 0,16 s, FOV hẹp 4°, tiến 0,45 m); HỔ LAO và phản đòn mạnh gấp 1,6. Chỉ là trình bày, không đổi kết quả trận; tắt cùng tùy chọn rung camera.
+- PDF gốc v0.7 chưa sửa theo; bản markdown này là bản đúng.
+
 ## v0.4.1 — 01/11/2026
 
 - AI: giữ nguyên quyết định (move, guard) suốt cửa sổ `reaction_s`, nút cạnh chỉ gửi ở tick quyết định; giữ khoảng hở `approach_gap`/`min_gap`; RECOVER có trễ (vào < 25, ra > 60 STAMINA); DASH theo `dash_min_range`/`dash_max_range` của profile. Ngưỡng và xác suất CLASH chuyển vào `data/ai_profiles.json`.

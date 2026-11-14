@@ -23,6 +23,7 @@ var winner_slot := 0
 var remaining_time := 0.0
 var countdown_time := 0.0
 var tick := 0
+var hitstop_ticks := 0
 var finished := false
 var paused := false
 var player: Buffalo
@@ -35,15 +36,21 @@ var mud_zones: Array[StringName] = []
 var local_slot := 1
 var combat := CombatResolver.new(self)
 var clash := ClashSystem.new(self)
+var outro := MatchOutro.new(self)
 var local_input := MatchInput.new()
 ## Null outside LAN.
 var lan: MatchNetwork
+var vfx: MatchVFX
 ## Live CLASH state, empty when no CLASH is running (see ClashSystem.active).
 var active_clash: Dictionary:
 	get:
 		return clash.active
 	set(value):
 		clash.active = value
+## True once the match is over and its outro has played; the result screen waits for this.
+var result_ready: bool:
+	get:
+		return finished and outro.is_done()
 
 
 func _ready() -> void:
@@ -83,7 +90,18 @@ func _ready() -> void:
 	match_ended.connect(hud.show_result)
 	match_ended.connect(_on_match_ended)
 	combat_event.connect(_on_combat_event)
+	vfx = MatchVFX.new()
+	vfx.name = "MatchVFX"
+	add_child(vfx)
 	start_countdown()
+	var crowd := CrowdReaction.new()
+	crowd.name = "CrowdReaction"
+	add_child(crowd)
+	var dressing := get_node_or_null("Dressing")
+	crowd.setup(self, dressing.get_meta("crowd_material") as ShaderMaterial if dressing != null and dressing.has_meta("crowd_material") else null)
+	var handlers := ReleaseHandlers.new()
+	add_child(handlers)
+	handlers.setup(self)
 	var audio := Node.new()
 	audio.set_script(preload("res://scripts/core/match_audio.gd"))
 	add_child(audio)
@@ -96,7 +114,12 @@ func _input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		get_viewport().set_input_as_handled()
 		return
-	if phase != &"PLAYING":
+	if phase != &"PLAYING" and not (mode == &"SOLO" and phase == &"COUNTDOWN"):
+		return
+	# Esc on the settings page steps back to the pause menu, like its QUAY LẠI button.
+	if is_instance_valid(hud) and hud.showing_settings:
+		hud.show_pause()
+		get_viewport().set_input_as_handled()
 		return
 	if mode == &"LAN":
 		_request_lan_pause(not paused)
@@ -145,8 +168,21 @@ func _on_pause_state_changed(is_paused: bool) -> void:
 	_set_paused(is_paused)
 
 
-func _on_combat_event(event_name: StringName, _source_slot: int, _target_slot: int, _value: float) -> void:
+func _on_combat_event(event_name: StringName, source_slot: int, target_slot: int, value: float) -> void:
 	$CameraRig.trigger_shake(event_name)
+	if is_instance_valid(vfx):
+		vfx.on_combat_event(event_name, source_slot, target_slot)
+	if lan == null or not lan.is_client():
+		if event_name in [&"HORN_HIT", &"DASH_HIT"]:
+			hitstop_ticks = maxi(hitstop_ticks, GameBalance.get_int("hitstop_hit_ticks"))
+		elif event_name in [&"PARRY_SUCCESS", &"COUNTER_HIT", &"CLASH_START"]:
+			hitstop_ticks = maxi(hitstop_ticks, GameBalance.get_int("hitstop_heavy_ticks"))
+		if lan != null:
+			network.send_event({"type": "COMBAT", "event": event_name, "source": source_slot, "target": target_slot, "value": value})
+
+
+func _on_action_started(slot: int, action: StringName) -> void:
+	combat_event.emit(StringName(String(action) + "_START"), slot, slot, 0.0)
 
 
 func _level_config() -> Dictionary:
@@ -161,7 +197,19 @@ func start_countdown() -> void:
 	countdown_time = GameBalance.get_number("countdown_s", 3.0)
 	remaining_time = GameBalance.get_number("match_duration_s", 90.0)
 	match_seed = Time.get_ticks_msec()
+	if is_instance_valid(ai):
+		ai.rng.seed = match_seed
 	local_input.arm_release_gates()
+
+
+func announcer_active() -> bool:
+	var elapsed := GameBalance.get_number("countdown_s", 3.0) - countdown_time
+	var delay := GameBalance.get_number("announcer_intro_delay_s")
+	return mode == &"SOLO" and phase == &"COUNTDOWN" and elapsed >= delay and elapsed < delay + GameBalance.get_number("announcer_intro_duration_s", 3.0)
+
+
+func announcer_text() -> String:
+	return "%s · %s gặp %s" % [_level_config().get("title", String(level_id)), player.get_meta("announcer_name"), opponent.get_meta("announcer_name")]
 
 
 func start_playing() -> void:
@@ -173,7 +221,12 @@ func start_playing() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if paused or finished:
+	if paused:
+		return
+	if finished:
+		outro.process(delta)
+		if mode == &"SOLO" and result_ready and is_instance_valid(outro.winner):
+			$CameraRig.show_winner(outro.winner)
 		return
 	if phase == &"COUNTDOWN":
 		local_input.update_release_gates()
@@ -190,11 +243,33 @@ func _physics_process(delta: float) -> void:
 		return
 	if phase != &"PLAYING":
 		return
-	tick += 1
-	clash.tick_cooldown(delta)
 	var player_frame := _read_player_input()
-	var opponent_frame := _opponent_input(delta)
+	simulate_tick(delta, player_frame)
+	var snapshot := get_snapshot()
+	snapshot_changed.emit(snapshot)
+	if lan != null:
+		if finished:
+			lan.send_result(snapshot)
+		else:
+			lan.broadcast_snapshot(delta, snapshot)
+
+
+## The only gameplay step; clients never call it. Frozen ticks still capture buffered edges.
+func simulate_tick(delta: float, player_frame: InputFrame, opponent_frame: InputFrame = null) -> void:
+	if lan != null and lan.is_client():
+		return
+	tick += 1
+	if hitstop_ticks > 0:
+		if opponent_frame == null:
+			opponent_frame = lan.remote_frame if lan != null else InputFrame.new(2)
+		player.buffer_input(player_frame)
+		opponent.buffer_input(opponent_frame)
+		hitstop_ticks -= 1
+		return
+	clash.tick_cooldown(delta)
 	player.begin_input(player_frame)
+	if opponent_frame == null:
+		opponent_frame = _opponent_input(delta)
 	opponent.begin_input(opponent_frame)
 	player.update_facing(delta)
 	opponent.update_facing(delta)
@@ -214,15 +289,20 @@ func _physics_process(delta: float) -> void:
 	remaining_time = maxf(0.0, remaining_time - delta)
 	_emit_resources()
 	_check_match_end()
-	var snapshot := get_snapshot()
-	snapshot_changed.emit(snapshot)
-	if lan != null:
-		lan.broadcast_snapshot(delta, snapshot)
 
 
 func _process(delta: float) -> void:
 	if lan != null and lan.is_client():
 		lan.interpolate(delta)
+	$CameraRig.set_clash_zoom(clash.is_active() and not finished)
+
+
+## Clients display the host's fence predicate; no local re-evaluation of combat rules.
+func presentation_pinned(actor: Buffalo) -> bool:
+	if lan != null and lan.is_client():
+		return bool(lan.pinned_slots.get(actor.slot, false))
+	var other := opponent if actor == player else player
+	return ArenaBounds.is_pinned(actor, (actor.global_position - other.global_position).normalized())
 
 
 func _read_player_input() -> InputFrame:
@@ -280,6 +360,7 @@ func _finish(winner: int, reason: StringName) -> void:
 	end_reason = reason
 	player.freeze()
 	opponent.freeze()
+	outro.start()
 	match_ended.emit(winner_slot, end_reason)
 
 
@@ -298,6 +379,7 @@ func _emit_resources() -> void:
 func get_snapshot() -> Dictionary:
 	return {
 		"tick": tick,
+		"hitstop_ticks": hitstop_ticks,
 		"phase": phase,
 		"remaining_ms": int(remaining_time * 1000.0),
 		"countdown_ms": int(countdown_time * 1000.0),
@@ -318,6 +400,11 @@ func _actor_snapshot(actor: Buffalo) -> Dictionary:
 		"spirit": actor.spirit,
 		"stamina": actor.stamina,
 		"action": actor.state_name(),
+		"state_time": actor.state_time,
+		"state_duration": actor.state_duration,
+		"counter_window": actor.counter_window,
+		"counter_attack": actor.counter_attack,
+		"pinned": presentation_pinned(actor),
 		"hooking": actor.clash_hooked
 	}
 
@@ -327,5 +414,9 @@ func spawn_buffalo(at: Vector3, actor_slot: int, color: Color, number: String, f
 	actor.slot = actor_slot
 	actor.position = at
 	add_child(actor)
+	actor.action_started.connect(_on_action_started)
+	var feedback := BuffaloFeedback.new()
+	feedback.name = "CombatFeedback"
+	actor.add_child(feedback)
 	ArenaBuilder.add_identifier(actor, color, number, faction)
 	return actor

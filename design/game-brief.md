@@ -19,7 +19,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 **One-sentence pitch:** A 1v1 3D buffalo-fighting duel where you spend STAMINA on HORN, DASH and GUARD, and win the horn-lock CLASH to drain your rival's SPIRIT until they flee.
 
 ## Core loop
-- Move and angle your buffalo around a small oval arena (45° follow camera, mouse-look), spending STAMINA on HORN (18 dmg) and DASH (14 dmg), or holding GUARD to cut damage to 45%.
+- Move and angle your buffalo around a small oval arena (low over-the-shoulder follow camera at 22°, mouse-look), spending STAMINA on HORN (18 dmg) and DASH (14 dmg), or holding GUARD to cut damage to 45%.
 - When two committed attacks meet, a CLASH starts: choose PUSH, HOOK or RELEASE and win the shared balance meter (**confirmed pillar: CLASH is the heart of the game**).
 - Winning trades and clashes drains the opponent's SPIRIT (no regen); pinning them against the fence multiplies damage by 1.5, and mud slows movement to 80%.
 - Repeat until SPIRIT reaches 0 or the 90 s timer runs out.
@@ -37,6 +37,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 - Solo ladder: L01 (EASY AI), L02 (NORMAL AI, 1 mud zone), L03 (HARD AI, 2 mud zones)
 - Host-authoritative LAN 1v1 (LAN01)
 - Main menu, lobby, HUD and result screen
+- Solo "Mùa hội" (festival, 8th lunar month): five Phần Lễ screens in festival order (opening, rước nước, các giáp, trống khai hội, closing), release handlers in the countdown, winner salute, and a culture card after each Solo match (`data/ceremony.json`, `data/culture_cards.json`)
 
 ## Out of scope — not building this
 - Ring-out win condition (confirmed dropped)
@@ -44,7 +45,7 @@ verified-by: user (answers on core pillar, win rule, scope; remaining fields unc
 - 2D presentation (the old GDD v0.1 described 2D; the implementation is 3D)
 
 ## Build order
-Already built. Remaining order is `INTENT UNKNOWN`; the code suggests the feel of CLASH was iterated last (recent commits tune clash entry, push momentum and dash recovery), so CLASH feel is the risk area to re-verify first.
+Already built, Solo/PvE first (owner, 2026-11-13). Solo "Mùa hội" is complete as of 2026-11-13. Next: LAN polish (LAN result has no winner camera shot yet), then any items the owner raises. Culture card text awaits owner review.
 
 ---
 **Who it's for / what they feel:** `INTENT UNKNOWN` — not recoverable from code.

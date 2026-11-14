@@ -1,4 +1,5 @@
 extends Control
+## LAN lobby screen: host or join by IPv4, show connection status, then load the arena.
 
 var status_label: Label
 var address_edit: LineEdit

@@ -14,6 +14,7 @@ var client_pending_input := InputFrame.new(2)
 var client_input_accumulator := 0.0
 var snapshot_accumulator := 0.0
 var remote_targets: Dictionary = {}
+var pinned_slots: Dictionary = {}
 
 
 func _init(owner: MatchController, manager: Node) -> void:
@@ -25,6 +26,7 @@ func connect_signals() -> void:
 	network.input_received.connect(_on_remote_input)
 	network.snapshot_received.connect(_on_snapshot_received)
 	network.connection_lost.connect(_on_connection_lost)
+	network.event_received.connect(_on_event_received)
 	network.pause_request_received.connect(controller._on_pause_request_received)
 	network.pause_state_changed.connect(controller._on_pause_state_changed)
 
@@ -41,6 +43,11 @@ func broadcast_snapshot(delta: float, snapshot: Dictionary) -> void:
 		snapshot_accumulator = fmod(snapshot_accumulator, SEND_INTERVAL)
 
 
+## Host: the snapshot that ends the match goes out once and reliably; no snapshot follows RESULT.
+func send_result(snapshot: Dictionary) -> void:
+	network.send_event({"type": "RESULT", "snapshot": snapshot})
+
+
 ## Client: merge this tick's input (edges are OR-ed so none are lost) and upload at 30 Hz.
 func upload_input(delta: float, sampled_frame: InputFrame) -> void:
 	client_pending_input.move = sampled_frame.move
@@ -49,18 +56,23 @@ func upload_input(delta: float, sampled_frame: InputFrame) -> void:
 	client_pending_input.guard_pressed = client_pending_input.guard_pressed or sampled_frame.guard_pressed
 	client_pending_input.horn_pressed = client_pending_input.horn_pressed or sampled_frame.horn_pressed
 	client_pending_input.dash_pressed = client_pending_input.dash_pressed or sampled_frame.dash_pressed
+	client_pending_input.parry_pressed = client_pending_input.parry_pressed or sampled_frame.parry_pressed
 	client_pending_input.seq = sampled_frame.seq
 	client_input_accumulator += delta
 	if client_input_accumulator >= SEND_INTERVAL:
 		network.send_input(frame_to_payload(client_pending_input))
 		client_pending_input.horn_pressed = false
 		client_pending_input.dash_pressed = false
+		client_pending_input.parry_pressed = false
 		client_pending_input.guard_pressed = false
 		client_input_accumulator = fmod(client_input_accumulator, SEND_INTERVAL)
 
 
 ## Client: ease both buffaloes toward the latest host positions.
 func interpolate(delta: float) -> void:
+	# After RESULT the local outro moves the buffaloes.
+	if controller.finished or controller.hitstop_ticks > 0:
+		return
 	for slot in remote_targets:
 		var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
 		var target_position: Vector3 = remote_targets[slot]
@@ -74,6 +86,7 @@ static func frame_to_payload(frame: InputFrame) -> Dictionary:
 		"camera_yaw": frame.camera_yaw,
 		"horn": frame.horn_pressed,
 		"dash": frame.dash_pressed,
+		"parry": frame.parry_pressed,
 		"guard": frame.guard_held,
 		"guard_pressed": frame.guard_pressed,
 		"seq": frame.seq
@@ -86,6 +99,7 @@ static func payload_to_frame(payload: Dictionary) -> InputFrame:
 	frame.camera_yaw = float(payload.get("camera_yaw", 0.0))
 	frame.horn_pressed = bool(payload.get("horn", false))
 	frame.dash_pressed = bool(payload.get("dash", false))
+	frame.parry_pressed = bool(payload.get("parry", false))
 	frame.guard_held = bool(payload.get("guard", false))
 	frame.guard_pressed = bool(payload.get("guard_pressed", false))
 	frame.seq = int(payload.get("seq", 0))
@@ -101,6 +115,7 @@ func _on_remote_input(_peer_id: int, payload: Dictionary) -> void:
 			remote_guard_blocked_until_release = true
 		remote_frame.horn_pressed = false
 		remote_frame.dash_pressed = false
+		remote_frame.parry_pressed = false
 		remote_frame.guard_pressed = false
 		remote_frame.guard_held = false
 	elif remote_guard_blocked_until_release:
@@ -111,10 +126,19 @@ func _on_remote_input(_peer_id: int, payload: Dictionary) -> void:
 			remote_frame.guard_pressed = false
 
 
+func _on_event_received(payload: Dictionary) -> void:
+	if payload.get("type") == "RESULT" and payload.get("snapshot") is Dictionary:
+		_on_snapshot_received(payload["snapshot"])
+	elif payload.get("type") == "COMBAT" and is_client():
+		controller.combat_event.emit(StringName(payload.get("event", "")), int(payload.get("source", 0)), int(payload.get("target", 0)), float(payload.get("value", 0.0)))
+
+
 func _on_snapshot_received(snapshot: Dictionary) -> void:
 	if network.is_host or not is_instance_valid(controller.player):
 		return
 	controller.phase = StringName(snapshot.get("phase", controller.phase))
+	controller.tick = int(snapshot.get("tick", controller.tick))
+	controller.hitstop_ticks = int(snapshot.get("hitstop_ticks", controller.hitstop_ticks))
 	controller.remaining_time = float(snapshot.get("remaining_ms", 0)) / 1000.0
 	controller.countdown_time = float(snapshot.get("countdown_ms", controller.countdown_time * 1000.0)) / 1000.0
 	var players: Array = snapshot.get("players", [])
@@ -131,11 +155,24 @@ func _on_snapshot_received(snapshot: Dictionary) -> void:
 		actor.clash_hooked = bool(item.get("hooking", false))
 		_apply_facing(actor, item.get("facing"))
 		_apply_action(actor, item.get("action"))
+		actor.state_time = float(item.get("state_time", 0.0))
+		actor.state_duration = float(item.get("state_duration", 0.0))
+		actor.counter_window = float(item.get("counter_window", 0.0))
+		actor.counter_attack = bool(item.get("counter_attack", false))
+		pinned_slots[slot] = bool(item.get("pinned", false))
+		var animator := actor.visual as BuffaloAnimator
+		if animator != null:
+			animator.sync_action_clock()
 	_apply_clash_snapshot(snapshot)
 	if controller.phase == &"RESULT" and not controller.finished:
 		controller.finished = true
 		controller.winner_slot = int(snapshot.get("winner_slot", 0))
 		controller.end_reason = StringName(snapshot.get("end_reason", "NONE"))
+		# Start the outro from the host's final positions, as the host does.
+		for slot in remote_targets:
+			var actor: Buffalo = controller.player if int(slot) == 1 else controller.opponent
+			actor.global_position = remote_targets[slot]
+		controller.outro.start()
 		if is_instance_valid(controller.hud):
 			controller.hud.show_result(controller.winner_slot, controller.end_reason)
 

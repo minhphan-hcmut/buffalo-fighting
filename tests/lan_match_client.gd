@@ -28,9 +28,14 @@ func run() -> void:
 	var post_clash_ticks := 0
 	var saw_post_clash_stun := false
 	var facing_ok := true
+	var playing_spirit := Vector2.ZERO
+	var playing_states_normal := false
 	while frame < 900 and arena.phase != &"RESULT":
 		await physics_frame
 		frame += 1
+		if arena.phase == &"PLAYING":
+			playing_spirit = Vector2(arena.player.spirit, arena.opponent.spirit)
+			playing_states_normal = arena.player.state == Buffalo.State.NORMAL and arena.opponent.state == Buffalo.State.NORMAL and arena.active_clash.is_empty()
 		var hud = arena.hud
 		if clash_was_visible and arena.active_clash.is_empty():
 			post_clash_ticks += 1
@@ -51,9 +56,11 @@ func run() -> void:
 	check(saw_bar, "client saw the KHÓA SỪNG bar")
 	check(absf(best_bar - (-70.0)) < 0.5, "client bar shows -70 (mirrored for slot 2), last value %.1f" % best_bar)
 	check(facing_ok and arena.player.facing.distance_to(Vector3.RIGHT) < 0.05 and arena.opponent.facing.distance_to(Vector3.LEFT) < 0.05, "client facing is +X / -X during and after the CLASH")
-	check(is_equal_approx(arena.player.spirit, 100.0) and is_equal_approx(arena.opponent.spirit, 86.0), "client final SPIRIT is 100/86")
+	check(is_equal_approx(playing_spirit.x, 100.0) and is_equal_approx(playing_spirit.y, 86.0), "client SPIRIT after the CLASH is 100/86")
 	check(saw_post_clash_stun, "client shows the loser STUNNED right after the CLASH")
-	check(arena.player.state == Buffalo.State.NORMAL and arena.opponent.state == Buffalo.State.NORMAL and arena.active_clash.is_empty(), "client final states are NORMAL/NORMAL with no CLASH")
+	check(playing_states_normal, "client states are NORMAL/NORMAL with no CLASH before the match ends")
+	check(arena.end_reason == &"FLEE" and arena.winner_slot == 1, "client receives RESULT: slot 1 wins by FLEE (got %s / %d)" % [arena.end_reason, arena.winner_slot])
+	check(arena.outro.running and arena.opponent.state == Buffalo.State.FLEE, "client plays the outro: slot 2 leaves the arena")
 	manager.leave()
 	print("LAN CLIENT FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)

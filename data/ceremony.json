@@ -1,0 +1,58 @@
+{
+  "duration_s": 15.0,
+  "min_view_s": 0.6,
+  "flag_rise_s": 5.0,
+  "procession_s": 12.0,
+  "camera_drift_deg": 8.0,
+  "skip_hint": "Bấm phím bất kỳ hoặc nhấp chuột để tiếp tục",
+  "opening": {
+    "date": "Mùng 1 tháng 8 âm lịch",
+    "title": "DÂNG HƯƠNG · THƯỢNG CỜ KHAI HỘI",
+    "lines": [
+      "Dân làng dâng hương ở đền, cờ hội được kéo lên trong tiếng trống điểm.",
+      "Cầu cho mùa hội an lành, biển lặng, thuyền ra khơi bình an."
+    ],
+    "button": "VÀO MÙA HỘI",
+    "sfx": "festival_gong"
+  },
+  "water": {
+    "date": "Mùng 7 tháng 8 âm lịch",
+    "title": "RƯỚC NƯỚC",
+    "lines": [
+      "Kiệu hoa rước bình nước về đình, cờ ngũ sắc dẫn đường trong tiếng trống chiêng.",
+      "Dân làng cầu mưa thuận gió hòa cho mùa hội."
+    ],
+    "button": "VÀO VÒNG LOẠI",
+    "sfx": "festival_gong"
+  },
+  "giap": {
+    "date": "Mùng 8 tháng 8 âm lịch",
+    "title": "CÁC GIÁP ĐƯA ÔNG TRÂU VÀO HỘI",
+    "lines": [
+      "Các giáp dắt ông trâu của mình về đình, dâng lễ trình Thần linh.",
+      "Ông trâu số 06 của giáp Đông bước vào bán kết."
+    ],
+    "button": "VÀO BÁN KẾT",
+    "sfx": "festival_gong"
+  },
+  "drums": {
+    "date": "Mùng 9 tháng 8 âm lịch",
+    "title": "TRỐNG KHAI HỘI · MÚA CỜ",
+    "lines": [
+      "Rước Thành hoàng ra sới; trai làng tấu trống chiêng, múa cờ mừng hội.",
+      "Ông trâu được rước ra sân cho trận chung kết."
+    ],
+    "button": "VÀO CHUNG KẾT",
+    "sfx": "match_start_drums"
+  },
+  "closing": {
+    "date": "Mùng 10 tháng 8 âm lịch",
+    "title": "RƯỚC ÔNG TRÂU VÔ ĐỊCH VỀ ĐÌNH",
+    "lines": [
+      "Ông trâu số 06 giáp Đông thắng thế, được rước về đình trong tiếng trống chiêng.",
+      "Lễ tạ ơn, tiễn thần khép lại mùa hội."
+    ],
+    "button": "KHÉP MÙA HỘI",
+    "sfx": "match_start_drums"
+  }
+}

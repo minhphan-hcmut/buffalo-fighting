@@ -1,6 +1,6 @@
 # Chọi trâu: Đấu trường lễ hội
 
-Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu và giữ góc nghiêng 45 độ. Mở `project.godot` bằng Godot 4.x để chạy.
+Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu, thấp qua vai phải (nghiêng 22 độ). Mở `project.godot` bằng Godot 4.x để chạy.
 
 ## Điều khiển
 
@@ -15,16 +15,14 @@ Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng F
 
 ## Cấu trúc
 
+Chi tiết từng file và luồng một trận: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 - `scenes/`: menu, lobby, arena và trâu.
-- `scripts/core/`: balance, input frame, session state, trâu (`buffalo.gd`, `buffalo_animator.gd`) và trận đấu:
-  - `match_controller.gd`: phase, timer, pause, luật thắng; điều phối các module dưới.
-  - `arena_builder.gd` / `arena_bounds.gd`: dựng sân, rào, bùn; giới hạn sân và PINNED.
-  - `combat_resolver.gd`: HORN/DASH/GUARD, sát thương và knockback.
-  - `clash_system.gd`: khóa sừng (PUSH/HOOK/RELEASE).
-  - `match_input.gd`: đọc input local; `match_network.gd`: đồng bộ LAN.
-- `scripts/ai/`: FSM AI.
-- `scripts/network/`: ENet Host/Join.
-- `scripts/ui/`: menu, lobby và HUD.
+- `scripts/core/`: mô phỏng trận đấu (trâu, combat, khóa sừng, sân, input, mạng) và lớp trình bày
+  (chuyển động trâu, hiệu ứng, âm thanh, camera, đoạn kết, dựng sân và Phần Lễ).
+- `scripts/ai/`: FSM AI. `scripts/network/`: ENet Host/Join. `scripts/ui/`: menu, lobby, HUD, Phần Lễ.
+- `data/`: `balance.json` (luật chơi), `presentation.json` (hình, tiếng, HUD), `levels.json`,
+  `ai_profiles.json`, `ceremony.json`, `audio.json`.
 - `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
 - `assets/characters/buffalo/buffalo.glb`: model dự phòng; nguồn tại `assets/blender/buffalo.blend`.
 - `assets/audio/`: âm thanh gameplay; ZIP nguồn chỉ giữ local trong `assets/audio/source/` (không commit).
@@ -74,4 +72,4 @@ Xuất bản Windows (cần cài export templates Godot 4.7.2 qua *Editor → Ma
 godot --headless --path . --export-debug "Windows Desktop" build/windows/buffalo-fighting.exe
 ```
 
-LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A), có bước chân chéo và nhấc móng cho model HERO bằng blend shape runtime, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/balance.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Húc và dash trên LAN dùng đồng hồ visual cục bộ khi snapshot không có tiến độ đòn, nên không bảo đảm trùng từng frame với host; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
+LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A), có bước chân chéo và nhấc móng cho model HERO bằng blend shape runtime, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/presentation.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Trên LAN, snapshot gửi kèm tiến độ đòn và client nội suy giữa hai snapshot; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.

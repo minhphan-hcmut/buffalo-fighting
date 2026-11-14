@@ -1,69 +1,94 @@
 class_name ArenaBuilder
 extends RefCounted
-## Builds the oval arena (ground, mud, bamboo fence with two gates, light) and the
-## flag + number identifiers carried by each buffalo.
+## Builds the parts of the arena that a match depends on (mud zones, the bamboo fence
+## with its collision and two gates), the sun and sky, and each buffalo's identity
+## (announcer name and team outline). Festival scenery (stands, crowd, flags, trees) is in ArenaDressing.
 
-const BAMBOO_FENCE: PackedScene = preload("res://assets/environment/bamboo_fence.glb")
-const GROUND_MATERIAL: StandardMaterial3D = preload("res://assets/environment/sparse_grass/ground.tres")
+const FENCE_HEIGHT := 1.5
+## Render layer for far scenery the sun must not light (see ArenaDressing hills).
+const FAR_SCENERY_LAYER := 1 << 1
+const BAMBOO := Color("#8F7C5A")
+const BAMBOO_DARK := Color("#6E5D42")
+const LASHING := Color("#5A3B27")
+## Team rims (GDD 5.1): the red side gets a bright rim, the blue side a dark one.
+const OUTLINE_RED := Color("#E6B490")
+const OUTLINE_BLUE := Color("#0E1822")
+const MUD_SHADER := preload("res://assets/shaders/mud_patch.gdshader")
 
 
 static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
-	var ground := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(GameBalance.get_number("arena_rx") * 2.0 + 4.0, GameBalance.get_number("arena_rz") * 2.0 + 4.0)
-	ground.mesh = plane
-	ground.material_override = GROUND_MATERIAL
-	parent.add_child(ground)
-	for zone in mud_zones:
+	ArenaDressing.build(parent)
+	for i in mud_zones.size():
 		var mud := MeshInstance3D.new()
-		var cylinder := CylinderMesh.new()
-		cylinder.top_radius = GameBalance.get_number("mud_radius")
-		cylinder.bottom_radius = cylinder.top_radius
-		cylinder.height = 0.025
-		mud.mesh = cylinder
-		var center := ArenaBounds.mud_center(zone)
-		mud.position = Vector3(center.x, 0.015, center.y)
-		mud.material_override = material(Color("#5D4638"))
+		var plane := PlaneMesh.new()
+		# The quad overshoots the gameplay radius so the noisy rim can fade past it.
+		var fraction := GameBalance.get_number("mud_visual_radius_fraction", 0.8)
+		plane.size = Vector2.ONE * 2.0 * GameBalance.get_number("mud_radius") / fraction
+		mud.mesh = plane
+		var center := ArenaBounds.mud_center(mud_zones[i])
+		mud.position = Vector3(center.x, 0.012, center.y)
+		mud.rotation.y = 1.3 * i
+		mud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mud.material_override = _mud_material(fraction, float(i) * 7.3)
 		parent.add_child(mud)
 	_build_fence(parent)
+	add_lighting(parent)
+
+
+## The arena's sun, sky, ambient light, tonemap and haze. Shared with scenes that show the
+## buffaloes outside a match (the how-to-play demo) so they look the same as in the arena.
+static func add_lighting(parent: Node3D) -> void:
 	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
-	light.light_energy = 1.25
+	light.name = "Sun"
+	light.rotation_degrees = Vector3(-42.0, -38.0, 0.0)
+	light.light_color = Color("#FFF1DC")
+	light.light_energy = GameBalance.get_number("ui_sun_energy")
 	light.shadow_enabled = true
+	light.directional_shadow_max_distance = 60.0
+	# On the Compatibility renderer, objects wholly beyond the shadow distance are
+	# over-lit by the sun; far scenery sits on its own layer and gets sky light only.
+	light.light_cull_mask = ~FAR_SCENERY_LAYER & 0xFFFFF
 	parent.add_child(light)
 	var world := WorldEnvironment.new()
 	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("#33546D")
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#F2E6CF")
-	environment.ambient_light_energy = 0.7
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color("#5F86A6")
+	sky_material.sky_horizon_color = Color("#EBC8A0")
+	sky_material.ground_horizon_color = Color("#C9B48A")
+	sky_material.ground_bottom_color = Color("#59523B")
+	sky_material.sun_angle_max = 20.0
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	environment.sky = sky
+	environment.background_mode = Environment.BG_SKY
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	environment.ambient_light_energy = GameBalance.get_number("ui_ambient_energy")
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.tonemap_exposure = GameBalance.get_number("ui_exposure", 1.0)
+	# Haze softens the hills and trees so the arena reads first.
+	environment.fog_enabled = true
+	environment.fog_light_color = Color("#CBD3D2")
+	environment.fog_density = GameBalance.get_number("ui_fog_density", 0.006)
+	environment.fog_sky_affect = 0.0
 	world.environment = environment
 	parent.add_child(world)
 
 
 static func add_identifier(actor: Buffalo, color: Color, number: String, faction: String) -> void:
-	var flag := MeshInstance3D.new()
-	var flag_mesh := BoxMesh.new()
-	flag_mesh.size = Vector3(0.05, 0.55, 0.38)
-	flag.mesh = flag_mesh
-	flag.position = Vector3(0.0, 1.75, 0.0)
-	flag.material_override = material(color)
-	actor.add_child(flag)
-	var label := Label3D.new()
-	label.text = "%s · %s\n%s" % [faction, number, "ĐỎ" if color.r > color.b else "XANH"]
-	label.position = Vector3(0.0, 2.25, 0.0)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 30
-	label.modulate = color
-	actor.add_child(label)
+	actor.set_meta("announcer_name", "Ông trâu số %s cờ %s %s" % [number, "đỏ" if color.r > color.b else "xanh", faction.capitalize()])
+	var bright := color.r > color.b
+	Buffalo.add_team_outline(actor, OUTLINE_RED if bright else OUTLINE_BLUE)
 
 
-static func material(color: Color) -> StandardMaterial3D:
-	var result := StandardMaterial3D.new()
-	result.albedo_color = color
-	result.roughness = 0.9
-	return result
+## The losing buffalo's own handler (team shirt), starting outside the gate beside the
+## exit corridor (GDD 4.5 outro); MatchOutro walks them in and leads the buffalo out.
+## Visual meshes only: no collision, no AI.
+static func add_handler(parent: Node3D, gate: Vector3, shirt: Color) -> Node3D:
+	var at := Vector3(signf(gate.x) * (GameBalance.get_number("arena_rx") + 2.0), 0.0, GameBalance.get_number("gate_width") * 0.5 + 0.35)
+	var handler := LowPoly.villager(parent, at, -PI / 2.0 if gate.x > 0.0 else PI / 2.0, shirt)
+	handler.name = "GateHandler"
+	return handler
 
 
 static func _build_fence(parent: Node3D) -> void:
@@ -92,13 +117,37 @@ static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:
 	body.collision_layer = 1
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(length, 1.5, 0.28)
+	shape.size = Vector3(length, FENCE_HEIGHT, 0.28)
 	collision.shape = shape
 	body.add_child(collision)
-	var fence := BAMBOO_FENCE.instantiate() as Node3D
-	fence.name = "BambooFence"
-	# The exported module has unit width/height and its origin at ground level.
-	fence.scale = Vector3(length, shape.size.y, 1.0)
-	fence.position.y = -shape.size.y * 0.5
-	body.add_child(fence)
+	_add_bamboo_panel(body, length)
 	return body
+
+
+# Visual bamboo for one fence segment centred on `body`: a post at each end and three
+# rails, with dark lashing where they meet. Thick enough to stay solid from the
+# gameplay camera (thin slats flicker at that distance).
+static func _add_bamboo_panel(body: StaticBody3D, length: float) -> void:
+	var bottom := -FENCE_HEIGHT * 0.5
+	for x in [-length * 0.5, length * 0.5]:
+		LowPoly.cylinder(body, "Post", 0.085, 0.1, FENCE_HEIGHT + 0.25, Vector3(x, bottom + (FENCE_HEIGHT + 0.25) * 0.5, 0.0), BAMBOO_DARK)
+		LowPoly.cylinder(body, "PostCap", 0.1, 0.1, 0.06, Vector3(x, bottom + FENCE_HEIGHT + 0.25, 0.0), BAMBOO)
+	for height in [0.35, 0.8, 1.25]:
+		var rail := LowPoly.cylinder(body, "Rail", 0.055, 0.055, length + 0.1, Vector3(0.0, bottom + height, 0.06), BAMBOO)
+		rail.rotation.z = PI * 0.5
+		for x in [-length * 0.5, length * 0.5]:
+			LowPoly.cylinder(body, "Lashing", 0.11, 0.11, 0.08, Vector3(x, bottom + height, 0.0), LASHING)
+
+
+# Wet mud with a broken, fading rim and glossy puddles (assets/shaders/mud_patch.gdshader),
+# so it reads as slower ground at a glance without looking pasted on.
+static func _mud_material(radius_fraction: float, seed: float) -> ShaderMaterial:
+	var mud := ShaderMaterial.new()
+	mud.shader = MUD_SHADER
+	mud.set_shader_parameter("radius_fraction", radius_fraction)
+	mud.set_shader_parameter("seed", seed)
+	for key in ["edge_noise", "edge_soft", "puddle_amount", "wet_roughness", "wet_depth", "puddle_roughness", "wet_specular", "puddle_specular", "sheen_strength", "sheen_power", "sheen_frequency", "sheen_sharpness", "wet_rim_width", "wet_rim_darken", "normal_strength"]:
+		mud.set_shader_parameter(key, GameBalance.get_number("mud_" + key))
+	for key in ["mud_color", "rim_color", "puddle_color"]:
+		mud.set_shader_parameter(key, Color(GameBalance.get_number("mud_" + key + "_r"), GameBalance.get_number("mud_" + key + "_g"), GameBalance.get_number("mud_" + key + "_b")))
+	return mud

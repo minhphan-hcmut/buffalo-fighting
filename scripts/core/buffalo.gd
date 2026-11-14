@@ -1,10 +1,14 @@
 class_name Buffalo
 extends CharacterBody3D
+## One fighting buffalo: SPIRIT/STAMINA, the action state machine (State), movement and
+## the input buffer. Pure simulation: it never reads devices, plays sounds or draws.
+## MatchController drives it once per tick through begin_input(), update_timers(),
+## advance_state() and the start_*() actions; CombatResolver and ClashSystem apply hits.
 
 signal action_started(slot: int, action: StringName)
 
 enum State { NORMAL, GUARD, HORN_STARTUP, HORN_ACTIVE, HORN_RECOVERY, DASH_ACTIVE,
-	DASH_RECOVERY, STUNNED, CLASH, FLEE }
+	DASH_RECOVERY, STUNNED, CLASH, FLEE, PARRY_ACTIVE, PARRY_RECOVERY }
 
 const STATE_NAMES := {
 	State.NORMAL: &"NORMAL",
@@ -16,7 +20,9 @@ const STATE_NAMES := {
 	State.DASH_RECOVERY: &"DASH_RECOVERY",
 	State.STUNNED: &"STUNNED",
 	State.CLASH: &"CLASH",
-	State.FLEE: &"FLEE"
+	State.FLEE: &"FLEE",
+	State.PARRY_ACTIVE: &"PARRY_ACTIVE",
+	State.PARRY_RECOVERY: &"PARRY_RECOVERY"
 }
 
 var slot := 1
@@ -34,6 +40,12 @@ var hit_invulnerability := 0.0
 var stamina_regen_delay := 0.0
 var horn_cooldown := 0.0
 var dash_cooldown := 0.0
+var parry_cooldown := 0.0
+var counter_window := 0.0
+var counter_attack := false
+var attack_connected := false
+var attack_serial := 0
+var parry_recoil := false
 var knockback := Vector3.ZERO
 ## Counts down after any impulse (stunning or not); separate() leaves such a buffalo's velocity alone.
 var knockback_time := 0.0
@@ -52,12 +64,67 @@ var clash_action: StringName = &"PUSH"
 
 func _ready() -> void:
 	reset_combat()
+	use_natural_skin(self)
 	if slot == 2:
-		var cloth := find_child("FACTION_Cloth_and_Belt", true, false) as MeshInstance3D
-		if cloth != null:
-			var material := cloth.get_active_material(0).duplicate() as BaseMaterial3D
-			material.albedo_texture = load("res://assets/characters/buffalo_hero/faction_tay.png")
-			cloth.set_surface_override_material(0, material)
+		dress_west(self)
+
+
+## Gives the HERO model's body the natural water-buffalo hide. The export keeps a
+## silver show skin (SKIN_02) on the body; the natural hide textures (same UV layout)
+## are on the keratin material, so the body gets a renamed copy of it. Renamed so
+## BuffaloFeedback, which finds the horns by "keratin", still picks the horns only.
+static func use_natural_skin(root: Node) -> void:
+	var body := root.find_child("HeroBody", true, false) as MeshInstance3D
+	if body == null:
+		return
+	var natural: BaseMaterial3D
+	for surface in body.mesh.get_surface_count():
+		var material := body.get_active_material(surface) as BaseMaterial3D
+		if material != null and material.resource_name.contains("keratin"):
+			natural = material
+	if natural == null:
+		return
+	for surface in body.mesh.get_surface_count():
+		var material := body.get_active_material(surface) as BaseMaterial3D
+		if material != null and material.resource_name.begins_with("SKIN"):
+			var hide := natural.duplicate() as BaseMaterial3D
+			hide.resource_name = "SKIN_01_Natural"
+			body.set_surface_override_material(surface, hide)
+
+
+## Adds the team rim (GDD 5.1: red side bright, blue side dark) to every surface of the
+## model under `root` as an inverted-hull next pass. Imported (shared) materials are
+## duplicated first so the two buffaloes never share an outline colour; per-instance
+## overrides (natural hide, horn glow, Giáp Tây cloth) are kept so their owners still
+## hold the live material. Call after those overrides are set.
+static func add_team_outline(root: Node, color: Color) -> void:
+	var shader := preload("res://assets/shaders/team_outline.gdshader")
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null or not (mesh_instance.name.begins_with("Hero") or mesh_instance.name.begins_with("FACTION")):
+			continue
+		for surface in mesh_instance.mesh.get_surface_count():
+			var material := mesh_instance.get_active_material(surface)
+			if material == null or material.resource_name.contains("eyes"):
+				continue
+			if mesh_instance.get_surface_override_material(surface) == null:
+				material = material.duplicate()
+			var outline := ShaderMaterial.new()
+			outline.shader = shader
+			outline.set_shader_parameter("outline_color", color)
+			outline.set_shader_parameter("outline_width", GameBalance.get_number("team_outline_width", 0.018))
+			material.next_pass = outline
+			mesh_instance.set_surface_override_material(surface, material)
+
+
+## Swaps the cloth on the buffalo model under `root` to the blue Giáp Tây pattern. The
+## model ships with the red Giáp Đông cloth, which slot 1 keeps.
+static func dress_west(root: Node) -> void:
+	var cloth := root.find_child("FACTION_Cloth_and_Belt", true, false) as MeshInstance3D
+	if cloth != null:
+		var material := cloth.get_active_material(0).duplicate() as BaseMaterial3D
+		material.albedo_texture = load("res://assets/characters/buffalo_hero/faction_tay.png")
+		cloth.set_surface_override_material(0, material)
 
 
 func reset_combat() -> void:
@@ -73,6 +140,12 @@ func reset_combat() -> void:
 	stamina_regen_delay = 0.0
 	horn_cooldown = 0.0
 	dash_cooldown = 0.0
+	parry_cooldown = 0.0
+	counter_window = 0.0
+	counter_attack = false
+	attack_connected = false
+	attack_kind = &"NONE"
+	parry_recoil = false
 	knockback = Vector3.ZERO
 	knockback_time = 0.0
 	buffered_action = &"NONE"
@@ -118,20 +191,27 @@ func begin_input(frame: InputFrame) -> void:
 	elif not frame.guard_held and state == State.GUARD:
 		guarding = false
 		state = State.NORMAL
+	if (frame.parry_pressed or (buffered_action == &"PARRY" and input_buffer_time > 0.0)) and state in [State.NORMAL, State.GUARD]:
+		if start_parry():
+			buffered_action = &"NONE"
+			input_buffer_time = 0.0
+			return
 	if guarding:
+		if frame.parry_pressed:
+			buffer_input(frame)
 		return
 	if state == State.NORMAL and buffered_action != &"NONE" and input_buffer_time > 0.0:
 		var queued := buffered_action
-		buffered_action = &"NONE"
-		input_buffer_time = 0.0
-		if queued == &"HORN" and start_horn():
-			return
-		if queued == &"DASH" and start_dash():
+		var started := (queued == &"HORN" and start_horn()) or (queued == &"DASH" and start_dash()) or (queued == &"PARRY" and start_parry())
+		if started:
+			buffered_action = &"NONE"
+			input_buffer_time = 0.0
 			return
 	if state != State.NORMAL:
-		if frame.horn_pressed or frame.dash_pressed:
-			buffered_action = &"HORN" if frame.horn_pressed else &"DASH"
-			input_buffer_time = GameBalance.get_number("input_buffer_s")
+		buffer_input(frame)
+		return
+	if frame.parry_pressed:
+		buffer_input(frame)
 		return
 	if frame.horn_pressed:
 		if start_horn():
@@ -145,25 +225,60 @@ func begin_input(frame: InputFrame) -> void:
 			input_buffer_time = GameBalance.get_number("input_buffer_s")
 
 
+## Also used during hitstop: capture edges without starting actions or advancing the buffer.
+func buffer_input(frame: InputFrame) -> void:
+	if frame.horn_pressed or frame.dash_pressed or frame.parry_pressed:
+		buffered_action = &"PARRY" if frame.parry_pressed else (&"HORN" if frame.horn_pressed else &"DASH")
+		input_buffer_time = GameBalance.get_number("input_buffer_s")
+
+
+func start_parry() -> bool:
+	var cost := GameBalance.get_number("parry_stamina_cost")
+	if not active or state not in [State.NORMAL, State.GUARD] or parry_cooldown > 0.0 or stamina < cost:
+		return false
+	consume_stamina(cost)
+	parry_cooldown = GameBalance.get_number("parry_cooldown_s")
+	counter_window = 0.0
+	counter_attack = false
+	guarding = false
+	state = State.PARRY_ACTIVE
+	state_time = 0.0
+	state_duration = GameBalance.get_number("parry_active_s")
+	attack_kind = &"NONE"
+	action_started.emit(slot, &"PARRY")
+	return true
+
+
+func parry_success() -> void:
+	state = State.NORMAL
+	state_time = 0.0
+	state_duration = 0.0
+	counter_window = GameBalance.get_number("counter_window_s")
+
+
 func start_horn() -> bool:
 	var cost := GameBalance.get_number("horn_cost")
-	if horn_cooldown > 0.0 or stamina < cost:
+	if not active or state != State.NORMAL or horn_cooldown > 0.0 or stamina < cost:
 		return false
 	stamina -= cost
 	stamina_regen_delay = GameBalance.get_number("stamina_regen_delay_s")
 	horn_cooldown = GameBalance.get_number("horn_cooldown_s")
 	state = State.HORN_STARTUP
 	state_time = 0.0
-	state_duration = GameBalance.get_number("horn_startup_s")
+	counter_attack = counter_window > 0.0
+	counter_window = 0.0
+	state_duration = GameBalance.get_number("counter_horn_startup_s" if counter_attack else "horn_startup_s")
 	attack_kind = &"HORN"
+	attack_connected = false
+	attack_serial += 1
 	hit_targets.clear()
-	action_started.emit(slot, attack_kind)
+	action_started.emit(slot, &"COUNTER" if counter_attack else attack_kind)
 	return true
 
 
 func start_dash() -> bool:
 	var cost := GameBalance.get_number("dash_cost")
-	if dash_cooldown > 0.0 or stamina < cost:
+	if not active or state != State.NORMAL or dash_cooldown > 0.0 or stamina < cost:
 		return false
 	stamina -= cost
 	stamina_regen_delay = GameBalance.get_number("stamina_regen_delay_s")
@@ -172,6 +287,10 @@ func start_dash() -> bool:
 	state_time = 0.0
 	state_duration = GameBalance.get_number("dash_active_s")
 	attack_kind = &"DASH"
+	counter_window = 0.0
+	counter_attack = false
+	attack_connected = false
+	attack_serial += 1
 	hit_targets.clear()
 	velocity = forward() * GameBalance.get_number("dash_speed")
 	action_started.emit(slot, attack_kind)
@@ -179,6 +298,8 @@ func start_dash() -> bool:
 
 
 func begin_clash(partner: Buffalo) -> void:
+	counter_window = 0.0
+	counter_attack = false
 	state = State.CLASH
 	state_time = 0.0
 	state_duration = GameBalance.get_number("lock_max_s")
@@ -199,6 +320,8 @@ func apply_stun(duration: float, impulse: Vector3) -> void:
 	if not active:
 		return
 	guarding = false
+	counter_window = 0.0
+	parry_recoil = false
 	state = State.STUNNED
 	state_time = 0.0
 	state_duration = duration
@@ -210,6 +333,7 @@ func apply_stun(duration: float, impulse: Vector3) -> void:
 func receive_spirit(amount: float, impulse: Vector3, stun: bool = true) -> void:
 	if not active:
 		return
+	counter_window = 0.0
 	spirit = clampf(spirit - amount, 0.0, GameBalance.get_number("spirit_max", 100.0))
 	if stun:
 		apply_stun(GameBalance.get_number("hitstun_s"), impulse)
@@ -229,6 +353,8 @@ func consume_stamina(amount: float) -> void:
 func update_timers(delta: float) -> void:
 	horn_cooldown = maxf(0.0, horn_cooldown - delta)
 	dash_cooldown = maxf(0.0, dash_cooldown - delta)
+	parry_cooldown = maxf(0.0, parry_cooldown - delta)
+	counter_window = maxf(0.0, counter_window - delta)
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
 	knockback_time = maxf(0.0, knockback_time - delta)
 	stamina_regen_delay = maxf(0.0, stamina_regen_delay - delta)
@@ -248,7 +374,7 @@ func advance_state(delta: float) -> void:
 	if state == State.NORMAL or state == State.GUARD or state == State.CLASH or state == State.FLEE:
 		return
 	state_time += delta
-	if state_time < state_duration:
+	if state_time + 0.000001 < state_duration:
 		return
 	match state:
 		State.HORN_STARTUP:
@@ -258,7 +384,9 @@ func advance_state(delta: float) -> void:
 		State.HORN_ACTIVE:
 			state = State.HORN_RECOVERY
 			state_time = 0.0
-			state_duration = GameBalance.get_number("horn_recovery_s")
+			state_duration = GameBalance.get_number("horn_recovery_s" if attack_connected else "horn_whiff_recovery_s")
+			if not attack_connected:
+				action_started.emit(slot, &"WHIFF")
 		State.HORN_RECOVERY:
 			state = State.NORMAL
 			attack_kind = &"NONE"
@@ -273,6 +401,14 @@ func advance_state(delta: float) -> void:
 		State.STUNNED:
 			state = State.NORMAL
 			knockback = Vector3.ZERO
+			parry_recoil = false
+		State.PARRY_ACTIVE:
+			state = State.PARRY_RECOVERY
+			state_time = 0.0
+			state_duration = GameBalance.get_number("parry_whiff_recovery_s")
+			action_started.emit(slot, &"WHIFF")
+		State.PARRY_RECOVERY:
+			state = State.NORMAL
 
 
 func movement_world(frame: InputFrame, camera_forward: Vector3, camera_right: Vector3) -> Vector3:
@@ -283,6 +419,10 @@ func movement_world(frame: InputFrame, camera_forward: Vector3, camera_right: Ve
 
 func simulate_movement(delta: float, move_dir: Vector3, terrain_factor: float) -> void:
 	if not active or state == State.FLEE:
+		return
+	if parry_recoil and knockback_time > 0.0:
+		velocity = knockback
+		move_and_slide()
 		return
 	var desired := Vector3.ZERO
 	if state == State.DASH_ACTIVE:
@@ -305,6 +445,10 @@ func simulate_movement(delta: float, move_dir: Vector3, terrain_factor: float) -
 			state_factor = GameBalance.get_number("horn_move_multiplier")
 		elif state == State.HORN_RECOVERY:
 			state_factor = GameBalance.get_number("horn_recovery_move_multiplier")
+		elif state == State.PARRY_ACTIVE:
+			state_factor = GameBalance.get_number("parry_move_multiplier")
+		elif state == State.PARRY_RECOVERY:
+			state_factor = GameBalance.get_number("parry_whiff_move_multiplier")
 		desired = move_dir.normalized() * GameBalance.get_number("walk_speed") * direction_factor * state_factor * terrain_factor
 	var rate := GameBalance.get_number("acceleration") if desired.length_squared() > 0.0 else GameBalance.get_number("deceleration")
 	velocity.x = move_toward(velocity.x, desired.x, rate * delta)
@@ -316,7 +460,7 @@ func simulate_movement(delta: float, move_dir: Vector3, terrain_factor: float) -
 
 
 func update_facing(delta: float) -> void:
-	if not active or state in [State.STUNNED, State.CLASH, State.FLEE, State.DASH_ACTIVE, State.HORN_STARTUP, State.HORN_ACTIVE]:
+	if not active or state in [State.STUNNED, State.CLASH, State.FLEE, State.DASH_ACTIVE, State.HORN_STARTUP, State.HORN_ACTIVE, State.PARRY_ACTIVE]:
 		return
 	var target_yaw := camera_yaw
 	var max_step := GameBalance.get_angle("turn_rate_deg_s") * delta

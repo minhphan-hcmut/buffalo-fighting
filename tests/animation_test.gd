@@ -38,6 +38,7 @@ func run() -> void:
 	_test_walk(buffalo, animator)
 	_test_legs(buffalo, animator)
 	_test_clash_steps(buffalo, animator)
+	_test_led_out_steps(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
 	_test_result(animator, arena.opponent.visual as BuffaloAnimator)
 	_test_pause(buffalo, animator)
@@ -157,7 +158,8 @@ func _test_horn_sequence(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 		var farthest := 0.0
 		var previous := animator.position
 		var largest_step := 0.0
-		for i in int(0.7 * fps):
+		var sequence_s := GameBalance.get_number("horn_startup_s") + GameBalance.get_number("horn_active_s") + GameBalance.get_number("horn_whiff_recovery_s") + 0.3
+		for i in int(sequence_s * fps):
 			animator.update_pose(dt)
 			deepest = minf(deepest, animator.pose_pitch)
 			farthest = minf(farthest, animator.pose_offset.z)
@@ -295,24 +297,29 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	_step(animator, 120)
 	if animator.leg_mesh == null:
 		return # Legacy model has separate meshes rather than the joined HERO body.
-	check(animator.leg_shape_indices.size() == 12, "HERO has three motion channels for each hoof")
+	check(animator.leg_skeleton != null and animator.leg_skeleton.get_bone_count() == 9, "HERO gets a root plus upper/lower bones for each leg")
+	check(animator.leg_mesh.skin != null and animator.leg_mesh.get_node_or_null(animator.leg_mesh.skeleton) == animator.leg_skeleton, "HERO body is skinned to the leg rig")
 	var source := load("res://assets/characters/buffalo_hero/buffalo_hero.glb") as PackedScene
 	var original := source.instantiate()
 	var original_body := original.find_child("HeroBody", true, false) as MeshInstance3D
-	check(original_body.mesh.get_blend_shape_count() == 0, "procedural gait leaves imported mesh unchanged")
+	check(original_body.skin == null and original_body.mesh.get_blend_shape_count() == 0, "procedural gait leaves imported mesh unchanged")
 	original.free()
 	var moved := false
 	var lifted := false
+	var folded := false
 	for i in 90:
 		buffalo.position.z -= GameBalance.get_number("walk_speed") * TICK
 		_step(animator, 1)
-		var mesh := animator.leg_mesh
-		var left := mesh.get_blend_shape_value(2)
-		moved = moved or absf(left) > 0.05
-		lifted = lifted or mesh.get_blend_shape_value(1) > 0.05
+		var left := animator.hoof_offsets[0]
+		if left.y > 0.05:
+			folded = folded or animator.leg_skeleton.get_bone_pose_rotation(2).get_angle() > 0.05
+		moved = moved or absf(left.z) > 0.05
+		lifted = lifted or left.y > 0.05
 		if i == 60:
-			check(is_equal_approx(left, mesh.get_blend_shape_value(11)), "diagonal hooves share their stride")
+			check(left.is_equal_approx(animator.hoof_offsets[3]), "diagonal hooves share their stride")
+
 	check(moved and lifted, "moving buffalo strides and lifts its hooves")
+	check(folded, "a lifted hoof folds the knee instead of stretching the leg")
 	for direction in [Vector3.BACK, Vector3.RIGHT]:
 		_reset(buffalo, animator)
 		for i in 90:
@@ -320,10 +327,7 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 			_step(animator, 1)
 		check(animator.local_velocity.normalized().dot(direction) > 0.99, "gait follows backward/lateral displacement")
 	_step(animator, 180)
-	var settled := true
-	for index in animator.leg_shape_indices:
-		settled = settled and absf(animator.leg_mesh.get_blend_shape_value(index)) < 0.001
-	check(settled, "all hoof channels return to rest after stopping")
+	check(_legs_at_rest(animator), "all legs return to rest after stopping")
 	var phase := animator.gait_phase
 	_step(animator, 60)
 	check(absf(animator.gait_phase - phase) < 0.001, "stride phase stops advancing at rest")
@@ -345,17 +349,14 @@ func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 			_step(animator, 1)
 			if i == 60:
 				check(buffalo.global_transform.is_equal_approx(before), "clash steps never move the physics body")
-			lifted = maxf(lifted, animator.leg_mesh.get_blend_shape_value(1))
-			reach = maxf(reach, absf(animator.leg_mesh.get_blend_shape_value(2)))
+			lifted = maxf(lifted, animator.hoof_offsets[0].y)
+			reach = maxf(reach, absf(animator.hoof_offsets[0].z))
 		check(lifted > 0.025 and lifted <= GameBalance.get_number("clash_gait_hoof_lift") + 0.001, "clash hooves lift in low steps")
 		check(reach > 0.05 and reach <= GameBalance.get_number("clash_gait_step_reach") + 0.001, "clash steps stay short")
 		check(animator.local_velocity.normalized().dot(direction) > 0.99, "clash gait follows push or retreat displacement")
 		check(absf(animator.gait_phase - previous_phase) > 0.01, "moving clash advances stride phase")
 		_step(animator, 180)
-		var planted := true
-		for index in animator.leg_shape_indices:
-			planted = planted and absf(animator.leg_mesh.get_blend_shape_value(index)) < 0.001
-		check(planted, "stationary clash plants every hoof, even while bracing")
+		check(_legs_at_rest(animator), "stationary clash plants every hoof, even while bracing")
 		var phase := animator.gait_phase
 		_step(animator, 60)
 		check(absf(animator.gait_phase - phase) < 0.001, "stationary clash never cycles hooves in place")
@@ -364,6 +365,25 @@ func _test_clash_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	check(animator.clash_gait_weight < 0.001, "leaving clash restores regular gait")
 	_reset(buffalo, animator)
 
+
+# Regression: the loser led out of the arena (FLEE, slow walk) used to shuffle with ~half-size
+# steps, invisible from the result camera; it must take full strides at the led-walk pace.
+func _test_led_out_steps(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if animator.leg_mesh == null:
+		return
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.FLEE
+	var reach := 0.0
+	var lifted := 0.0
+	for i in 180:
+		buffalo.position += Vector3.FORWARD * GameBalance.get_number("result_lead_speed") * TICK
+		_step(animator, 1)
+		if i > 60:
+			reach = maxf(reach, absf(animator.hoof_offsets[0].z))
+			lifted = maxf(lifted, animator.hoof_offsets[0].y)
+	check(reach > GameBalance.get_number("gait_step_reach") * 0.85, "led-out loser takes full strides (reach %.3f)" % reach)
+	check(lifted > GameBalance.get_number("gait_hoof_lift") * 0.85, "led-out loser lifts its hooves (lift %.3f)" % lifted)
+	_reset(buffalo, animator)
 
 func _test_turn_and_teleport(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	_reset(buffalo, animator)
@@ -403,3 +423,13 @@ func _test_pause(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	animator._process(TICK)
 	check(is_equal_approx(animator.time, before), "pose freezes while the match is paused")
 	arena.paused = false
+
+
+func _legs_at_rest(animator: BuffaloAnimator) -> bool:
+	for leg in 4:
+		if animator.hoof_offsets[leg].length() > 0.001:
+			return false
+	for bone in animator.leg_skeleton.get_bone_count():
+		if animator.leg_skeleton.get_bone_pose_rotation(bone).get_angle() > 0.002:
+			return false
+	return true

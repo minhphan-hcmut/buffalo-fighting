@@ -1,4 +1,7 @@
 extends Node
+## Autoload "NetworkManager": the ENet connection for LAN (host/join on port 7777,
+## disconnect, pause handshake) and the raw message channels: client inputs,
+## host snapshots and reliable events. Match logic lives in MatchNetwork, not here.
 
 signal status_changed(message: String)
 signal lobby_ready
@@ -46,7 +49,7 @@ func _physics_process(_delta: float) -> void:
 	if not is_host or _client_peer_id == 0 or _remote_frame.is_empty():
 		return
 	input_received.emit(CLIENT_SLOT, _remote_frame.duplicate())
-	for action_name in ["horn", "dash", "guard_pressed", "hook", "release"]:
+	for action_name in ["horn", "dash", "parry", "guard_pressed", "hook", "release"]:
 		_remote_frame[action_name] = false
 
 
@@ -279,6 +282,7 @@ func send_input(payload: Dictionary) -> void:
 	var actions := {
 		"horn": bool(payload.get("horn", false)),
 		"dash": bool(payload.get("dash", false)),
+		"parry": bool(payload.get("parry", false)),
 		"guard_pressed": bool(payload.get("guard_pressed", false)),
 		"hook": bool(payload.get("hook", false)),
 		"release": bool(payload.get("release", false))
@@ -318,7 +322,7 @@ func submit_action(sequence: int, actions: Dictionary) -> void:
 		return
 	last_action_seq[sender] = sequence
 
-	for action_name in ["horn", "dash", "guard_pressed", "hook", "release"]:
+	for action_name in ["horn", "dash", "parry", "guard_pressed", "hook", "release"]:
 		_remote_frame[action_name] = (
 			bool(_remote_frame.get(action_name, false)) or bool(actions.get(action_name, false))
 		)
@@ -336,6 +340,7 @@ func _neutral_input() -> Dictionary:
 		"camera_yaw": 0.0,
 		"horn": false,
 		"dash": false,
+		"parry": false,
 		"guard": false,
 		"guard_pressed": false,
 		"hook": false,

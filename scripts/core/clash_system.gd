@@ -82,6 +82,10 @@ func process(delta: float, a_frame: InputFrame, b_frame: InputFrame) -> void:
 	var a_choice := choice_for(a_frame)
 	var b_choice := choice_for(b_frame)
 	if a_choice == &"RELEASE" or b_choice == &"RELEASE":
+		if a_choice == &"RELEASE":
+			controller.combat_event.emit(&"RELEASE_START", a.slot, b.slot, 0.0)
+		if b_choice == &"RELEASE":
+			controller.combat_event.emit(&"RELEASE_START", b.slot, a.slot, 0.0)
 		if a_choice == &"RELEASE" and b_choice == &"RELEASE":
 			end(0.0, &"CLASH_RELEASE")
 		elif a_choice == &"RELEASE":
