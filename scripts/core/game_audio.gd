@@ -30,7 +30,7 @@ func _ready() -> void:
 	music = AudioStreamPlayer.new()
 	music.bus = &"Music"
 	add_child(music)
-	for i in 16:
+	for i in int(settings.get("sfx_voices", 32)):
 		var voice := AudioStreamPlayer.new()
 		voice.bus = &"SFX"
 		add_child(voice)

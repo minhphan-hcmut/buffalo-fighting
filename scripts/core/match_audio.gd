@@ -1,5 +1,5 @@
 extends Node
-## Match sounds: countdown, announcer intro, crowd, and one sound per combat event.
+## Match sounds: countdown, announcer intro, crowd, and layered combat impacts.
 ## Combat sounds follow `combat_event`, which the host forwards to LAN clients, so
 ## both machines hear the same thing. Presentation only.
 
@@ -17,6 +17,9 @@ var crowd: AudioStreamPlayer
 var pinned_before: Dictionary = {}
 var pinned_cooldowns: Dictionary = {}
 var guarded_hits: Dictionary = {}
+var pending_impacts: Dictionary = {}
+var recent_thumps: Dictionary = {}
+var impact_variants: Dictionary = {}
 var flee_before := false
 var last_cheer_frame := -1
 
@@ -131,27 +134,63 @@ func _exit_tree() -> void:
 		intro_voice.stream_paused = false
 
 
-func _combat_event(event: StringName, _source: int, target: int, _value: float) -> void:
+func _combat_event(event: StringName, source: int, target: int, _value: float) -> void:
+	var pair := Vector2i(source, target)
 	if event in [&"HORN_START", &"COUNTER_START"]:
+		GameAudio.play_sfx("sfx_horn_whoosh")
 		GameAudio.play_sfx("buffalo_snort")
 	elif event == &"DASH_START":
+		GameAudio.play_sfx("sfx_dash_burst")
+		GameAudio.play_sfx("sfx_dash_earth")
 		GameAudio.play_sfx("buffalo_dash_steps")
 	elif event == &"PARRY_SUCCESS":
-		GameAudio.play_sfx("buffalo_block")
-		GameAudio.play_sfx("buffalo_horn_hit")
+		GameAudio.play_sfx("sfx_parry_ring")
+		GameAudio.play_sfx("sfx_parry_impact")
 	elif event == &"COUNTER_HIT":
+		if pending_impacts.has(pair):
+			pending_impacts[pair] = true
+		elif recent_thumps.has(pair):
+			var recent: Dictionary = recent_thumps[pair]
+			var age := (Time.get_ticks_msec() - int(recent.time)) / 1000.0
+			var voice: AudioStreamPlayer = recent.voice
+			# Split LAN packets can deliver the modifier after playback has begun.
+			if age < GameBalance.get_number("vfx_impact_merge_s") and is_instance_valid(voice) and voice.playing and voice.stream == GameAudio.stream_for("sfx_impact_thump"):
+				var cue: Dictionary = GameAudio.settings.cues.sfx_impact_thump_heavy
+				voice.volume_db = float(cue.db)
+				voice.pitch_scale = float(cue.pitch) + GameAudio.pitch_rng.randf_range(-float(cue.pitch_jitter), float(cue.pitch_jitter))
 		_cheer()
 	elif event == &"GUARD_HIT":
-		guarded_hits[target] = true
+		guarded_hits[pair] = Time.get_ticks_msec()
+		recent_thumps.erase(pair)
 		GameAudio.play_sfx("buffalo_block")
 	elif event == &"CLASH_HOOK":
 		GameAudio.play_sfx("clash_hook")
 	if event not in [&"HORN_HIT", &"DASH_HIT"]:
 		return
 	# Resolver emits GUARD_HIT immediately before its HORN_HIT/DASH_HIT event.
-	if guarded_hits.erase(target):
-		return
-	GameAudio.play_sfx("buffalo_horn_hit")
+	if guarded_hits.has(pair):
+		var age := (Time.get_ticks_msec() - int(guarded_hits[pair])) / 1000.0
+		guarded_hits.erase(pair)
+		if age < GameBalance.get_number("vfx_impact_merge_s"):
+			return
+	# Resolver and LAN relay emit hit modifiers in order; wait until this batch ends.
+	if not pending_impacts.has(pair):
+		_play_impact.call_deferred(pair)
+	pending_impacts[pair] = event == &"DASH_HIT"
+
+
+func _play_impact(pair: Vector2i) -> void:
+	var heavy: bool = pending_impacts[pair]
+	pending_impacts.erase(pair)
+	var cue := "sfx_heavy_impact_" if heavy else "sfx_horn_impact_"
+	impact_variants[cue] = int(impact_variants.get(cue, 0)) % 2 + 1
+	GameAudio.play_sfx(cue + str(impact_variants[cue]))
+	if heavy:
+		# The heavy wood sample lives below ~150 Hz, which laptop speakers barely play;
+		# a lower, louder horn crack keeps the heavy hit stronger than a normal one there.
+		GameAudio.play_sfx("sfx_heavy_crack_" + str(impact_variants[cue]))
+	var thump := GameAudio.play_sfx("sfx_impact_thump_heavy" if heavy else "sfx_impact_thump")
+	recent_thumps[pair] = {"time": Time.get_ticks_msec(), "voice": thump}
 
 
 func _cheer() -> void:
