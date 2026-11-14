@@ -189,11 +189,14 @@ func trigger_shake(event_name: StringName) -> void:
 	if event_name in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT"]:
 		punch_time = 0.0
 		punch_strength = GameBalance.get_number("camera_punch_heavy_scale") if event_name != &"HORN_HIT" else 1.0
-	if event_name not in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT", &"CLASH_START"]:
+	if event_name not in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT", &"PARRY_SUCCESS", &"CLASH_START"]:
 		return
 	shake_elapsed = 0.0
 	shake_duration = GameBalance.get_number("camera_shake_duration_s", 0.12)
 	shake_strength = GameBalance.get_number("camera_shake_distance", 0.06)
+	if event_name != &"HORN_HIT":
+		shake_strength *= GameBalance.get_number("camera_shake_heavy_scale")
+		shake_duration *= GameBalance.get_number("camera_shake_heavy_duration_scale")
 
 
 func _input(event: InputEvent) -> void:
