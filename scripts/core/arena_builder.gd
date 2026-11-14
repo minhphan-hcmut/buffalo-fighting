@@ -14,6 +14,9 @@ const LASHING := Color("#5A3B27")
 const OUTLINE_RED := Color("#E6B490")
 const OUTLINE_BLUE := Color("#0E1822")
 const MUD_SHADER := preload("res://assets/shaders/mud_patch.gdshader")
+const MUD_ALBEDO := preload("res://assets/textures/mud/brown_mud_03_diff_1k.jpg")
+const MUD_NORMAL := preload("res://assets/textures/mud/brown_mud_03_nor_gl_1k.jpg")
+const MUD_ARM := preload("res://assets/textures/mud/brown_mud_03_arm_1k.jpg")
 
 
 static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
@@ -29,7 +32,7 @@ static func build(parent: Node3D, mud_zones: Array[StringName]) -> void:
 		mud.position = Vector3(center.x, 0.012, center.y)
 		mud.rotation.y = 1.3 * i
 		mud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mud.material_override = _mud_material(fraction, float(i) * 7.3)
+		mud.material_override = _mud_material(fraction, float(i) * 7.3, plane.size.x)
 		parent.add_child(mud)
 	_build_fence(parent)
 	add_lighting(parent)
@@ -109,6 +112,8 @@ static func _build_fence(parent: Node3D) -> void:
 		var segment := _fence_segment(midpoint, tangent.length())
 		segment.rotation.y = atan2(-tangent.z, tangent.x)
 		parent.add_child(segment)
+	# Shut during play, so the gaps do not look open where the arena oval still stops a buffalo.
+	parent.add_child(ArenaGates.new())
 
 
 static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:
@@ -127,7 +132,7 @@ static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:
 # Visual bamboo for one fence segment centred on `body`: a post at each end and three
 # rails, with dark lashing where they meet. Thick enough to stay solid from the
 # gameplay camera (thin slats flicker at that distance).
-static func _add_bamboo_panel(body: StaticBody3D, length: float) -> void:
+static func _add_bamboo_panel(body: Node3D, length: float) -> void:
 	var bottom := -FENCE_HEIGHT * 0.5
 	for x in [-length * 0.5, length * 0.5]:
 		LowPoly.cylinder(body, "Post", 0.085, 0.1, FENCE_HEIGHT + 0.25, Vector3(x, bottom + (FENCE_HEIGHT + 0.25) * 0.5, 0.0), BAMBOO_DARK)
@@ -141,12 +146,16 @@ static func _add_bamboo_panel(body: StaticBody3D, length: float) -> void:
 
 # Wet mud with a broken, fading rim and glossy puddles (assets/shaders/mud_patch.gdshader),
 # so it reads as slower ground at a glance without looking pasted on.
-static func _mud_material(radius_fraction: float, seed: float) -> ShaderMaterial:
+static func _mud_material(radius_fraction: float, seed: float, size_m: float) -> ShaderMaterial:
 	var mud := ShaderMaterial.new()
 	mud.shader = MUD_SHADER
 	mud.set_shader_parameter("radius_fraction", radius_fraction)
 	mud.set_shader_parameter("seed", seed)
-	for key in ["edge_noise", "edge_soft", "puddle_amount", "wet_roughness", "wet_depth", "puddle_roughness", "wet_specular", "puddle_specular", "sheen_strength", "sheen_power", "sheen_frequency", "sheen_sharpness", "wet_rim_width", "wet_rim_darken", "normal_strength"]:
+	mud.set_shader_parameter("mud_albedo", MUD_ALBEDO)
+	mud.set_shader_parameter("mud_normal", MUD_NORMAL)
+	mud.set_shader_parameter("mud_arm", MUD_ARM)
+	mud.set_shader_parameter("tile_count", size_m / GameBalance.get_number("mud_texture_tile_m"))
+	for key in ["edge_noise", "edge_soft", "puddle_amount", "wet_roughness", "wet_depth", "puddle_roughness", "wet_specular", "puddle_specular", "sheen_strength", "sheen_power", "sheen_frequency", "sheen_sharpness", "wet_rim_width", "wet_rim_darken", "texture_normal_depth", "texture_ao"]:
 		mud.set_shader_parameter(key, GameBalance.get_number("mud_" + key))
 	for key in ["mud_color", "rim_color", "puddle_color"]:
 		mud.set_shader_parameter(key, Color(GameBalance.get_number("mud_" + key + "_r"), GameBalance.get_number("mud_" + key + "_g"), GameBalance.get_number("mud_" + key + "_b")))

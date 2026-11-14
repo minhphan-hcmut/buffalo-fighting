@@ -12,12 +12,13 @@ extends RefCounted
 
 const CROWD_SHADER := preload("res://assets/shaders/crowd_bob.gdshader")
 const GROUND_MATERIAL: StandardMaterial3D = preload("res://assets/environment/sparse_grass/ground.tres")
+## Trampled arena floor: Poly Haven "Sand 01" scan (CC0), 1.5 m per tile in world space.
+const EARTH_MATERIAL: StandardMaterial3D = preload("res://assets/textures/earth/earth_floor.tres")
 ## Kenney Nature Kit palms (CC0), recoloured to the arena palette: cau/dừa break up the
 ## row of round trees and say "coastal village" at a glance.
 const PALM_MODELS: Array[PackedScene] = [preload("res://assets/environment/nature_kit/tree_palmTall.glb"), preload("res://assets/environment/nature_kit/tree_palmBend.glb")]
 
 # Palette (GDD Bảng 18) plus village clothing tones.
-const EARTH_TINT := Color("#D2B08A")
 const GRASS_TINT := Color("#86A84E")
 const WOOD := Color("#7A5236")
 const WOOD_DARK := Color("#5A3B27")
@@ -98,8 +99,7 @@ static func _build_ground(root: Node3D) -> void:
 	field.material_override = grass
 	root.add_child(field)
 	# Trampled earth: the oval floor plus the two gate corridors.
-	var earth := GROUND_MATERIAL.duplicate() as StandardMaterial3D
-	earth.albedo_color = EARTH_TINT
+	var earth := EARTH_MATERIAL
 	var floor_mesh := MeshInstance3D.new()
 	floor_mesh.name = "EarthFloor"
 	var disc := CylinderMesh.new()
@@ -306,32 +306,44 @@ static func _build_flags(root: Node3D) -> void:
 		root.add_child(instance)
 
 
-# A ring of round trees and tall palms behind the stands, and low hills on the horizon.
+# A ring of round trees and tall palms behind the stands, a sparser grove further out that
+# fills the flat field before the horizon, and low hills on the horizon.
 static func _build_trees(root: Node3D) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = CROWD_SEED + 1
 	var trunks: Array[Transform3D] = []
 	var trunk_colors := PackedColorArray()
 	var crowns: Array[Transform3D] = []
 	var crown_colors := PackedColorArray()
 	var palms: Array = [[], []]
-	var count := 46
-	for index in count:
-		var angle := TAU * (index + rng.randf_range(-0.3, 0.3)) / count
-		var at := ring(angle, STAND_OFFSET + STAND_TIERS * TIER_DEPTH + rng.randf_range(2.5, 7.0))
-		if absf(at.z) < GATE_CLEARANCE + 1.0 and absf(at.x) > 10.0:
-			continue
-		if rng.randf() < PALM_SHARE:
-			var palm_scale := rng.randf_range(5.0, 6.5)
-			palms[rng.randi() % PALM_MODELS.size()].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * palm_scale), at))
-			continue
-		var height := rng.randf_range(2.4, 3.6)
-		trunks.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.28, height, 0.28)), at + Vector3.UP * height * 0.5))
-		trunk_colors.append(WOOD_DARK)
-		for blob in 2:
-			var size := rng.randf_range(1.6, 2.4) * (1.0 - blob * 0.3)
-			crowns.append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), at + Vector3(rng.randf_range(-0.4, 0.4), height + size * 0.35 + blob * 0.9, rng.randf_range(-0.4, 0.4))))
-			crown_colors.append(LEAF if rng.randf() < 0.6 else LEAF_DARK)
+	var behind_stands := STAND_OFFSET + STAND_TIERS * TIER_DEPTH
+	# [tree count, nearest and farthest offset outside the stands]. The grove stays inside
+	# the sun's shadow distance, where Compatibility lights scenery correctly. Each band
+	# has its own seed, so adding the grove left the ring behind the stands unchanged.
+	var bands := [[46, 2.5, 7.0], [GameBalance.get_int("scenery_grove_count", 30), GameBalance.get_number("scenery_grove_min_m"), GameBalance.get_number("scenery_grove_max_m")]]
+	# The first band keeps the original generator, which the hills below continue from.
+	var ring_rng := RandomNumberGenerator.new()
+	ring_rng.seed = CROWD_SEED + 1
+	for band_index in bands.size():
+		var rng := ring_rng
+		if band_index > 0:
+			rng = RandomNumberGenerator.new()
+			rng.seed = CROWD_SEED + 1 + band_index
+		var count: int = bands[band_index][0]
+		for index in count:
+			var angle := TAU * (index + rng.randf_range(-0.3, 0.3)) / count
+			var at := ring(angle, behind_stands + rng.randf_range(bands[band_index][1], bands[band_index][2]))
+			if absf(at.z) < GATE_CLEARANCE + 1.0 and absf(at.x) > 10.0:
+				continue
+			if rng.randf() < PALM_SHARE:
+				var palm_scale := rng.randf_range(5.0, 6.5)
+				palms[rng.randi() % PALM_MODELS.size()].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * palm_scale), at))
+				continue
+			var height := rng.randf_range(2.4, 3.6)
+			trunks.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.28, height, 0.28)), at + Vector3.UP * height * 0.5))
+			trunk_colors.append(WOOD_DARK)
+			for blob in 2:
+				var size := rng.randf_range(1.6, 2.4) * (1.0 - blob * 0.3)
+				crowns.append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), at + Vector3(rng.randf_range(-0.4, 0.4), height + size * 0.35 + blob * 0.9, rng.randf_range(-0.4, 0.4))))
+				crown_colors.append(LEAF if rng.randf() < 0.6 else LEAF_DARK)
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.35
 	trunk.bottom_radius = 0.5
@@ -359,6 +371,7 @@ static func _build_trees(root: Node3D) -> void:
 	# Hills: spheres sunk into the ground so only a low dome shows. They lie beyond
 	# the sun's shadow distance, so they use ArenaBuilder.FAR_SCENERY_LAYER and are
 	# lit by the sky only (the sun would burn them out white on Compatibility).
+	var rng := ring_rng
 	for index in 9:
 		var angle := TAU * index / 9.0 + rng.randf_range(-0.2, 0.2)
 		var distance := rng.randf_range(75.0, 100.0)

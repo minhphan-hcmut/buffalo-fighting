@@ -1,0 +1,5 @@
+Brown Mud 03 - Poly Haven (https://polyhaven.com/a/brown_mud_03)
+Author: Rob Tuytel. License: CC0 1.0 (https://polyhaven.com/license).
+Real-world size: 1.3 m x 1.3 m. Downloaded 2026-11-14 via https://api.polyhaven.com/files/brown_mud_03
+Kept here: 2K JPG diffuse, OpenGL normal (nor_gl), ARM (AO/roughness/metal) as the originals.
+Game uses the 1K JPG versions in assets/textures/mud/ (unmodified).

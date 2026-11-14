@@ -1,0 +1,5 @@
+Sand 01 - Poly Haven (https://polyhaven.com/a/sand_01)
+Author: Rob Tuytel. License: CC0 1.0 (https://polyhaven.com/license).
+Real-world size: 1.5 m x 1.5 m. Downloaded 2026-11-15 via https://api.polyhaven.com/files/sand_01
+Kept here: 2K JPG diffuse, OpenGL normal (nor_gl), ARM (AO/roughness/metal) as the originals.
+Game uses the 1K JPG versions in assets/textures/earth/ (unmodified) for the trampled arena floor.
