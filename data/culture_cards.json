@@ -1,0 +1,31 @@
+{
+  "label": "BẠN CÓ BIẾT?",
+  "final_card": "di_san",
+  "cards": [
+    {
+      "id": "ong_trau",
+      "title": "Ông trâu",
+      "body": "Ở Đồ Sơn, trâu chọi không bị gọi là “con” mà được tôn là “ông trâu”. Mỗi ông trâu mang số hiệu riêng khi vào hội, như số 06 của bạn."
+    },
+    {
+      "id": "ruoc_nuoc",
+      "title": "Lễ rước nước",
+      "body": "Trước ngày đấu, làng rước nước về đình trên kiệu hoa để cầu mưa thuận gió hòa. Ở hội chọi trâu, phần Lễ luôn đi trước phần chọi."
+    },
+    {
+      "id": "trong_co",
+      "title": "Trống hội và múa cờ",
+      "body": "Trống khai hội mở đầu ngày hội chính. Tiếng trống giục giã và cờ tung bay là hiệu báo hai ông trâu sắp ra sới."
+    },
+    {
+      "id": "thuong_vo",
+      "title": "Tinh thần thượng võ",
+      "body": "Ngoài đời không có thanh KHÍ THẾ: ông trâu nào nhụt chí sẽ tự quay đầu chạy khỏi sới. Luật thua “bỏ chạy” trong game lấy từ chính điều đó."
+    },
+    {
+      "id": "di_san",
+      "title": "Di sản văn hóa",
+      "body": "Năm 2012, Chọi trâu Đồ Sơn thành Di sản văn hóa phi vật thể quốc gia. Lễ hội giữ phần Lễ trang nghiêm và cấm cá cược."
+    }
+  ]
+}

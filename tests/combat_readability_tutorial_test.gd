@@ -49,20 +49,20 @@ func run() -> void:
 	for id in [2, 3, 4, 5, 6]:
 		hud._process(duration)
 		check(hud.tutorial_current == id, "tutorial ordered display %d" % id)
-	check(hud.tutorial_label.text == "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn", "exact tutorial 6 wording")
+	check(hud.tutorial_label.get_parsed_text() == "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn", "exact tutorial 6 wording")
 	hud._process(duration)
 	hud._tutorial_event(&"HORN_HIT", 2, 1, 18)
 	hud._tutorial_event(&"CLASH_START", 1, 2, 0)
 	hud._process(duration)
 	check(hud.tutorial_seen == [1, 2, 3, 4, 5, 6] and hud.tutorial_queue.is_empty(), "each context hint appears once")
-	check(hud.tutorial_label.text.contains("G Gạt sừng"), "control guide includes G after hints")
+	check(hud.tutorial_label.get_parsed_text().contains("G Gạt sừng"), "control guide includes G after hints")
 	for variant in [[&"SOLO", &"L02"], [&"LAN", &"L01"]]:
 		arena.mode = variant[0]
 		arena.level_id = variant[1]
 		hud.tutorial_seen.clear()
 		hud._process(duration)
 		hud._tutorial_event(&"HORN_HIT", 2, 1, 18)
-		check(hud.tutorial_seen.is_empty() and hud.tutorial_queue.is_empty() and hud.tutorial_label.text.contains("G Gạt sừng"), "context hints only in SOLO L01")
+		check(hud.tutorial_seen.is_empty() and hud.tutorial_queue.is_empty() and hud.tutorial_label.get_parsed_text().contains("G Gạt sừng"), "context hints only in SOLO L01")
 	arena.free()
 	print("READABILITY TUTORIAL FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)

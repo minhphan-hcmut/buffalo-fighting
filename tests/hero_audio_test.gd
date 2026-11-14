@@ -67,6 +67,11 @@ func run() -> void:
 	await process_frame
 	check(audio.music.stream != null, "Music plays after the match ends")
 	print("HERO_AUDIO triangles=%d bounds=%s" % [triangles, bounds])
+	for player in root.find_children("*", "AudioStreamPlayer", true, false):
+		player.stop()
+		player.stream = null
 	arena.free()
 	instance.free()
+	await physics_frame
+	await physics_frame
 	_finish()

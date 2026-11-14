@@ -25,8 +25,8 @@ func run() -> void:
 	var hud = arena.hud
 	hud.set_process(false)
 	hud._process(0.0)
-	check(hud.spirit_labels[0].text == "KHÍ THẾ  100 / 100", "initial spirit label uses actor state")
-	check(hud.stamina_labels[1].text == "SỨC  100 / 100", "initial opponent stamina label uses actor state")
+	check(hud.spirit_labels[0].text == "KHÍ THẾ", "spirit bar carries a caption, not numbers")
+	check(hud.stamina_labels[1].text == "", "stamina caption stays hidden while stamina is fine")
 	check(hud.player_spirit.fill_mode == ProgressBar.FILL_BEGIN_TO_END and hud.opponent_spirit.fill_mode == ProgressBar.FILL_END_TO_BEGIN, "opponent resource bars mirror player bars")
 	arena.player.spirit = 77.0
 	arena.player.stamina = 24.0
@@ -35,8 +35,8 @@ func run() -> void:
 	hud._process(0.0)
 	check(hud.player_spirit.value == 77.0 and hud.opponent_spirit.value == 56.0, "both spirit bars follow independent actor state")
 	check(hud.player_stamina.value == 24.0 and hud.opponent_stamina.value == 60.0, "both stamina bars follow independent actor state")
-	check(hud.spirit_labels[0].text == "KHÍ THẾ  77 / 100" and hud.spirit_labels[1].text == "KHÍ THẾ  56 / 100", "both spirit labels show current numbers")
-	check(hud.stamina_labels[0].text == "SỨC  24 / 100 · SỨC THẤP" and hud.stamina_labels[1].text == "SỨC  60 / 100", "low stamina has a text warning without relying on color")
+	check(hud.spirit_labels[0].text == "KHÍ THẾ" and hud.spirit_labels[1].text == "KHÍ THẾ", "spirit captions stay number-free")
+	check(hud.stamina_labels[0].text == "SỨC THẤP" and hud.stamina_labels[1].text == "", "low stamina has a text warning without relying on color")
 	check(hud.low_stamina == [true, false], "only actor below stamina threshold is warned")
 	check(hud.player_stamina.get_theme_stylebox("fill").bg_color == Color("#FFAA66"), "low stamina switches fill to orange")
 	check(hud.spirit_trails[0].value == 100.0, "new spirit loss keeps the old value as a bright trail")
@@ -77,6 +77,10 @@ func run() -> void:
 				has_identifier = true
 		check(not has_identifier, "buffalo has no floating identifier outside combat feedback")
 		check(str(actor.get_meta("announcer_name", "")).contains("06" if actor == arena.player else "17"), "announcer metadata retains buffalo number")
+		var body := actor.find_child("HeroBody", true, false) as MeshInstance3D
+		var hide := body.get_active_material(0) as BaseMaterial3D
+		check(hide.resource_name == "SKIN_01_Natural" and hide.albedo_texture.resource_path.contains("buffalo_basecolor"), "buffalo wears the natural hide, not the silver show skin")
+		check(feedback.horn_material != null and body.get_active_material(0) != feedback.horn_material, "horn glow stays on the horns, not the hide")
 	var panel_style: StyleBoxFlat = hud.pause_panel.get_theme_stylebox("panel")
 	check(panel_style.bg_color.a == 1.0, "shared modal theme is fully opaque")
 	hud.show_settings()

@@ -91,13 +91,28 @@ func run() -> void:
 	arena._finish(1, &"FLEE")
 	audio._process(0.0)
 	var handler := arena.outro.handler
-	check(handler != null and handler.visible and handler.get_node_or_null("Hat") != null, "outro spawns a low-poly handler with a conical hat")
+	check(handler != null and handler.visible and handler.find_child("Hat", true, false) != null, "outro spawns a low-poly handler with a conical hat")
 	check(absf(handler.position.x) > GameBalance.get_number("arena_rx") and absf(handler.position.z) > GameBalance.get_number("gate_width") * 0.5, "handler waits outside the arena and beside the exit path")
 	check(handler.find_children("*", "CollisionObject3D").is_empty() and handler.find_children("*", "CollisionShape3D").is_empty(), "handler has no collision or AI")
-	for frame in 240:
+	check(arena.outro.lead == MatchOutro.Lead.APPROACH and (handler.find_child("Human_Mesh", true, false) as MeshInstance3D).material_override == LowPoly._villager_material(ReleaseHandlers.SHIRTS[arena.opponent.slot - 1]), "the loser's own handler comes to fetch it")
+	var waiting_at := arena.opponent.global_position
+	var handler_start := handler.global_position
+	var approach_frames := 0
+	while arena.outro.lead == MatchOutro.Lead.APPROACH and approach_frames < 900:
 		arena.outro.process(1.0 / 60.0)
-	check(not arena.outro.waypoints.is_empty() and not arena.result_ready, "Solo result waits beyond four seconds while the loser still walks")
-	for frame in 720:
+		approach_frames += 1
+	check(arena.outro.lead == MatchOutro.Lead.LEAD, "handler reaches the loser (%.1f s)" % (approach_frames / 60.0))
+	check(arena.opponent.global_position.is_equal_approx(waiting_at), "loser waits in place until its handler arrives")
+	check(handler.global_position.distance_to(handler_start) > 5.0 and handler.global_position.distance_to(arena.outro.lead_spot()) < 0.3, "handler walked in to the loser's head")
+	check(arena.outro.rope != null and arena.outro.rope.visible, "the rope appears once the handler holds the loser")
+	for frame in 60:
+		arena.outro.process(1.0 / 60.0)
+	var nose := arena.opponent.visual.global_transform * Vector3(0.0, GameBalance.get_number("result_rope_nose_y"), -GameBalance.get_number("result_rope_nose_ahead"))
+	var rope_end := arena.outro.rope.get_child(arena.outro.rope.get_child_count() - 1) as Node3D
+	check(rope_end.global_position.distance_to(nose) < 0.5, "rope runs to the loser's nose")
+	check(arena.opponent.global_position.distance_to(waiting_at) > 1.0 and handler.global_position.distance_to(arena.outro.lead_spot()) < 1.0, "handler leads the walking loser and stays at its head")
+	check(not arena.outro.waypoints.is_empty() and not arena.result_ready, "Solo result waits while the loser is led out")
+	for frame in 1200:
 		arena.outro.process(1.0 / 60.0)
 		if arena.result_ready:
 			break

@@ -94,6 +94,14 @@ func _ready() -> void:
 	vfx.name = "MatchVFX"
 	add_child(vfx)
 	start_countdown()
+	var crowd := CrowdReaction.new()
+	crowd.name = "CrowdReaction"
+	add_child(crowd)
+	var dressing := get_node_or_null("Dressing")
+	crowd.setup(self, dressing.get_meta("crowd_material") as ShaderMaterial if dressing != null and dressing.has_meta("crowd_material") else null)
+	var handlers := ReleaseHandlers.new()
+	add_child(handlers)
+	handlers.setup(self)
 	var audio := Node.new()
 	audio.set_script(preload("res://scripts/core/match_audio.gd"))
 	add_child(audio)

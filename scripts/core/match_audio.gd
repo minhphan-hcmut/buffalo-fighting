@@ -13,6 +13,12 @@ var step_times: Dictionary = {}
 var struggle: AudioStreamPlayer
 var intro_voice: AudioStreamPlayer
 var intro_played := false
+var crowd: AudioStreamPlayer
+var pinned_before: Dictionary = {}
+var pinned_cooldowns: Dictionary = {}
+var guarded_hits: Dictionary = {}
+var flee_before := false
+var last_cheer_frame := -1
 
 
 func _ready() -> void:
@@ -24,27 +30,52 @@ func _ready() -> void:
 	loop.loop_begin = 0
 	loop.loop_end = int(loop.get_length() * loop.mix_rate)
 	struggle.stream = loop
-	struggle.volume_db = float(GameAudio.settings.get("struggle_db", -14.0))
+	var struggle_cue: Dictionary = GameAudio.settings.get("cues", {}).get("buffalo_horn_lock_struggle_loop", {})
+	struggle.volume_db = float(struggle_cue.get("db", GameAudio.settings.get("struggle_db", -14.0)))
 	add_child(struggle)
+	crowd = AudioStreamPlayer.new()
+	crowd.bus = &"SFX"
+	var crowd_loop := GameAudio.stream_for("crowd_cheer").duplicate() as AudioStreamWAV
+	crowd_loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	crowd_loop.loop_begin = 0
+	crowd_loop.loop_end = int(crowd_loop.get_length() * crowd_loop.mix_rate)
+	crowd.stream = crowd_loop
+	crowd.pitch_scale = float(GameAudio.settings.get("crowd_loop_pitch", 1.0))
+	add_child(crowd)
 	GameAudio.play_music("music_festival_loop", true)
 	if controller.mode == &"LAN":
-		GameAudio.play_sfx("announcer_intro_vi")
+		intro_voice = GameAudio.play_sfx("announcer_intro_vi")
 	controller.combat_event.connect(_combat_event)
 
 
 func _process(delta: float) -> void:
 	struggle.stream_paused = controller.paused
+	crowd.stream_paused = controller.paused
 	if is_instance_valid(intro_voice):
 		if (not intro_voice.playing and not intro_voice.stream_paused) or intro_voice.stream != GameAudio.stream_for("announcer_intro_vi"):
 			intro_voice = null
 		else:
 			intro_voice.stream_paused = controller.paused
-			if not controller.announcer_active():
+			if controller.mode == &"SOLO" and not controller.announcer_active():
 				intro_voice.stop()
 				intro_voice.stream_paused = false
 				intro_voice = null
 	if controller.paused:
 		return
+	var ambience := controller.phase in [&"PLAYING", &"RESULT"]
+	if ambience and not crowd.playing:
+		crowd.play()
+	elif not ambience:
+		crowd.stop()
+	var reaction := controller.get_node_or_null("CrowdReaction")
+	var excitement := clampf(float(reaction.get("excitement")), 0.0, 1.0) if reaction != null else 0.0
+	crowd.volume_db = lerpf(float(GameAudio.settings.get("crowd_loop_db", -30.0)), float(GameAudio.settings.get("crowd_loop_excited_db", -24.0)), excitement)
+	var fleeing := controller.player.state == Buffalo.State.FLEE or controller.opponent.state == Buffalo.State.FLEE
+	var flee_started := fleeing and not flee_before
+	flee_before = fleeing
+	var result_started := controller.phase == &"RESULT" and previous_phase != &"RESULT"
+	if flee_started or result_started:
+		_cheer()
 	if controller.announcer_active() and not intro_played:
 		intro_played = true
 		intro_voice = GameAudio.play_sfx("announcer_intro_vi")
@@ -54,10 +85,11 @@ func _process(delta: float) -> void:
 			GameAudio.play_sfx("match_start_drums")
 		elif controller.phase == &"RESULT":
 			GameAudio.play_sfx("festival_gong")
-			GameAudio.play_sfx("crowd_cheer")
 			if controller.winner_slot == 0:
 				GameAudio.play_sfx("ui_error")
 			else:
+				# GDD 2.5: the winner salutes the crowd to the festival drums.
+				GameAudio.play_sfx("match_start_drums")
 				GameAudio.play_music("music_victory" if controller.winner_slot == controller.local_slot else "music_defeat")
 	if controller.phase == &"COUNTDOWN":
 		var count := ceili(controller.countdown_time)
@@ -69,11 +101,20 @@ func _process(delta: float) -> void:
 		previous_clash = locked
 		if locked:
 			GameAudio.play_sfx("buffalo_horn_lock_start")
+			var cue: Dictionary = GameAudio.settings.get("cues", {}).get("buffalo_horn_lock_struggle_loop", {})
+			var jitter := float(cue.get("pitch_jitter", 0.0))
+			struggle.pitch_scale = float(cue.get("pitch", 1.0)) + GameAudio.pitch_rng.randf_range(-jitter, jitter)
 			struggle.play()
 		else:
 			struggle.stop()
 	for actor: Buffalo in [controller.player, controller.opponent]:
 		var slot := actor.slot
+		pinned_cooldowns[slot] = maxf(0.0, float(pinned_cooldowns.get(slot, 0.0)) - delta)
+		var pinned := controller.phase == &"PLAYING" and controller.presentation_pinned(actor)
+		if pinned and not bool(pinned_before.get(slot, false)) and pinned_cooldowns[slot] <= 0.0:
+			GameAudio.play_sfx("wooden_fence_rattle")
+			pinned_cooldowns[slot] = float(GameAudio.settings.get("pinned_rattle_cooldown_s", 1.0))
+		pinned_before[slot] = pinned
 		var last: Vector3 = positions.get(slot, actor.global_position)
 		var distance := actor.global_position.distance_to(last)
 		positions[slot] = actor.global_position
@@ -99,10 +140,22 @@ func _combat_event(event: StringName, _source: int, target: int, _value: float) 
 		GameAudio.play_sfx("buffalo_block")
 		GameAudio.play_sfx("buffalo_horn_hit")
 	elif event == &"COUNTER_HIT":
-		GameAudio.play_sfx("crowd_cheer")
+		_cheer()
+	elif event == &"GUARD_HIT":
+		guarded_hits[target] = true
+		GameAudio.play_sfx("buffalo_block")
+	elif event == &"CLASH_HOOK":
+		GameAudio.play_sfx("clash_hook")
 	if event not in [&"HORN_HIT", &"DASH_HIT"]:
 		return
-	var actor := controller.player if target == 1 else controller.opponent
-	GameAudio.play_sfx("buffalo_block" if actor.guarding else "buffalo_horn_hit")
-	if ArenaBounds.is_pinned(actor, actor.global_position.normalized()):
-		GameAudio.play_sfx("wooden_fence_rattle")
+	# Resolver emits GUARD_HIT immediately before its HORN_HIT/DASH_HIT event.
+	if guarded_hits.erase(target):
+		return
+	GameAudio.play_sfx("buffalo_horn_hit")
+
+
+func _cheer() -> void:
+	var frame := Engine.get_process_frames()
+	if frame != last_cheer_frame:
+		last_cheer_frame = frame
+		GameAudio.play_sfx("crowd_cheer")

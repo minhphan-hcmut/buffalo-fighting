@@ -64,8 +64,57 @@ var clash_action: StringName = &"PUSH"
 
 func _ready() -> void:
 	reset_combat()
+	use_natural_skin(self)
 	if slot == 2:
 		dress_west(self)
+
+
+## Gives the HERO model's body the natural water-buffalo hide. The export keeps a
+## silver show skin (SKIN_02) on the body; the natural hide textures (same UV layout)
+## are on the keratin material, so the body gets a renamed copy of it. Renamed so
+## BuffaloFeedback, which finds the horns by "keratin", still picks the horns only.
+static func use_natural_skin(root: Node) -> void:
+	var body := root.find_child("HeroBody", true, false) as MeshInstance3D
+	if body == null:
+		return
+	var natural: BaseMaterial3D
+	for surface in body.mesh.get_surface_count():
+		var material := body.get_active_material(surface) as BaseMaterial3D
+		if material != null and material.resource_name.contains("keratin"):
+			natural = material
+	if natural == null:
+		return
+	for surface in body.mesh.get_surface_count():
+		var material := body.get_active_material(surface) as BaseMaterial3D
+		if material != null and material.resource_name.begins_with("SKIN"):
+			var hide := natural.duplicate() as BaseMaterial3D
+			hide.resource_name = "SKIN_01_Natural"
+			body.set_surface_override_material(surface, hide)
+
+
+## Adds the team rim (GDD 5.1: red side bright, blue side dark) to every surface of the
+## model under `root` as an inverted-hull next pass. Imported (shared) materials are
+## duplicated first so the two buffaloes never share an outline colour; per-instance
+## overrides (natural hide, horn glow, Giáp Tây cloth) are kept so their owners still
+## hold the live material. Call after those overrides are set.
+static func add_team_outline(root: Node, color: Color) -> void:
+	var shader := preload("res://assets/shaders/team_outline.gdshader")
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null or not (mesh_instance.name.begins_with("Hero") or mesh_instance.name.begins_with("FACTION")):
+			continue
+		for surface in mesh_instance.mesh.get_surface_count():
+			var material := mesh_instance.get_active_material(surface)
+			if material == null or material.resource_name.contains("eyes"):
+				continue
+			if mesh_instance.get_surface_override_material(surface) == null:
+				material = material.duplicate()
+			var outline := ShaderMaterial.new()
+			outline.shader = shader
+			outline.set_shader_parameter("outline_color", color)
+			outline.set_shader_parameter("outline_width", GameBalance.get_number("team_outline_width", 0.018))
+			material.next_pass = outline
+			mesh_instance.set_surface_override_material(surface, material)
 
 
 ## Swaps the cloth on the buffalo model under `root` to the blue Giáp Tây pattern. The

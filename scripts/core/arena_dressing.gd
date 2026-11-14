@@ -1,7 +1,7 @@
 class_name ArenaDressing
 extends RefCounted
 ## Festival scenery around the sới (GDD 4.1, 4.6): earth floor and grass field, tiered
-## wooden stands with a seated crowd, the elders' pavilion, five-colour flag poles with
+## wooden stands with a standing crowd, the elders' pavilion, five-colour flag poles with
 ## pennant strings, trees and low hills. Presentation only: nothing here has collision
 ## or affects a match. ArenaBuilder calls build() once per arena.
 ##
@@ -10,7 +10,11 @@ extends RefCounted
 ## outward. Gates sit at angle 0 and PI (±X); the pavilion sits at -PI/2 (-Z).
 ## Crowd colours use a fixed seed, so every match looks the same.
 
+const CROWD_SHADER := preload("res://assets/shaders/crowd_bob.gdshader")
 const GROUND_MATERIAL: StandardMaterial3D = preload("res://assets/environment/sparse_grass/ground.tres")
+## Kenney Nature Kit palms (CC0), recoloured to the arena palette: cau/dừa break up the
+## row of round trees and say "coastal village" at a glance.
+const PALM_MODELS: Array[PackedScene] = [preload("res://assets/environment/nature_kit/tree_palmTall.glb"), preload("res://assets/environment/nature_kit/tree_palmBend.glb")]
 
 # Palette (GDD Bảng 18) plus village clothing tones.
 const EARTH_TINT := Color("#D2B08A")
@@ -21,12 +25,22 @@ const LACQUER := Color("#8E2B22")
 const TILE := Color("#4A3B36")
 const GOLD := Color("#E8BC65")
 const PAPER := Color("#F2E6CF")
-const BAMBOO := Color("#C9B26B")
+const BAMBOO := Color("#A08E6A")
 const LEAF := Color("#6F8F4E")
 const LEAF_DARK := Color("#566F3E")
-const FLAG_COLORS: Array[Color] = [Color("#C0392B"), Color("#E8BC65"), Color("#2E6E9E"), Color("#F2E6CF"), Color("#3E8E4E")]
-const SHIRTS: Array[Color] = [Color("#5C4033"), Color("#6B4B2B"), Color("#33546D"), Color("#8A5A3B"), Color("#3F4F3A"), Color("#7D2E26"), Color("#B9A27A"), Color("#2F3A44")]
+const PALM_LEAF := Color("#56763A")
+const PALM_TRUNK := Color("#8A7358")
+const PALM_SHARE := 0.35
+# Five-colour flags, dusted down so the scenery stays behind the buffaloes in the
+# visual hierarchy (the saturated red/blue belong to the two teams).
+const FLAG_COLORS: Array[Color] = [Color("#9A4C3E"), Color("#C4A262"), Color("#4C6A80"), Color("#D6CBB4"), Color("#5E7D56")]
+const CLOTH_RED := Color("#7A3328")
+const CLOTH_OCHRE := Color("#A2864F")
+const SHIRTS: Array[Color] = [Color("#7A4E3A"), Color("#8C6A3E"), Color("#3F6A88"), Color("#A0683F"), Color("#56724A"), Color("#9A3A2E"), Color("#CDB88E"), Color("#4C5A68")]
 const CROWD_SEED := 6061
+# Share of the crowd baked with a raised, cheering arm.
+const CROWD_CHEER_SHARE := 0.2
+const CROWD_HAT_SHADE := 0.25
 
 const STAND_OFFSET := 3.2        # first tier, metres outside the fence
 const STAND_TIERS := 3
@@ -134,10 +148,10 @@ static func _build_stands(root: Node3D) -> void:
 			tier_transforms.append(Transform3D(_sized(basis, Vector3(chord, height, TIER_DEPTH)), mid + Vector3.UP * height * 0.5))
 			tier_colors.append(WOOD if (index + tier) % 2 == 0 else WOOD.darkened(0.08))
 			if tier == 0:
-				# Red and gold cloth hung on the front of the lowest tier.
+				# Dark red and ochre cloth hung on the front of the lowest tier.
 				var front := mid - (basis * Vector3(0, 0, 1)) * (TIER_DEPTH * 0.5 + 0.02)
 				cloth_transforms.append(Transform3D(_sized(basis, Vector3(chord, height * 0.8, 0.03)), front + Vector3.UP * height * 0.5))
-				cloth_colors.append(LACQUER if index % 2 == 0 else GOLD)
+				cloth_colors.append(CLOTH_RED if index % 2 == 0 else CLOTH_OCHRE)
 			var count := maxi(1, int(chord / SEAT_SPACING))
 			for seat in count:
 				var at := p0.lerp(p1, (seat + 0.5) / count) + Vector3.UP * height
@@ -148,49 +162,47 @@ static func _build_stands(root: Node3D) -> void:
 	_build_crowd(root, seats)
 
 
-# Seated villagers: shirt, head and conical hat as three MultiMeshes.
+# Villagers standing on the tiers: the baked villager (LowPoly.crowd_villager_mesh), one
+# MultiMesh per pose. Shirt colour and hat on/off go in per-instance custom data.
 static func _build_crowd(root: Node3D, seats: Array[Transform3D]) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = CROWD_SEED
-	var bodies: Array[Transform3D] = []
-	var heads: Array[Transform3D] = []
-	var hats: Array[Transform3D] = []
-	var body_colors := PackedColorArray()
-	var head_colors := PackedColorArray()
-	var hat_colors := PackedColorArray()
+	var transforms: Array = [[], []]
+	var looks: Array = [PackedColorArray(), PackedColorArray()]
 	for seat in seats:
 		if rng.randf() < 0.12:
 			continue
 		var jitter := Transform3D(Basis(Vector3.UP, rng.randf_range(-0.35, 0.35)), Vector3(rng.randf_range(-0.12, 0.12), 0.0, rng.randf_range(-0.08, 0.12)))
-		var person := seat * jitter
-		var lean := rng.randf_range(0.92, 1.06)
-		bodies.append(person * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * lean), Vector3(0, 0.36 * lean, 0)))
-		body_colors.append(SHIRTS[rng.randi() % SHIRTS.size()])
-		heads.append(person * Transform3D(Basis.IDENTITY, Vector3(0, 0.86 * lean, 0)))
-		head_colors.append(LowPoly.SKIN.darkened(rng.randf_range(0.0, 0.15)))
-		var hat_on := rng.randf() < 0.7
-		hats.append(person * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE if hat_on else Vector3.ZERO), Vector3(0, 1.05 * lean, 0)))
-		hat_colors.append(LowPoly.STRAW_HAT.darkened(rng.randf_range(0.0, 0.12)))
-	var shirt := CylinderMesh.new()
-	shirt.top_radius = 0.17
-	shirt.bottom_radius = 0.24
-	shirt.height = 0.72
-	shirt.radial_segments = 8
-	shirt.rings = 1
-	var head := SphereMesh.new()
-	head.radius = 0.15
-	head.height = 0.3  # height = 2 × radius keeps normals unit length
-	head.radial_segments = 8
-	head.rings = 4
-	var hat := CylinderMesh.new()
-	hat.top_radius = 0.0
-	hat.bottom_radius = 0.33
-	hat.height = 0.2
-	hat.radial_segments = 10
-	hat.rings = 1
-	LowPoly.multi(root, "CrowdBodies", shirt, bodies, body_colors)
-	LowPoly.multi(root, "CrowdHeads", head, heads, head_colors)
-	LowPoly.multi(root, "CrowdHats", hat, hats, hat_colors)
+		var height := rng.randf_range(0.92, 1.04)
+		var pose := 1 if rng.randf() < CROWD_CHEER_SHARE else 0
+		transforms[pose].append(seat * jitter * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * height), Vector3.ZERO))
+		# Instance data skips the source_color conversion, so hand the shader a linear colour.
+		var shirt := LowPoly.tone(SHIRTS[rng.randi() % SHIRTS.size()]).srgb_to_linear()
+		looks[pose].append(Color(shirt.r, shirt.g, shirt.b, 1.0 if rng.randf() < 0.75 else 0.0))
+	# One shared crowd material so CrowdReaction moves every pose together.
+	var crowd_material := ShaderMaterial.new()
+	crowd_material.shader = CROWD_SHADER
+	crowd_material.set_shader_parameter(&"skin", LowPoly.tone(LowPoly.SKIN))
+	crowd_material.set_shader_parameter(&"hair", LowPoly.tone(LowPoly.HAIR))
+	crowd_material.set_shader_parameter(&"trousers", LowPoly.tone(LowPoly.TROUSERS))
+	# Hats dusted down: in full sun a field of bright straw cones out-shouts the buffaloes.
+	crowd_material.set_shader_parameter(&"hat", LowPoly.tone(LowPoly.STRAW_HAT.darkened(CROWD_HAT_SHADE)))
+	root.set_meta("crowd_material", crowd_material)
+	for pose in 2:
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.use_custom_data = true
+		multimesh.mesh = LowPoly.crowd_villager_mesh(pose)
+		multimesh.instance_count = transforms[pose].size()
+		for index in multimesh.instance_count:
+			multimesh.set_instance_transform(index, transforms[pose][index])
+			multimesh.set_instance_custom_data(index, looks[pose][index])
+		var instance := MultiMeshInstance3D.new()
+		instance.name = "CrowdCheering" if pose == 1 else "Crowd"
+		instance.multimesh = multimesh
+		instance.material_override = crowd_material
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(instance)
 
 
 # Elders' pavilion behind the -Z fence: raised floor, red columns, tiled roof, drum.
@@ -228,7 +240,7 @@ static func _build_pavilion(root: Node3D) -> void:
 # Tall bamboo poles with five-colour flags, joined by strings of pennants.
 static func _build_flags(root: Node3D) -> void:
 	var poles: Array[Vector3] = []
-	var count := 16
+	var count := 12
 	for index in count:
 		var at := ring(TAU * (index + 0.5) / count, POLE_OFFSET)
 		if absf(at.z) < GATE_CLEARANCE and absf(at.x) > 6.0:
@@ -245,7 +257,7 @@ static func _build_flags(root: Node3D) -> void:
 		var yaw := face_centre(at) + PI * 0.5
 		for band in FLAG_COLORS.size():
 			var y := POLE_HEIGHT - 0.25 - band * 0.32
-			flag_transforms.append(Transform3D(_sized(Basis(Vector3.UP, yaw), Vector3(1.0, 0.32, 0.03)), at + Vector3(0, y, 0) + Basis(Vector3.UP, yaw) * Vector3(0.52, 0, 0)))
+			flag_transforms.append(Transform3D(_sized(Basis(Vector3.UP, yaw), Vector3(1.0, 0.32, 1.0)), at + Vector3(0, y, 0) + Basis(Vector3.UP, yaw) * Vector3(0.52, 0, 0)))
 			flag_colors.append(FLAG_COLORS[band])
 	var pennant_transforms: Array[Transform3D] = []
 	var pennant_colors := PackedColorArray()
@@ -256,13 +268,13 @@ static func _build_flags(root: Node3D) -> void:
 		var b := poles[(index + 1) % poles.size()] + Vector3.UP * (POLE_HEIGHT - 0.1)
 		var span := a.distance_to(b)
 		var along := (b - a).normalized()
-		var flags := int(span / 0.55)
+		var flags := int(span / 0.85)
 		for step in flags:
 			var t := (step + 0.5) / flags
 			var sag := 0.9 * 4.0 * t * (1.0 - t)
 			var at := a.lerp(b, t) + Vector3.DOWN * sag
-			var basis := _sized(Basis.looking_at(Vector3(along.z, 0, -along.x), Vector3.UP), Vector3(0.32, 0.36, 0.02))
-			pennant_transforms.append(Transform3D(basis.rotated(along, PI), at + Vector3.DOWN * 0.16))
+			var basis := _sized(Basis.looking_at(Vector3(along.z, 0, -along.x), Vector3.UP), Vector3(0.32, 0.36, 1.0))
+			pennant_transforms.append(Transform3D(basis, at + Vector3.DOWN * 0.16))
 			pennant_colors.append(FLAG_COLORS[(step + index) % FLAG_COLORS.size()])
 			var t2 := (step + 1.0) / flags
 			var next := a.lerp(b, t2) + Vector3.DOWN * (0.9 * 4.0 * t2 * (1.0 - t2))
@@ -271,15 +283,30 @@ static func _build_flags(root: Node3D) -> void:
 			line_transforms.append(Transform3D(_sized(Basis.looking_at(seg.normalized(), Vector3.UP), Vector3(0.02, 0.02, seg.length())), (prev + next) * 0.5))
 			line_colors.append(WOOD_DARK)
 	var cube := BoxMesh.new()
-	var pennant := PrismMesh.new()
-	pennant.size = Vector3.ONE
 	LowPoly.multi(root, "FlagPoles", cube, pole_transforms, pole_colors, true)
-	LowPoly.multi(root, "PoleFlags", cube, flag_transforms, flag_colors)
-	LowPoly.multi(root, "Pennants", pennant, pennant_transforms, pennant_colors)
 	LowPoly.multi(root, "PennantLines", cube, line_transforms, line_colors)
+	for hanging in [false, true]:
+		var transforms := pennant_transforms if hanging else flag_transforms
+		var colors := pennant_colors if hanging else flag_colors
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.use_custom_data = true
+		multimesh.mesh = LowPoly.flag_cloth(Vector2.ONE, hanging)
+		multimesh.instance_count = transforms.size()
+		for index in transforms.size():
+			multimesh.set_instance_transform(index, transforms[index])
+			# Compatibility drops custom-shader COLOR on MultiMesh; carry the same linear tint separately.
+			multimesh.set_instance_custom_data(index, colors[index].srgb_to_linear())
+		var instance := MultiMeshInstance3D.new()
+		instance.name = "Pennants" if hanging else "PoleFlags"
+		instance.multimesh = multimesh
+		instance.material_override = LowPoly.flag_material(hanging, Color.WHITE, true, hanging)
+		instance.extra_cull_margin = GameBalance.get_number("flag_wave_amplitude")
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(instance)
 
 
-# A ring of round trees behind the stands, and low hills on the horizon.
+# A ring of round trees and tall palms behind the stands, and low hills on the horizon.
 static func _build_trees(root: Node3D) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = CROWD_SEED + 1
@@ -287,11 +314,16 @@ static func _build_trees(root: Node3D) -> void:
 	var trunk_colors := PackedColorArray()
 	var crowns: Array[Transform3D] = []
 	var crown_colors := PackedColorArray()
+	var palms: Array = [[], []]
 	var count := 46
 	for index in count:
 		var angle := TAU * (index + rng.randf_range(-0.3, 0.3)) / count
 		var at := ring(angle, STAND_OFFSET + STAND_TIERS * TIER_DEPTH + rng.randf_range(2.5, 7.0))
 		if absf(at.z) < GATE_CLEARANCE + 1.0 and absf(at.x) > 10.0:
+			continue
+		if rng.randf() < PALM_SHARE:
+			var palm_scale := rng.randf_range(5.0, 6.5)
+			palms[rng.randi() % PALM_MODELS.size()].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * palm_scale), at))
 			continue
 		var height := rng.randf_range(2.4, 3.6)
 		trunks.append(Transform3D(Basis.IDENTITY.scaled(Vector3(0.28, height, 0.28)), at + Vector3.UP * height * 0.5))
@@ -313,6 +345,17 @@ static func _build_trees(root: Node3D) -> void:
 	crown.rings = 4
 	LowPoly.multi(root, "TreeTrunks", trunk, trunks, trunk_colors, true)
 	LowPoly.multi(root, "TreeCrowns", crown, crowns, crown_colors, true)
+	for kind in PALM_MODELS.size():
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = _palm_mesh(PALM_MODELS[kind])
+		multimesh.instance_count = palms[kind].size()
+		for index in palms[kind].size():
+			multimesh.set_instance_transform(index, palms[kind][index])
+		var palm_instance := MultiMeshInstance3D.new()
+		palm_instance.name = "Palms%d" % kind
+		palm_instance.multimesh = multimesh
+		root.add_child(palm_instance)
 	# Hills: spheres sunk into the ground so only a low dome shows. They lie beyond
 	# the sun's shadow distance, so they use ArenaBuilder.FAR_SCENERY_LAYER and are
 	# lit by the sky only (the sun would burn them out white on Compatibility).
@@ -332,6 +375,19 @@ static func _build_trees(root: Node3D) -> void:
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		instance.layers = ArenaBuilder.FAR_SCENERY_LAYER
 		root.add_child(instance)
+
+
+# The palm's mesh with its leaf and bark surfaces swapped for palette materials.
+static func _palm_mesh(model: PackedScene) -> Mesh:
+	var scene := model.instantiate()
+	var source := (scene.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh
+	var mesh := source.duplicate() as Mesh
+	scene.free()
+	for surface in mesh.get_surface_count():
+		var original := source.surface_get_material(surface)
+		var leafy := original != null and original.resource_name.begins_with("leaf")
+		mesh.surface_set_material(surface, LowPoly.material(PALM_LEAF if leafy else PALM_TRUNK))
+	return mesh
 
 
 # `basis` with each local axis stretched by `size` (Basis.scaled() would stretch the

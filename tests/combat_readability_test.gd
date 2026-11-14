@@ -334,11 +334,11 @@ func _presentation_and_input() -> void:
 	duel()
 	arena.clash.enter(0.0)
 	arena.clash.start_hook(b, a, &"HOOK")
-	check(other.label.text == "MÓC", "MÓC appears on the hooking buffalo")
+	check(other.label.text != "MÓC", "hooking shows no floating word (clash HUD already says who hooks)")
 	var release := frame(b)
 	release.guard_pressed = true
 	arena.clash.process(DT, frame(a), release)
-	check(other.label.text == "NHẢ", "NHẢ appears on the releasing buffalo, including slot 2")
+	check(other.label.text != "NHẢ", "release shows no floating word")
 	duel()
 	a.state = Buffalo.State.HORN_STARTUP
 	a.state_duration = 0.25

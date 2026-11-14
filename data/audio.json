@@ -2,5 +2,89 @@
   "music_db": -14.0,
   "sfx_db": -8.0,
   "struggle_db": -14.0,
-  "step_interval_s": 0.3
+  "step_interval_s": 0.3,
+  "announcer_music_duck_db": -12.0,
+  "crowd_loop_db": -34.0,
+  "crowd_loop_excited_db": -25.0,
+  "crowd_loop_pitch": 0.86,
+  "pinned_rattle_cooldown_s": 1.5,
+  "cues": {
+    "announcer_intro_vi": {
+      "db": -3.0,
+      "pitch_jitter": 0.0
+    },
+    "buffalo_hoof_dirt": {
+      "db": -22.0,
+      "pitch_jitter": 0.08
+    },
+    "buffalo_hoof_mud": {
+      "db": -22.0,
+      "pitch_jitter": 0.08
+    },
+    "buffalo_horn_hit": {
+      "db": -6.0,
+      "pitch_jitter": 0.06
+    },
+    "buffalo_block": {
+      "db": -9.0,
+      "pitch": 0.84,
+      "pitch_jitter": 0.05
+    },
+    "buffalo_dash_steps": {
+      "db": -15.0,
+      "pitch_jitter": 0.05
+    },
+    "buffalo_snort": {
+      "db": -16.0,
+      "pitch_jitter": 0.06
+    },
+    "buffalo_horn_lock_start": {
+      "db": -10.0,
+      "pitch_jitter": 0.04
+    },
+    "buffalo_horn_lock_struggle_loop": {
+      "db": -20.0,
+      "pitch": 0.94,
+      "pitch_jitter": 0.03
+    },
+    "clash_hook": {
+      "stream": "buffalo_horn_hit",
+      "db": -15.0,
+      "pitch": 0.78,
+      "pitch_jitter": 0.04
+    },
+    "wooden_fence_rattle": {
+      "db": -13.0,
+      "pitch_jitter": 0.05
+    },
+    "crowd_cheer": {
+      "db": -19.0,
+      "pitch": 0.96,
+      "pitch_jitter": 0.03
+    },
+    "countdown_drum": {
+      "db": -12.0,
+      "pitch_jitter": 0.0
+    },
+    "match_start_drums": {
+      "db": -12.0,
+      "pitch_jitter": 0.0
+    },
+    "festival_gong": {
+      "db": -14.0,
+      "pitch_jitter": 0.0
+    },
+    "ui_confirm": {
+      "db": -18.0,
+      "pitch_jitter": 0.0
+    },
+    "ui_back": {
+      "db": -18.0,
+      "pitch_jitter": 0.0
+    },
+    "ui_error": {
+      "db": -15.0,
+      "pitch_jitter": 0.0
+    }
+  }
 }

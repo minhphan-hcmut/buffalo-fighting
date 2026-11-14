@@ -52,8 +52,11 @@ func _flee_outro() -> void:
 	check(arena.get_node("CameraRig").overview_time >= 0.0, "camera starts the overview")
 	check(arena.get_node("CameraRig").winner_time < 0.0, "winner shot waits while the outro plays")
 	var closest := INF
-	var seconds := GameBalance.get_number("result_outro_s") + 0.5
+	# Solo: the handler walks in and leads the loser out, so wait for the result (bounded).
+	var seconds := GameBalance.get_number("result_outro_max_s") + 0.5
 	for frame in int(seconds * Engine.physics_ticks_per_second):
+		if arena.result_ready:
+			break
 		await physics_frame
 		closest = minf(closest, arena.player.global_position.distance_to(arena.opponent.global_position))
 	var rx := GameBalance.get_number("arena_rx")

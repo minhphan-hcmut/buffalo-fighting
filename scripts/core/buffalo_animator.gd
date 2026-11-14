@@ -1,14 +1,10 @@
 class_name BuffaloAnimator
 extends Node3D
 ## Visual-only procedural motion for the unrigged buffalo model (animation stage A).
-## Moves this node, HERO hoof morphs and legacy ear/tail pivots; the physics body is never touched,
+## Moves this node, a runtime HERO leg skeleton and legacy ear/tail pivots; the physics body is never touched,
 ## so gameplay, LAN and combat tests are unaffected. Motion is read from the body's actual
 ## displacement, which also works on a LAN client where velocity is not replicated.
 
-## Multiplies the silver HERO skin texture into a dark slate water buffalo.
-const SKIN_TINT := Color("#3A3735")
-## Minimum roughness after make_matte, so hide and horn read as dry, not plastic.
-const MATTE_ROUGHNESS := 0.82
 const POSE_RATE := 12.0
 const SNAP_RATE := 32.0
 const MOTION_FILTER_RATE := 12.0
@@ -18,6 +14,8 @@ const SWAY_ROLL_DEG := 2.5
 const ROCK_PITCH_DEG := 1.5
 const ACCEL_PITCH_DEG_PER_MS2 := 0.12
 const ACCEL_PITCH_MAX_DEG := 6.0
+## Most the body may tip nose-up (about the hips) before the front hooves visibly leave the ground.
+const MAX_NOSE_UP_DEG := 3.0
 const TURN_ROLL_DEG_PER_RAD_S := 1.2
 const TURN_ROLL_MAX_DEG := 8.0
 const BREATH_HZ := 0.35
@@ -29,13 +27,28 @@ const PITCH_PIVOT := Vector3(0.0, 0.0, 1.17)
 # Measured from buffalo.glb: inner (root) end of the left/right ears, top of the tail.
 const EAR_PIVOT := Vector3(0.36, 1.47, -1.19)
 const TAIL_PIVOT := Vector3(0.0, 1.42, 1.52)
+# Measured from buffalo_hero.glb (forward = -Z). Per leg, front-left, front-right,
+# rear-left, rear-right: (x, knee/hock height, z, shoulder/hip height).
+const LEG_JOINTS: Array[Vector4] = [
+	Vector4(-0.34, 0.42, -0.33, 0.95), Vector4(0.34, 0.42, -0.33, 0.95),
+	Vector4(-0.23, 0.48, 1.17, 1.0), Vector4(0.23, 0.48, 1.17, 1.0),
+]
+# Plan-view skin radius per leg: fully attached inside x, free of the leg beyond y.
+const LEG_RADII: Array[Vector2] = [Vector2(0.2, 0.3), Vector2(0.2, 0.3), Vector2(0.15, 0.22), Vector2(0.15, 0.22)]
+const LEG_HOOF_FORWARD_SQUASH := 0.6
+# Vertices below x follow the leg fully; above y they belong to the torso.
+const LEG_ATTACH_Y := Vector2(0.58, 0.85)
+const LEG_KNEE_BLEND := 0.07
 
 var buffalo: Buffalo
 var controller: MatchController
 var speed := 0.0
 var local_velocity := Vector3.ZERO
 var leg_mesh: MeshInstance3D
-var leg_shape_indices: Array[int] = []
+## Visual-only leg rig built at runtime (null on the legacy model).
+var leg_skeleton: Skeleton3D
+## Per leg (FL, FR, RL, RR): planned hoof travel in model space; y is the lift.
+var hoof_offsets: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var forward_speed := 0.0
 var forward_accel := 0.0
 var turn_rate := 0.0
@@ -68,6 +81,9 @@ var _shake_roll := 0.0
 var _last_position := Vector3.ZERO
 var _last_yaw := 0.0
 var clash_gait_weight := 0.0
+# Speed at which a full stride is taken: the walk speed, or the slower led walk out of the
+# arena after a defeat (FLEE), so the loser takes full steps instead of shuffling.
+var _gait_reference_speed := 8.75
 var _action_visual_state := -1
 var _action_visual_time := 0.0
 
@@ -81,30 +97,7 @@ func _ready() -> void:
 	rng.seed = get_instance_id()
 	_build_pivots()
 	_build_leg_shapes()
-	make_matte(self)
 	reset_motion()
-
-
-## Gives every surface of the buffalo model under `root` a non-metallic copy of its
-## material. The HERO export marks skin, horns and eyes as metallic = 1, which renders
-## as chrome without reflection probes; its skin texture is silver, so the skin is
-## also tinted to a water buffalo's slate grey. Call once per model instance, before
-## BuffaloFeedback swaps in the horn shader (it copies the active material).
-static func make_matte(root: Node) -> void:
-	for node in root.find_children("*", "MeshInstance3D", true, false):
-		var mesh_instance := node as MeshInstance3D
-		for surface in mesh_instance.mesh.get_surface_count():
-			var source := mesh_instance.get_active_material(surface) as BaseMaterial3D
-			if source == null or source.metallic == 0.0:
-				continue
-			var matte := source.duplicate() as BaseMaterial3D
-			matte.metallic = 0.0
-			matte.metallic_texture = null
-			matte.roughness = maxf(source.roughness, MATTE_ROUGHNESS)
-			matte.roughness_texture = null
-			if source.resource_name.begins_with("SKIN"):
-				matte.albedo_color = SKIN_TINT
-			mesh_instance.set_surface_override_material(surface, matte)
 
 
 func _physics_process(delta: float) -> void:
@@ -177,10 +170,13 @@ func update_pose(delta: float) -> void:
 	victory_weight = lerpf(victory_weight, 1.0 if result > 0 else 0.0, soft * 0.5)
 	defeat_weight = lerpf(defeat_weight, 1.0 if result < 0 else 0.0, soft * 0.5)
 
-	var walk_speed := GameBalance.get_number("walk_speed", 8.75)
+	var fleeing := buffalo.state == Buffalo.State.FLEE
+	_gait_reference_speed = GameBalance.get_number("result_lead_speed") if fleeing else GameBalance.get_number("walk_speed", 8.75)
+	var walk_speed := _gait_reference_speed
 	# Distance-driven cadence: no cycling feet at rest or on a blocked body.
 	clash_gait_weight = lerpf(clash_gait_weight, 1.0 if buffalo.state == Buffalo.State.CLASH else 0.0, soft)
-	var stride := lerpf(GameBalance.get_number("gait_stride_length", 3.65), GameBalance.get_number("clash_gait_stride_length", 0.8), clash_gait_weight)
+	var base_stride := GameBalance.get_number("result_lead_stride_length") if fleeing else GameBalance.get_number("gait_stride_length", 3.65)
+	var stride := lerpf(base_stride, GameBalance.get_number("clash_gait_stride_length", 0.8), clash_gait_weight)
 	gait_phase = fposmod(gait_phase + delta * speed / stride, 1.0)
 	_update_legs()
 	var walk := clampf(speed / walk_speed, 0.0, 1.3) * _gait_weight
@@ -189,12 +185,13 @@ func update_pose(delta: float) -> void:
 
 	var accel_pitch := clampf(-forward_accel * ACCEL_PITCH_DEG_PER_MS2, -ACCEL_PITCH_MAX_DEG, ACCEL_PITCH_MAX_DEG)
 	var turn_roll := clampf(turn_rate * TURN_ROLL_DEG_PER_RAD_S, -TURN_ROLL_MAX_DEG, TURN_ROLL_MAX_DEG) * (0.4 + 0.6 * minf(walk, 1.0))
-	var pitch := pose_pitch + deg_to_rad(
+	# The body pitches about the hips, so nose-up lifts the front hooves off the dirt:
+	# cap it (stun recoil + braking stacked to ~16 deg and read as a floating buck).
+	var pitch := minf(pose_pitch + deg_to_rad(
 		accel_pitch
 		+ walk * ROCK_PITCH_DEG * sin(gait_phase * TAU * 2.0 + 0.8)
-		+ victory_weight * 6.0 * sin(time * TAU * VICTORY_HOP_HZ * 2.0)
 		- defeat_weight * 8.0
-	)
+	), deg_to_rad(MAX_NOSE_UP_DEG)) + deg_to_rad(victory_weight * 6.0 * sin(time * TAU * VICTORY_HOP_HZ * 2.0))
 	var roll := pose_roll + deg_to_rad(turn_roll + walk * SWAY_ROLL_DEG * sin(gait_phase * TAU)) + _shake_roll
 	var rotation_basis := Basis.from_euler(Vector3(pitch, pose_yaw, roll))
 	var breath := 1.0 + BREATH_SCALE * sin(time * TAU * BREATH_HZ) * (1.0 - minf(walk, 1.0))
@@ -247,7 +244,8 @@ func _compute_targets() -> void:
 			_target_pitch = deg_to_rad(5.0)
 			_target_tail_lift = deg_to_rad(35.0)
 			_target_ear_back = deg_to_rad(40.0)
-			_shake_roll = deg_to_rad(5.0) * sin(time * TAU * 3.0)
+			# Trembles while standing beaten; steadies once it is led away.
+			_shake_roll = deg_to_rad(5.0) * sin(time * TAU * 3.0) * (1.0 - clampf(speed / _gait_reference_speed, 0.0, 1.0))
 
 
 ## LAN client only: called when a snapshot delivers this buffalo's `state_time`.
@@ -354,57 +352,99 @@ func _result_for_self() -> int:
 	return 1 if controller.winner_slot == buffalo.slot else -1
 
 
-# The HERO asset is a joined mesh, not a skeleton. Build visual-only morphs once,
-# preserving every surface/material/UV. Smooth masks keep the hips attached to the
-# torso; only the lower legs and hooves move. The imported resource stays untouched.
+# The HERO asset is a joined mesh without a rig. Build a visual-only leg skeleton once:
+# each leg gets an upper bone (shoulder/hip, inside the body) and a lower bone (knee or
+# hock), and vertices are skinned to them with smooth masks. Legs then swing and fold by
+# rotation, so they keep their length instead of shearing. Surfaces, materials and UVs
+# are preserved; the imported resource stays untouched.
 func _build_leg_shapes() -> void:
 	leg_mesh = find_child("HeroBody", true, false) as MeshInstance3D
-	if leg_mesh == null or leg_mesh.mesh == null:
+	if leg_mesh == null or leg_mesh.mesh == null or leg_mesh.get_parent() == null:
 		return
+	leg_skeleton = Skeleton3D.new()
+	leg_skeleton.name = "LegSkeleton"
+	leg_mesh.get_parent().add_child(leg_skeleton)
+	leg_skeleton.transform = leg_mesh.transform
+	leg_skeleton.add_bone("Root")
+	var skin := Skin.new()
+	skin.add_bind(0, Transform3D.IDENTITY)
+	for leg in 4:
+		var joint: Vector4 = LEG_JOINTS[leg]
+		var upper := leg_skeleton.add_bone("Leg%d_Upper" % leg)
+		leg_skeleton.set_bone_parent(upper, 0)
+		leg_skeleton.set_bone_rest(upper, Transform3D(Basis(), Vector3(joint.x, joint.w, joint.z)))
+		var lower := leg_skeleton.add_bone("Leg%d_Lower" % leg)
+		leg_skeleton.set_bone_parent(lower, upper)
+		leg_skeleton.set_bone_rest(lower, Transform3D(Basis(), Vector3(0.0, joint.y - joint.w, 0.0)))
+		skin.add_bind(upper, Transform3D(Basis(), -Vector3(joint.x, joint.w, joint.z)))
+		skin.add_bind(lower, Transform3D(Basis(), -Vector3(joint.x, joint.y, joint.z)))
+	leg_skeleton.reset_bone_poses()
 	var source := leg_mesh.mesh
 	var animated := ArrayMesh.new()
-	animated.blend_shape_mode = Mesh.BLEND_SHAPE_MODE_NORMALIZED
-	for leg in 4:
-		for axis in ["X", "Y", "Z"]:
-			animated.add_blend_shape("Step_%d_%s" % [leg, axis])
 	for surface in source.get_surface_count():
 		var arrays := source.surface_get_arrays(surface)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var shapes: Array[Array] = []
-		for leg in 4:
-			var side := -1.0 if leg % 2 == 0 else 1.0
-			var front := leg < 2
-			for axis in 3:
-				var targets := vertices.duplicate()
-				for i in vertices.size():
-					var vertex := vertices[i]
-					var lower := 1.0 - smoothstep(0.32, 0.95, vertex.y)
-					var lateral := smoothstep(0.12, 0.28, vertex.x * side)
-					var longitudinal := 1.0 - smoothstep(-0.45, 0.05, vertex.z) if front else smoothstep(0.35, 0.75, vertex.z)
-					targets[i][axis] += lower * lateral * longitudinal
-				var shape: Array = []
-				shape.resize(Mesh.ARRAY_MAX)
-				shape[Mesh.ARRAY_VERTEX] = targets
-				shape[Mesh.ARRAY_NORMAL] = arrays[Mesh.ARRAY_NORMAL]
-				shape[Mesh.ARRAY_TANGENT] = arrays[Mesh.ARRAY_TANGENT]
-				shapes.append(shape)
-		animated.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, shapes)
+		var bones := PackedInt32Array()
+		var weights := PackedFloat32Array()
+		bones.resize(vertices.size() * 4)
+		weights.resize(vertices.size() * 4)
+		for i in vertices.size():
+			var vertex := vertices[i]
+			var leg := _leg_for_vertex(vertex)
+			bones[i * 4] = 0
+			weights[i * 4] = 1.0
+			if leg < 0:
+				continue
+			var joint: Vector4 = LEG_JOINTS[leg]
+			var radius: Vector2 = LEG_RADII[leg]
+			var offset := Vector2(vertex.x - joint.x, vertex.z - joint.z)
+			if offset.y < 0.0:
+				offset.y *= LEG_HOOF_FORWARD_SQUASH # hooves reach forward of the leg column
+			var member := 1.0 - smoothstep(radius.x, radius.y, offset.length())
+			var attach := 1.0 - smoothstep(LEG_ATTACH_Y.x, LEG_ATTACH_Y.y, vertex.y)
+			var leg_weight := member * attach
+			var below_knee := 1.0 - smoothstep(joint.y - LEG_KNEE_BLEND, joint.y + LEG_KNEE_BLEND, vertex.y)
+			weights[i * 4] = 1.0 - leg_weight
+			bones[i * 4 + 1] = 1 + leg * 2
+			weights[i * 4 + 1] = leg_weight * (1.0 - below_knee)
+			bones[i * 4 + 2] = 2 + leg * 2
+			weights[i * 4 + 2] = leg_weight * below_knee
+		arrays[Mesh.ARRAY_BONES] = bones
+		arrays[Mesh.ARRAY_WEIGHTS] = weights
+		animated.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
 		animated.surface_set_material(surface, source.surface_get_material(surface))
 	leg_mesh.mesh = animated
-	for i in animated.get_blend_shape_count():
-		leg_shape_indices.append(i)
+	leg_mesh.skin = skin
+	leg_mesh.skeleton = leg_mesh.get_path_to(leg_skeleton)
+
+
+# The leg whose column is closest to `vertex` in plan view, or -1 above the legs.
+func _leg_for_vertex(vertex: Vector3) -> int:
+	if vertex.y >= LEG_ATTACH_Y.y:
+		return -1
+	var best := -1
+	var best_distance := INF
+	for leg in 4:
+		var joint: Vector4 = LEG_JOINTS[leg]
+		var distance := Vector2(vertex.x - joint.x, vertex.z - joint.z).length()
+		if distance < best_distance:
+			best_distance = distance
+			best = leg
+	return best
 
 
 func _update_legs() -> void:
-	if leg_mesh == null or leg_shape_indices.is_empty():
+	if leg_skeleton == null:
 		return
-	var amount := clampf(speed / GameBalance.get_number("walk_speed"), 0.0, 1.0) * minf(_gait_weight, 1.0)
+	var amount := clampf(speed / _gait_reference_speed, 0.0, 1.0) * minf(_gait_weight, 1.0)
 	# Clash moves much slower than a walk: use its own reference speed and
 	# low, short steps instead of scaling the regular trot down to invisibility.
 	var clash_amount := clampf(speed / GameBalance.get_number("lock_slide_speed", 1.7), 0.0, 1.0)
 	var reach := lerpf(GameBalance.get_number("gait_step_reach", 0.28) * amount, GameBalance.get_number("clash_gait_step_reach", 0.1) * clash_amount, clash_gait_weight)
 	var lift := lerpf(GameBalance.get_number("gait_hoof_lift", 0.14) * amount, GameBalance.get_number("clash_gait_hoof_lift", 0.05) * clash_amount, clash_gait_weight)
 	var direction := local_velocity.normalized() if local_velocity.length_squared() > 0.001 else Vector3.ZERO
+	# Sideways steps are narrower than forward strides: legs barely abduct.
+	direction.x *= GameBalance.get_number("gait_lateral_scale", 0.55)
 	for leg in 4:
 		# Diagonal pairs alternate in a heavy trot. During stance the hoof travels
 		# backwards relative to the body; the return stroke lifts it off the dirt.
@@ -412,9 +452,28 @@ func _update_legs() -> void:
 		var swing := phase >= 0.6
 		var progress := (phase - 0.6) / 0.4 if swing else phase / 0.6
 		var travel := lerpf(-1.0, 1.0, smoothstep(0.0, 1.0, progress)) if swing else lerpf(1.0, -1.0, progress)
-		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3], direction.x * travel * reach)
-		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3 + 1], sin(progress * PI) * lift if swing else 0.0)
-		leg_mesh.set_blend_shape_value(leg_shape_indices[leg * 3 + 2], direction.z * travel * reach)
+		hoof_offsets[leg] = Vector3(direction.x * travel * reach, sin(progress * PI) * lift if swing else 0.0, direction.z * travel * reach)
+		_pose_leg(leg, hoof_offsets[leg])
+
+
+# Turns a hoof offset (plan-view travel + lift, model space) into bone rotations: the
+# upper bone swings the whole leg about the shoulder/hip so the hoof lands at the
+# planned spot, the lower bone folds the knee (front: hoof curls back) or hock (rear:
+# hoof tucks forward) to lift it without stretching the leg.
+func _pose_leg(leg: int, offset: Vector3) -> void:
+	var joint: Vector4 = LEG_JOINTS[leg]
+	var planar := Vector3(offset.x, 0.0, offset.z)
+	var swing_rotation := Quaternion.IDENTITY
+	if planar.length_squared() > 0.000001:
+		var axis := Vector3.DOWN.cross(planar.normalized()).normalized()
+		swing_rotation = Quaternion(axis, atan2(planar.length(), joint.w))
+	var lower_length := joint.y
+	# Part of the lift comes from the swing arc and the body bob, so the joint folds
+	# less than the full lift would need; a fully folded hoof flips up and reads wrong.
+	var fold := acos(clampf(1.0 - offset.y / lower_length, -1.0, 1.0)) * GameBalance.get_number("gait_knee_fold_scale", 0.65)
+	var fold_sign := -1.0 if leg < 2 else 1.0
+	leg_skeleton.set_bone_pose_rotation(1 + leg * 2, swing_rotation)
+	leg_skeleton.set_bone_pose_rotation(2 + leg * 2, Quaternion(Vector3.RIGHT, fold_sign * fold))
 
 
 func _build_pivots() -> void:

@@ -1,13 +1,16 @@
 class_name MenuBackdrop
 extends Node3D
 ## 3D scene behind the main menu: the festival arena (ArenaBuilder + ArenaDressing) with
-## the red and blue buffaloes squaring up mid-arena and their handlers waiting behind
-## them. The camera sways slowly in front of the pavilion. Presentation only; meant to
-## live in its own SubViewport (see MainMenu).
+## the red and blue buffaloes squaring up mid-arena and the blue handler waiting beside
+## the blue buffalo (the red side sits under the menu column, so it has none). The camera
+## sways slowly in front of the pavilion. Presentation only; meant to live in its own
+## SubViewport (see MainMenu).
 
 const BUFFALO_MODEL: PackedScene = preload("res://assets/characters/buffalo_hero/buffalo_hero.glb")
 ## Half the gap between the two buffaloes' centres, in metres.
 const STANCE_HALF_GAP := 1.6
+## Where the blue handler stands: behind and outside the rump.
+const HANDLER_SPOT := Vector3(4.5, 0.0, -1.9)
 
 var camera: Camera3D
 var elapsed := 0.0
@@ -26,12 +29,14 @@ func _ready() -> void:
 		add_child(buffalo)
 		var model := BUFFALO_MODEL.instantiate()
 		buffalo.add_child(model)
-		BuffaloAnimator.make_matte(model)
+		Buffalo.use_natural_skin(model)
 		if side > 0.0:
 			Buffalo.dress_west(model)
 		_buffaloes.append(buffalo)
-		var handler := LowPoly.villager(self, Vector3(side * (STANCE_HALF_GAP + 2.2), 0.0, -3.8), side * PI * 0.5, Color("#8E2B22") if side < 0.0 else Color("#2E5E80"))
-		handler.name = "Handler"
+	# Clear of the rump so the whole figure shows, not just a hat above the back. A red
+	# handler would stand behind the menu buttons with only the legs showing.
+	var handler := LowPoly.villager(self, HANDLER_SPOT, PI * 0.5 + 0.5, Color("#2E5E80"))
+	handler.name = "Handler"
 	camera = Camera3D.new()
 	camera.name = "Camera"
 	camera.fov = GameBalance.get_number("ui_menu_camera_fov_deg")
