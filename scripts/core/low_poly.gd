@@ -300,9 +300,10 @@ static func crowd_villager_mesh(variant: int) -> ArrayMesh:
 
 
 static func _bake_crowd_villager(cheer: bool) -> ArrayMesh:
+	# Baked outside the scene tree: the stands are built from _ready callbacks, some while the
+	# root is still adding the main scene and refuses new children. Skin and bone poses are
+	# all readable on the detached instance.
 	var model := VILLAGER_MODEL.instantiate() as Node3D
-	# The mesh only gets its skin once it is inside the tree.
-	(Engine.get_main_loop() as SceneTree).root.add_child(model)
 	var body := model.find_child("Human_Mesh", true, false) as MeshInstance3D
 	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
 	var player := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
@@ -338,7 +339,6 @@ static func _bake_crowd_villager(cheer: bool) -> ArrayMesh:
 	var to_person := placement * _to_ancestor(skeleton, model)
 	var crown := to_person * skeleton.get_bone_global_pose(skeleton.find_bone("HeadTop_End")).origin
 	var source := body.mesh.surface_get_arrays(0)
-	model.get_parent().remove_child(model)
 	model.free()
 
 	var vertices := PackedVector3Array()
