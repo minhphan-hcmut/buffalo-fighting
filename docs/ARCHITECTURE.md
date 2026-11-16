@@ -47,7 +47,7 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 **Màn chơi Solo:** `main_menu.gd` → Phần Lễ mở hội (`CeremonyView`) → `arena.tscn`
 (Vòng loại L01) → `MatchOutro` (trâu thua lui khỏi sới) → bảng kết quả → trận tiếp theo
-(L02, L03) → thắng chung kết thì Phần Lễ khép hội. Tiến trình lưu trong `SessionState`.
+(L02–L05) → thắng chung kết thì Phần Lễ khép hội. Tiến trình lưu trong `SessionState`.
 
 ## Bản đồ file
 
@@ -55,15 +55,15 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 | File | Việc của nó |
 |---|---|
-| `match_controller.gd` | Gốc của scene `arena.tscn`: phase (đếm ngược, đấu, kết quả), đồng hồ, tạm dừng, luật thắng, hitstop, tạo các module khác. |
+| `match_controller.gd` | Gốc của scene `arena.tscn`: phase (đếm ngược, đấu, kết quả), đồng hồ, tạm dừng, luật thắng, hitstop, tạo các module khác. Solo tự mở pause khi mất focus trong COUNTDOWN/PLAYING nếu bật cài đặt; LAN không tự pause và luôn giữ hitstop. Sân tập dùng cấu hình `training`: không kết thúc trận/đếm giờ, hồi khí thế theo ngưỡng, giữ sức AI đầy và tùy chọn sức người chơi vô hạn. |
 | `buffalo.gd` | Một con trâu: máy trạng thái hành động (`State`), di chuyển, SPIRIT/STAMINA, bộ đệm input. `use_natural_skin()` cho model dùng da trâu thật thay bản da bạc trong file glb. |
 | `combat_resolver.gd` | Kiểm tra trúng đòn và tính khí thế mất, đẩy lùi. Thứ tự: bất tử → gạt sừng → ghìm → trúng; đánh sườn/lưng ×1,25. |
 | `clash_system.gd` | Khóa sừng: thanh kéo co, móc, nhả, ai thua thì mất khí thế. |
 | `arena_bounds.gd` | Hình học sân bầu dục: va chạm thân/đầu, giới hạn rào, trạng thái bị ép rào, vùng bùn. |
 | `input_frame.gd` | Một tick ý định của một con trâu. |
-| `match_input.gd` | Đọc bàn phím/chuột thành `InputFrame`. |
-| `match_network.gd` | Nối `MatchController` với LAN: gửi/nhận input, snapshot, sự kiện. |
-| `session_state.gd` | Dữ liệu sống qua các lần đổi scene: chế độ, màn hiện tại, kết quả trước, thẻ văn hóa và màn Phần Lễ đã xem (`take_rites_before()`). |
+| `match_input.gd` | Đọc bàn phím/chuột thành `InputFrame`; chặn nút đang giữ/click vừa nhả từ menu hoặc pause cho tới input mới. `configure_ui()` gắn A/B của gamepad vào chọn/quay lại, dùng chung ở menu, sảnh và trận. |
+| `match_network.gd` | Nối `MatchController` với LAN: gửi/nhận input, snapshot, sự kiện; giữ kết quả trước snapshot trễ/rời trận. Tái đấu chỉ từ kết quả: mỗi bên đồng ý, host phát REMATCH_START tin cậy rồi hai scene nạp lại, giữ ENet/slot, state/stats mới. Epoch chặn input/snapshot/RESULT/COMBAT từ trận cũ, kể cả khoảng nạp scene. Peer rời ở bất kỳ lúc nào → khóa tái đấu, giữ kết quả và hiện thông báo. |
+| `session_state.gd` | Dữ liệu sống qua các lần đổi scene: mùa Solo năm vòng theo `SOLO_LEVELS` (L01–L05), màn hiện tại, kết quả trước, thẻ văn hóa và màn Phần Lễ đã xem (`take_rites_before()` trước L01/L03/L05). Cờ `free_play`/`training` giữ mô phỏng SOLO nhưng chặn tăng vòng/nghi lễ, giữ tiến trình mùa khi rời trận. Sân tập chọn `drill_id` qua `begin_training()`; Sức vô hạn mặc định tắt, lưu cùng các cài đặt comfort bằng ConfigFile. |
 | `game_balance.gd`, `data_file.gd` | Đọc số từ `data/`. |
 | `yaw_basis.gd` | Vector trước/phải theo góc quay. |
 
@@ -73,13 +73,15 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 |---|---|
 | `buffalo_animator.gd` | Chuyển động thủ tục cho model trâu: lúc chạy dựng bộ xương 4 chân (đùi + cẳng, skin mềm) cho `HeroBody`, chân xoay quanh hông/gối nên không bị kéo dãn; húc, lao, khóa sừng. Thân chỉ ngửa tối đa `MAX_NOSE_UP_DEG` (3°) để móng trước không nhấc khỏi đất khi bị húc. Lúc bị dắt ra (FLEE), bước chân tính theo tốc độ dắt nên đủ sải. File `.glb` gốc không đổi. | Khi thân chúi mũi (húc, lao, gồng sừng), `_ground_legs` gập chân bằng IK hai đoạn để móng không lún xuống đất (chân trước chống ra trước, `leg_ground_*`); góc chúi tối đa `max_nose_down_deg`.
 | `buffalo_feedback.gd` | Chữ nổi trên đầu trâu, chỉ cho khoảnh khắc đáng gọi tên ("GẠT SỪNG!", "PHẢN ĐÒN!", "ĐÁNH SƯỜN!", "ĐÁNH LƯNG!", "HỤT"), và màu sừng phát sáng; shader ở `assets/shaders/horn_glow.gdshader`. |
-| `match_vfx.gd` | Hiệu ứng chỉ đọc. Trúng đòn (húc, lao, phản, sườn/lưng): chớp sao lõi trắng, tia lửa kéo vệt theo hướng bay (shader cộng sáng, `ALIGN_Y_TO_VELOCITY`), sóng xung kích billboard, đèn Omni lóe ngắn (giới hạn số đèn), vòng vàng dưới đất và chùm đất văng theo hướng bị đẩy; đòn nặng mạnh hơn. Đỡ: tia lửa bật ngược; gạt sừng: chớp lớn + vòng tia lửa; khóa sừng: cú va lúc bắt đầu, tia lửa định kỳ và khi móc. Vung sừng: cung chém vàng trước đầu; bắt đầu lao: chớp muzzle, vòng bụi và đất bắn ngược ở móng sau. Ngoài ra: vệt cày khi trượt lùi, bụi từng móng khi lao, hơi thở khi đuối sức, tia ghìm, vòng vàng khi bị ép rào. Sprite Kenney Particle Pack (CC0) ở `assets/vfx/kenney_particle_pack/`. Rung camera theo lực ở `follow_camera.gd`. |
-| `match_audio.gd`, `game_audio.gd` | Âm thanh trận đấu; `GameAudio` là autoload phát nhạc và tiếng, âm lượng theo `data/audio.json`. Cú trúng ghép lớp theo lực (va gỗ Kenney + `sfx_impact_thump`; cú lao/phản đòn dùng bản nặng + lớp `sfx_heavy_crack_N`), `COUNTER_HIT` nâng cấp chứ không phát trùng. Bốn tiếng tự tạo sinh lại bằng `python tools/gen_combat_sfx.py`. |
-| `follow_camera.gd` | Camera bám sau trâu, thấp qua vai phải (22°); giật vào và rung khi trúng đòn, zoom khi khóa sừng; cuối trận lên cao nhìn toàn sân, rồi (Solo) hạ xuống quay chậm quanh trâu thắng. |
-| `match_outro.gd` | Đoạn kết: bốc thăm (nếu hòa), rồi trâu thua ra cổng. Solo: người dắt của bên thua (áo cùng màu) chạy từ cổng vào đầu trâu, trâu đứng chờ, rồi dắt bằng dây thừng ra cổng (`result_lead_*`, `result_handler_*`). LAN: trâu tự đi ra. |
+| `match_vfx.gd` | Hiệu ứng chỉ đọc. Trúng đòn (húc, lao, phản, sườn/lưng): chớp sao lõi trắng, tia lửa kéo vệt theo hướng bay (shader cộng sáng, `ALIGN_Y_TO_VELOCITY`), sóng xung kích billboard, đèn Omni lóe ngắn (giới hạn số đèn), vòng vàng dưới đất và chùm đất văng theo hướng bị đẩy; đòn nặng mạnh hơn. Đỡ: tia lửa bật ngược; gạt sừng: chớp lớn + vòng tia lửa; khóa sừng: cú va lúc bắt đầu, tia lửa định kỳ và khi móc. Vung sừng: cung chém vàng trước đầu; bắt đầu lao: chớp muzzle, vòng bụi và đất bắn ngược ở móng sau. Ngoài ra: vệt cày khi trượt lùi, bụi từng móng khi lao, hơi thở khi đuối sức, tia ghìm, vòng vàng khi bị ép rào. Sprite Kenney Particle Pack (CC0) ở `assets/vfx/kenney_particle_pack/`. Rung camera theo lực ở `follow_camera.gd`. `warm_up()`: 2 khung đầu trận, dưới màn che tối, bắn một bản mọi preset trước camera cùng đèn gần như tắt để shader biên dịch trước, tránh giật lần đầu lao/trúng/khóa sừng (key `vfx_warm_up_*`); đếm frame bằng callback process_frame gắn node, tự ngắt khi rời cây, không coroutine treo sau free. |
+| `match_audio.gd`, `game_audio.gd` | Âm thanh trận đấu; `GameAudio` là autoload phát nhạc và tiếng, âm lượng theo `data/audio.json`. Cú trúng ghép lớp theo lực (va gỗ Kenney + `sfx_impact_thump`; cú lao/phản đòn dùng bản nặng + lớp `sfx_heavy_crack_N`), `COUNTER_HIT` nâng cấp chứ không phát trùng. Bốn tiếng tự tạo sinh lại bằng `python tools/gen_combat_sfx.py`. Khi thoát, GameAudio dừng/null stream, bỏ cache/voice references; MatchAudio nhả loop riêng và bỏ deferred impact sau khi rời cây. AudioServer headless có thể còn báo playback chưa nhả ở quit tức thời, xem báo cáo đợt 10. |
+| `match_rumble.gd` | Autoload `JoyRumble` nhớ thiết bị nhập từ menu sang trận; chỉ rung tay cầm người chơi cục bộ theo combat_event. Dừng khi pause, kết quả, rời trận, đổi sang bàn phím/chuột hoặc tắt cài đặt. Biên độ/thời gian đọc `rumble_*` từ presentation; callable rung/dừng thay được trong test headless. |
+| `follow_camera.gd` | Camera bám sau trâu: Gần/Vừa/Xa và vai Phải/Trái, mặc định Vừa/Phải giữ 5,2 m và 22°; đổi khung hình êm khi chỉnh trong pause, giữ ống kính trong biên oval kể cả khe cổng không có collision: sát rào thì rút cần trước (tối thiểu `camera_bounds_min_length_m`), hết mức mới nâng góc (tối đa `camera_bounds_max_pitch_deg`). Giật/rung khi trúng đòn, zoom khi khóa sừng; cuối trận lên cao rồi quay quanh trâu thắng theo phía vai đã chọn. |
+| `match_outro.gd` | Đoạn kết: bốc thăm (nếu hòa), rồi trâu thua ra cổng. Solo: người dắt của bên thua (áo cùng màu) chạy từ cổng vào đầu trâu, trâu đứng chờ, rồi dắt bằng dây thừng ra cổng (`result_lead_*`, `result_handler_*`); sau `result_skip_grace_s` có thể bấm phím/click/nút gamepad mới để bỏ qua phần trình bày và mở kết quả, không đổi bên thắng/lý do. HUD hiện gợi ý nhỏ sau khoảng chờ. LAN: trâu tự đi ra, không skip. |
+| `match_replay.gd` | Chỉ Solo/Đấu tự do, FLEE: ring buffer `replay_seconds` cuối, phát `replay_speed` lần bằng hai bản sao không collision và camera ngang trước outro. Ghi transform, state/time/duration và trạng thái public của animator để khởi tạo chuyển động; gọi `sample_motion`/`update_pose` sẵn có, không sửa animator hoặc rewind mô phỏng. Context MatchController tách khỏi cây chỉ cấp dữ liệu khóa sừng cho animator, không chạy `_ready`/tick/mạng. HUD/VFX trận thật ẩn trong replay. Fresh key/click/gamepad bỏ qua sau grace như outro; không đổi Engine.time_scale/kết quả/stats/mùa. Cài đặt Hiệu ứng mặc định bật. Bổ sung ngoài GDD v0.7; tuning `replay_*`. |
 | `lead_rope.gd` | Dây thừng võng giữa tay người dắt và mũi trâu (vài đoạn trụ mảnh, `result_rope_*`). |
-| `release_handlers.gd` | Hai người dắt trâu đứng ở đầu trâu lúc đếm ngược rồi đi vòng cung bên trái trâu (tránh camera vai phải) ra cổng trước hiệu lệnh (GDD 2.6, 4.6). Chỉ đọc `countdown_time`. `SHIRTS`: màu áo người dắt theo bên, dùng chung với đoạn kết. |
-| `arena_builder.gd` | Phần sân mà trận đấu cần: bùn (shader `mud_patch` + bộ scan CC0 Poly Haven "Brown Mud 03" ở `assets/textures/mud/`), hàng rào tre (có va chạm) và hai cổng, mặt trời, bầu trời, cờ trên lưng trâu. |
+| `release_handlers.gd` | Hai người dắt trâu đứng ở đầu trâu lúc đếm ngược rồi đi vòng cung bên trái trâu (tránh camera vai phải) tới miệng cổng rồi đi thẳng qua khe cổng (không xuyên rào) trước hiệu lệnh (GDD 2.6, 4.6). Chỉ đọc `countdown_time`. `SHIRTS`: màu áo người dắt theo bên, dùng chung với đoạn kết. |
+| `arena_builder.gd` | Phần sân mà trận đấu cần: bùn (shader `mud_patch` + bộ scan CC0 Poly Haven "Brown Mud 03" ở `assets/textures/mud/`), hàng rào tre (có va chạm) và hai cổng, mặt trời, bầu trời, cờ trên lưng trâu. Preset Thấp gom mesh tre tĩnh theo vật liệu và từng cụm `graphics_fence_batch_segments_low` đoạn bằng SurfaceTool; giữ nguyên tam giác/màu/collision, cổng vẫn chuyển động riêng. Vừa/Cao dựng như cũ. |
 | `arena_gates.gd` | Hai cổng tre ở khe hàng rào (±X), chỉ để nhìn, không va chạm: đóng khi đang đấu (biên oval chặn trâu ở đó, nên khe không được trông như để mở), mở lúc đếm ngược cho người dắt đi ra và từ RESULT cho phần kết; ngoài trận (menu, Phần Lễ) luôn mở. Key `gate_swing_s`, `gate_open_deg`. |
 | `arena_dressing.gd` | Cảnh lễ hội quanh sân, chỉ để nhìn: bãi cỏ, nền đất nện (scan CC0 Poly Haven "Sand 01", `assets/textures/earth/earth_floor.tres`), khán đài và đám đông đứng (model dân làng dựng sẵn qua `LowPoly.crowd_villager_mesh`, 2 MultiMesh: đứng yên / giơ tay; màu áo và nón theo custom data; shader `crowd_bob`), đình trống, cột cờ và dây cờ đuôi nheo uốn nhẹ bằng shader `flag_wave`, cây tròn xen cau/dừa (Kenney Nature Kit, CC0, tô lại màu qua `_palm_mesh`) thành vòng sau khán đài và một rừng thưa xa hơn (`scenery_grove_*`, mỗi vòng một seed), đồi. Màu nền cố ý dịu để trâu nổi bật. |
 | `crowd_reaction.gd` | Độ hào hứng của khán giả (0..1) theo sự kiện combat, giảm dần; đẩy vào shader `crowd_bob` để đám đông nhún/reo. Chỉ đọc. |
@@ -92,30 +94,40 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 | Đường dẫn | Nội dung |
 |---|---|
-| `scripts/ai/ai_controller.gd` | AI Solo (FSM) tạo `InputFrame` như người chơi; 3 hồ sơ trong `data/ai_profiles.json`. |
-| `scripts/network/network_manager.gd` | Autoload `NetworkManager`: kết nối ENet, tạm dừng hai bên, kênh tin nhắn thô. |
-| `scripts/ui/hud.gd` | HUD trong trận: thanh khí thế/sức, đồng hồ, khóa sừng (bảng dưới đồng hồ, có dòng phím riêng; thanh gợi ý ẩn khi khóa), tutorial, thanh phím rich text (phím vàng đậm, hành động màu giấy), menu tạm dừng (co theo nội dung). |
-| `scripts/ui/main_menu.gd` | Menu chính (cột trái trên nền `MenuBackdrop`) và luồng Solo: bảng kết quả cột trái cạnh trâu thắng, trận tiếp, Phần Lễ; tạo bảng Cách chơi độc lập và khôi phục menu khi đóng. Nạp sẵn `arena.tscn` ở luồng nền từ lúc mở menu (`_prefetch_arena`), vào trận qua `_go_to_arena` nên không đứng hình. |
-| `scripts/ui/how_to_play.gd` | Bảng Cách chơi 3 tab: Luật chơi (từ khóa vàng), Các đòn, Điều khiển; focus, Esc và nút quay lại. |
+| `scripts/ai/ai_controller.gd` | AI Solo (FSM) tạo `InputFrame` như người chơi; 5 hồ sơ mùa hội trong `data/ai_profiles.json`. Nhánh DRILL riêng chỉ tạo InputFrame cho Bao cát, Hổ lao, Húc, Móc theo nhịp hoặc Đẩy; không sửa state trực tiếp và không đi qua quyết định FSM cũ. |
+| `scripts/network/network_manager.gd` | Autoload `NetworkManager`: ENet, đồng thuận pause, kênh tin nhắn thô và yêu cầu tái đấu client→host tin cậy (chỉ peer đã nối được gửi). Gắn/kiểm tra match_epoch trên snapshot/event/input/action; tái đấu giữ peer và sequence tăng đều, chỉ xóa input/pause cũ. Bổ sung tái đấu ngoài GDD v0.7. |
+| `scripts/ui/ui_motion.gd` | Phản hồi hover/focus/nhấn cho nút, pop banner, bảng kết quả trượt/mờ vào và fade đổi scene bằng ảnh khung hình cũ; không trì hoãn gameplay. Tuning `ui_motion_*`, `ui_fade_*`, `ui_banner_*` trong `presentation.json`. |
+| `scripts/ui/hud.gd` | HUD trong trận: thanh khí thế/sức, đồng hồ, khóa sừng (bảng dưới đồng hồ, có dòng phím riêng; thanh gợi ý ẩn khi khóa), tutorial, thanh phím rich text (phím vàng đậm, hành động màu giấy), menu tạm dừng (co theo nội dung). Banner đếm ngược/Vào trận neo trên giữa tại `hud_banner_top`, chừa cả mức pop tối đa ở cỡ Thường/Lớn. Sân tập giữ vị trí riêng, thay đồng hồ bằng panel tên bài/bộ đếm/popup, chỉ đọc combat_event; menu pause có Đổi bài tập thay Chơi lại. |
+| `scripts/ui/match_stats.gd` | Bộ đếm chỉ đọc cho từng trận, nhìn theo local_slot (Solo, Đấu tự do và cả hai máy LAN). HORN_HIT/DASH_HIT đếm đòn; COUNTER_HIT, FLANK_HIT/BACK_HIT là chú thích của cùng đòn nên không cộng trùng. Khối hai cột hiện trên kết quả; Sân tập dùng bộ đếm riêng. Chơi lại tạo collector mới. |
+| `scripts/ui/hud_text.gd` | Cỡ chữ HUD Thường/Lớn, nhớ cỡ gốc để đổi qua lại không nhân dồn; chỉ ghi metadata/font override khi giá trị đổi. HUD cache chuỗi timer/phím/countdown/khóa sừng, StyleBox sức; helper chỉ ghi text/Range/alpha/visibility/color khi đổi, dirty counter label_writes/range_writes để test. Cao/Vừa giữ phản hồi từng frame, Thấp vẫn có throttle. Hiệu ứng đổi cỡ chữ trực tiếp khi pause; trang cài đặt giữ kích thước cũ. |
+| `scripts/ui/screenshot_service.gd` | Autoload `Screenshots`: F12 ở mọi scene lưu PNG duy nhất trong user://screenshots; tạo thư mục, kiểm tra lỗi lưu rồi mới hiện toast. Ưu tiên xử lý input trước các scene để không bỏ qua outro/Phần Lễ. Thư mục và nguồn frame có thể tiêm khi test. |
+| `scripts/ui/main_menu.gd` | Menu chính (cột trái trên nền `MenuBackdrop`) và luồng Solo: chọn Mùa hội, Đấu tự do (cả năm vòng mở sẵn) hoặc Sân tập (5 bài + Sức vô hạn, phím lấy từ `MoveDemo.MOVES`); bảng kết quả cột trái cạnh trâu thắng, trận tiếp, Phần Lễ. Kết quả tự do có Chơi lại/Đổi trận/Về menu, giữ thẻ văn hóa và không khép mùa; Sân tập không mở kết quả/thẻ. Tạo bảng Cách chơi độc lập và khôi phục menu khi đóng. Nạp sẵn `arena.tscn` ở luồng nền từ lúc mở menu (`_prefetch_arena`); callback tĩnh `_finish_prefetch` lấy kết quả và tự ngắt kể cả khi đã rời menu sang LAN, không giữ request nền tới lúc quit. Vào trận qua `_go_to_arena` nên không đứng hình. |
+| `scripts/ui/how_to_play.gd` | Bảng Cách chơi 4 tab: Luật chơi (từ khóa vàng), Các đòn, Điều khiển, Sổ tay; focus, Esc/B và nút quay lại. |
+| `scripts/ui/festival_notebook.gd` | Sổ tay liệt kê mọi thẻ từ culture_cards.json, thẻ chưa mở bị khóa; chọn bằng focus/chuột, nội dung dài cuộn bằng chuột hoặc phím lên/xuống khi focus phần chữ. Lịch sử riêng `user://festival_notebook.json` do CultureCards kiểm tra/lưu, chỉ mở khi thẻ thực sự hiện ở kết quả (kể cả sau Phần Lễ khép hội), không thay tiến trình mùa. Bổ sung ngoài GDD v0.7. |
+| `scripts/ui/howto_diagrams.gd` | Ba thẻ Luật chơi: thanh khí thế/đồng hồ, thanh sức/hồi sức, trâu nhìn từ trên với vùng sườn/lưng và rào. Vẽ bằng `_draw()`, nhãn số đọc GameBalance, không đổi demo 3D. |
 | `scripts/ui/move_demo.gd` | Một SubViewport dựng lười khi mở Các đòn: hai scene trâu thật diễn 6 timeline lặp, không gọi combat; dừng render/animator khi ẩn, giải phóng cùng bảng. Tuning `demo_*` trong `presentation.json`. |
 | `scripts/ui/controls_diagram.gd` | Sơ đồ bàn phím, chuột và phím khóa sừng; keycap dùng chung với minh họa đòn. Tuning `ui_howto_*`. |
-| `scripts/ui/culture_cards.gd` | Chọn thẻ văn hóa chưa xem sau trận Solo; ưu tiên thẻ di sản khi thắng chung kết, lưu danh sách đã xem trong `SessionState`. |
+| `scripts/ui/culture_cards.gd` | Chọn thẻ văn hóa chưa xem trong mùa Solo qua SessionState; ưu tiên thẻ di sản khi thắng chung kết. Lịch sử sưu tầm Sổ tay lưu riêng, giữ qua lần chạy; file hỏng → rỗng, test `--script` mặc định không đọc/ghi file người chơi. |
 | `scripts/ui/ceremony_view.gd` | Màn Phần Lễ toàn màn hình: cảnh 3D + chú thích + nút tiếp tục. |
-| `scripts/ui/lobby.gd`, `settings_controls.gd` | Sảnh LAN; các dòng cài đặt dùng chung cho menu và tạm dừng. |
+| `scripts/core/graphics_quality.gd`, `scripts/ui/fps_overlay.gd` | Cài đặt Đồ họa: preset Thấp/Vừa/Cao + Khán giả, Bóng đổ, Môi trường, Chi tiết model, Độ phân giải 3D, Giới hạn FPS (Theo màn hình/30–144/Không giới hạn), Hiện FPS. Lưu `user://graphics.cfg` (riêng với settings); GPU tích hợp tự vào Thấp; test `--script` luôn dùng Cao, không đọc/ghi file người chơi. Thấp còn gom hàng rào theo cụm, cập nhật HUD live PLAYING ở `graphics_hud_refresh_hz_low` (30 Hz), giảm số hạt/thời gian bụi và bỏ emitter trang trí (`graphics_vfx_*_low`); chớp/tia va chạm chính và warm-up vẫn giữ. HUD cộng dồn delta để timer hiệu ứng không chậm; pause/countdown/result cập nhật ngay. Vừa/Cao và mô phỏng giữ nguyên. Bổ sung hiệu năng ngoài GDD v0.7. |
+| `scripts/ui/lobby.gd`, `settings_controls.gd` | Sảnh LAN; cài đặt dùng chung cho menu/pause. Góc camera Gần/Vừa/Xa và vai Phải/Trái đặt chung một hàng. Trang Hiệu ứng riêng chứa rung/giật camera, chớp Đầy đủ/Dịu/Tắt, hitstop Solo và tự pause; áp dụng ngay, Xong/Esc trả focus về nút mở. Các tùy chọn lưu/kiểm tra trong SessionState cùng ConfigFile. |
 | `scenes/` | `main_menu.tscn` (scene khởi động), `arena.tscn`, `buffalo.tscn`, `lobby.tscn`. |
 | `assets/shaders/flag_wave.gdshader` | Sóng cờ chỉ đổi đỉnh: mép buộc cố định, biên độ tăng ra mép tự do; pha theo vị trí XZ, màu MultiMesh qua `INSTANCE_CUSTOM` để chạy đúng GL Compatibility. Tuning `flag_*` trong `presentation.json`. |
 | `assets/ui/festival_theme.tres` | Theme mặc định của project (màu nút, panel, chữ). |
 | `tests/` | Test headless; xem mục Test bên dưới. |
+
+Trang Hiệu ứng còn có **Rung tay cầm** (mặc định bật) và **Cỡ chữ HUD** (Thường/Lớn, mặc định Thường), lưu/kiểm tra kiểu boolean trong SessionState. Bốn tiện ích thống kê/rung/cỡ chữ/F12 là bổ sung được duyệt ngoài GDD v0.7; chỉ trình bày, không thay mô phỏng hay payload LAN. Tuning `stats_*`, `rumble_*`, `hud_*`, `screenshot_*` nằm trong `presentation.json`. Test: `match_stats_test.gd`, `rumble_hud_screenshot_test.gd`.
 
 ## Dữ liệu trong `data/`
 
 | File | Chứa gì | Đổi file này thì |
 |---|---|---|
 | `balance.json` | Luật chơi: tốc độ, sát thương, thời gian đòn, khóa sừng, kích thước sân. | Trận đấu chơi khác đi; host và client phải dùng cùng bản. |
-| `presentation.json` | Cảm giác nhìn/nghe: camera, chuyển động, hiệu ứng, HUD, tutorial, đoạn kết. | Chỉ đổi cách trông, không đổi kết quả trận. |
-| `levels.json` | Ba trận Solo (L01–L03) và trận LAN: tên trận, hồ sơ AI, vùng bùn. | Đổi nội dung mùa hội. |
+| `presentation.json` | Cảm giác nhìn/nghe: camera, chuyển động, hiệu ứng, HUD, tutorial, đoạn kết; `comfort_flash_soft_scale`, kích thước trang Hiệu ứng/Đấu tự do. | Chỉ đổi cách trông, không đổi kết quả trận. |
+| `levels.json` | Năm trận Solo (L01–L05) và trận LAN: tên trận, hồ sơ AI, vùng bùn, số hiệu và giáp của đối thủ; `difficulty_labels` ánh xạ profile sang nhãn độ khó ở Đấu tự do. | Đổi nội dung mùa hội và nhãn danh sách trận tự do. |
 | `ai_profiles.json` | Độ khó AI: tốc độ phản xạ, tỉ lệ gạt sừng, phản đòn. | Đổi độ khó. |
-| `ceremony.json` | Chữ và thời lượng 5 màn Phần Lễ. `water`/`giap`/`drums` hiện trước L01/L02/L03, mỗi màn một lần mỗi mùa hội. | Đổi lời dẫn nghi lễ. |
+| `training.json` | Năm bài tập: id, tên, mục tiêu, DRILL profile, id đòn để dùng lại lời phím, các bộ đếm và mẫu chữ HUD. | Đổi danh sách/nội dung Sân tập; luật riêng dùng `training_*` trong balance/presentation. |
+| `ceremony.json` | Chữ và thời lượng 5 màn Phần Lễ. `water`/`giap`/`drums` hiện trước L01/L03/L05, mỗi màn một lần mỗi mùa hội. | Đổi lời dẫn nghi lễ. |
 | `culture_cards.json` | Năm thẻ văn hóa, nguồn tư liệu và thẻ ưu tiên khi thắng chung kết. | Chỉ đổi nội dung thẻ sau trận Solo, không đổi kết quả trận. |
 | `audio.json` | Âm lượng nhạc/tiếng và nhịp tiếng bước chân. | Đổi độ to nhỏ. |
 
@@ -152,3 +164,15 @@ hoặc 2 (xanh).
 `bash tools/run_tests.sh` chạy mọi `tests/*_test.gd` và các cặp test LAN hai tiến trình (host +
 client), in bảng PASS/FAIL. Mỗi test là một script `extends SceneTree`, báo lỗi bằng `quit(1)`.
 Thay đổi người chơi nhìn thấy được thì chụp ảnh lưu ở `production/qa/evidence/`.
+
+## Các đường thoát giao diện
+
+- Cài đặt → Đồ họa/Hiệu ứng: Esc hoặc B đóng trang con trước, trả focus về nút mở;
+  các nút phía sau bị loại khỏi điều hướng khi trang con mở.
+- Sảnh LAN có focus Tạo phòng lúc vào, Quay lại khi chờ; Esc/B rời sảnh và đóng ENet.
+- Trận LAN kết thúc hoặc mất kết nối có bảng kết quả với Về menu, Esc/B cũng về menu
+  khi kết quả đã sẵn sàng. Pause LAN không có Chơi lại vì chưa có giao thức tái đấu hai máy.
+- Sân tập đặt đếm ngược/Vào trận bên dưới bảng tên bài, cùng vùng thông báo khóa sừng.
+- Kiểm thử hồi quy đợt rà soát: `tests/review_regressions_test.gd`, `lan_snapshot_test.gd`.
+  Hai harness có cửa sổ `review_window_harness.gd` và `review_lan_window_harness.gd` dùng
+  để rà luồng/chụp bằng chứng ở 1280×720 và 1920×1080, không nằm trong runner headless.
