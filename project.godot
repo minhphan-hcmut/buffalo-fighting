@@ -17,6 +17,9 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Screenshots="*res://scripts/ui/screenshot_service.gd"
+JoyRumble="*res://scripts/core/match_rumble.gd"
+
 GameAudio="*res://scripts/core/game_audio.gd"
 NetworkManager="*res://scripts/network/network_manager.gd"
 MCPRuntimeBridge="*res://addons/godot_mcp/services/mcp_runtime_bridge.gd"

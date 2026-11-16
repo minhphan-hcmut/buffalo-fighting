@@ -46,6 +46,8 @@ func build_input(delta: float) -> InputFrame:
 	var distance := offset.length()
 	var toward := offset.normalized() if distance > 0.001 else actor.forward()
 	frame.camera_yaw = atan2(-toward.x, -toward.z)
+	if profile_data.has("drill"):
+		return _drill_input(frame, distance, toward)
 	_observe_attack()
 	if actor.state == Buffalo.State.CLASH:
 		if decision_time <= 0.0:
@@ -79,6 +81,36 @@ func build_input(delta: float) -> InputFrame:
 		_decide(frame, distance, toward)
 	frame.move = _recover_move(delta, distance, toward) if recovering and state == State.RECOVER else held_move
 	frame.guard_held = held_guard
+	return frame
+
+
+func _drill_input(frame: InputFrame, distance: float, toward: Vector3) -> InputFrame:
+	frame.clash_action = &""
+	var drill: String = profile_data.drill
+	if drill == "DUMMY":
+		return frame
+	if actor.state == Buffalo.State.CLASH:
+		if drill == "PUSH":
+			frame.clash_action = &"PUSH"
+			frame.move = Vector2(0.0, -1.0)
+		elif drill == "HOOK" and decision_time <= 0.0 and not actor.clash_hooked:
+			frame.clash_action = &"HOOK"
+			decision_time = float(profile_data.hook_interval_s)
+		return frame
+	if actor.state != Buffalo.State.NORMAL:
+		return frame
+	if drill == "DASH":
+		if distance < float(profile_data.dash_min_range):
+			frame.move = Vector2(0.0, 1.0)
+		elif distance > float(profile_data.dash_max_range):
+			frame.move = Vector2(0.0, -1.0)
+		elif actor.forward().dot(toward) >= float(profile_data.faces_dot):
+			frame.dash_pressed = actor.dash_cooldown <= 0.0 and actor.stamina >= GameBalance.get_number("dash_cost")
+	else:
+		if ArenaBounds.head_gap(actor, target) > float(profile_data.approach_gap):
+			frame.move = Vector2(0.0, -1.0)
+		elif actor.forward().dot(toward) >= float(profile_data.faces_dot):
+			frame.horn_pressed = actor.horn_cooldown <= 0.0 and actor.stamina >= GameBalance.get_number("horn_cost")
 	return frame
 
 

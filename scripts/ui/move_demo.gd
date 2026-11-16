@@ -70,7 +70,7 @@ func _ready() -> void:
 	viewport = SubViewport.new()
 	viewport.name = "DemoViewport"
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_2X
+	GraphicsQuality.apply_viewport(viewport)
 	frame.add_child(viewport)
 	_build_stage()
 	keys = HBoxContainer.new()

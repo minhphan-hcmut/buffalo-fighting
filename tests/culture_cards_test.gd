@@ -90,9 +90,9 @@ func run() -> void:
 	overlay._show_result("lan")
 	check(SessionState.culture_cards_seen.is_empty() and overlay.find_child("CultureCard", true, false) == null, "LAN neither consumes nor shows culture cards")
 	SessionState.mode = &"SOLO"
-	SessionState.last_match_level = &"L03"
+	SessionState.last_match_level = &"L05"
 	SessionState.last_winner = 1
-	overlay._show_result("L03:1:TIME")
+	overlay._show_result("L05:1:TIME")
 	panel = overlay.find_child("CultureCard", true, false) as PanelContainer
 	var ceremony := overlay.find_child("Ceremony", true, false) as CeremonyView
 	check(SessionState.culture_cards_seen == [StringName(data.final_card)], "final overlay selects heritage card")

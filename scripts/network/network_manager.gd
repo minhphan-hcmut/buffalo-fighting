@@ -21,6 +21,7 @@ const CLIENT_SLOT := 2
 var peer: ENetMultiplayerPeer
 var is_host := false
 var connected := false
+var match_epoch := 0
 var last_input_seq: Dictionary = {}
 var last_action_seq: Dictionary = {}
 var _client_peer_id := 0
@@ -98,6 +99,7 @@ func leave() -> void:
 		multiplayer.multiplayer_peer = null
 	peer = null
 	connected = false
+	match_epoch = 0
 	is_host = false
 	_client_peer_id = 0
 	_movement_sequence = 0
@@ -263,6 +265,8 @@ func _close_peer() -> void:
 func send_input(payload: Dictionary) -> void:
 	if not connected:
 		return
+	payload = payload.duplicate()
+	payload["match_epoch"] = match_epoch
 	if is_host:
 		input_received.emit(1, payload)
 		return
@@ -271,6 +275,7 @@ func send_input(payload: Dictionary) -> void:
 
 	_movement_sequence += 1
 	var movement := {
+		"match_epoch": match_epoch,
 		"move_x": clampf(float(payload.get("move_x", 0.0)), -1.0, 1.0),
 		"move_y": clampf(float(payload.get("move_y", 0.0)), -1.0, 1.0),
 		"camera_yaw": float(payload.get("camera_yaw", 0.0)),
@@ -289,12 +294,12 @@ func send_input(payload: Dictionary) -> void:
 	}
 	if actions.values().has(true):
 		_action_sequence += 1
-		submit_action.rpc_id(1, _action_sequence, actions)
+		submit_action.rpc_id(1, _action_sequence, actions, match_epoch)
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
 func submit_input(payload: Dictionary) -> void:
-	if not is_host:
+	if not is_host or not same_match(payload):
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if sender != _client_peer_id or sender <= 1:
@@ -312,8 +317,8 @@ func submit_input(payload: Dictionary) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func submit_action(sequence: int, actions: Dictionary) -> void:
-	if not is_host:
+func submit_action(sequence: int, actions: Dictionary, epoch: int = 0) -> void:
+	if not is_host or epoch != match_epoch:
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if sender != _client_peer_id or sender <= 1:
@@ -335,6 +340,7 @@ func _accept_sequence(sequences: Dictionary, sender: int, sequence: int) -> bool
 
 func _neutral_input() -> Dictionary:
 	return {
+		"match_epoch": match_epoch,
 		"move_x": 0.0,
 		"move_y": 0.0,
 		"camera_yaw": 0.0,
@@ -352,6 +358,8 @@ func _neutral_input() -> Dictionary:
 func send_snapshot(payload: Dictionary) -> void:
 	if not is_host:
 		return
+	payload = payload.duplicate()
+	payload["match_epoch"] = match_epoch
 	snapshot_received.emit(payload)
 	if connected and multiplayer.get_peers().size() > 0:
 		receive_snapshot.rpc(payload)
@@ -365,6 +373,8 @@ func receive_snapshot(payload: Dictionary) -> void:
 func send_event(payload: Dictionary) -> void:
 	if not is_host:
 		return
+	payload = payload.duplicate()
+	payload["match_epoch"] = match_epoch
 	event_received.emit(payload)
 	if connected and multiplayer.get_peers().size() > 0:
 		receive_event.rpc(payload)
@@ -373,3 +383,29 @@ func send_event(payload: Dictionary) -> void:
 @rpc("authority", "call_remote", "reliable", 0)
 func receive_event(payload: Dictionary) -> void:
 	event_received.emit(payload)
+
+
+func same_match(payload: Dictionary) -> bool:
+	var epoch: Variant = payload.get("match_epoch", 0)
+	return epoch is int and epoch == match_epoch
+
+
+## Client-to-host requests share the reliable event channel; only the connected peer may ask.
+func request_rematch() -> void:
+	if connected and not is_host:
+		submit_rematch.rpc_id(1, match_epoch)
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func submit_rematch(epoch: int) -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if is_host and epoch == match_epoch and sender > 1 and sender == _client_peer_id:
+		event_received.emit({"type": "REMATCH_WANT", "match_epoch": epoch})
+
+
+## Keep ENet and the monotonic input sequences; clear only state belonging to the old match.
+func begin_rematch(epoch: int) -> void:
+	match_epoch = epoch
+	_remote_frame = _neutral_input()
+	_match_paused = false
+	_pending_requester = 0

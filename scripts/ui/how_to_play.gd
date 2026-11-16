@@ -9,6 +9,7 @@ var pages: Array[Control] = []
 var selected_tab := 0
 var demo: MoveDemo
 var panel: PanelContainer
+var notebook: FestivalNotebook
 
 
 func _ready() -> void:
@@ -36,8 +37,9 @@ func _ready() -> void:
 	tab_row.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
 	content.add_child(tab_row)
 	var group := ButtonGroup.new()
-	for title in ["LUẬT CHƠI", "CÁC ĐÒN", "ĐIỀU KHIỂN"]:
+	for title in ["LUẬT CHƠI", "CÁC ĐÒN", "ĐIỀU KHIỂN", "SỔ TAY"]:
 		var button := Button.new()
+		UiMotion.attach(button)
 		button.text = title
 		button.toggle_mode = true
 		button.button_group = group
@@ -52,7 +54,7 @@ func _ready() -> void:
 	body.name = "Pages"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(body)
-	var rules := VBoxContainer.new()
+	var rules := HBoxContainer.new()
 	rules.name = "Rules"
 	rules.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_column_gap"))
 	pages.append(rules)
@@ -62,13 +64,16 @@ func _ready() -> void:
 	var controls := ControlsDiagram.new()
 	controls.name = "Controls"
 	pages.append(controls)
+	var collection := Control.new()
+	collection.name = "NotebookPage"
+	pages.append(collection)
 	for page in pages:
 		body.add_child(page)
 		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_block(rules, "01 · MỤC TIÊU", "Đưa KHÍ THẾ đối thủ về 0 để đối thủ chịu thua, lui sới. Khí thế không hồi.\nTrận tối đa %d giây; hết giờ bên có khí thế cao hơn thắng. Bằng nhau thì bốc thăm." % GameBalance.get_int("match_duration_s"))
-	_block(rules, "02 · GIỮ SỨC", "Đòn đánh và ghìm đều tốn SỨC. Sức tự hồi khi nghỉ; hết sức thì không ghìm được.")
-	_block(rules, "03 · MẸO TRÊN SỚI", "Đánh vào sườn hoặc lưng mạnh hơn.\nDồn đối thủ sát rào để đòn đánh mạnh hơn.\nGạt sừng đúng lúc, rồi húc ngay để phản đòn.")
+	for index in 3:
+		rules.add_child(HowtoDiagrams.create_card(index))
 	var back := Button.new()
+	UiMotion.attach(back)
 	back.name = "Back"
 	back.text = "QUAY LẠI"
 	back.custom_minimum_size = Vector2(GameBalance.get_number("ui_howto_back_width"), GameBalance.get_number("ui_howto_back_height"))
@@ -95,6 +100,13 @@ func select_tab(index: int) -> void:
 		demo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if demo != null:
 		demo.set_active(selected_tab == 1)
+	if selected_tab == 3:
+		if notebook == null:
+			notebook = FestivalNotebook.new()
+			pages[3].add_child(notebook)
+			notebook.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		else:
+			notebook.refresh()
 
 
 func _tab_input(event: InputEvent, index: int) -> void:
@@ -104,7 +116,7 @@ func _tab_input(event: InputEvent, index: int) -> void:
 		accept_event()
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if is_visible_in_tree() and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -117,21 +129,3 @@ func close() -> void:
 		demo.set_active(false)
 	closed.emit()
 	queue_free()
-
-
-func _block(parent: Container, heading: String, body: String) -> void:
-	var block := VBoxContainer.new()
-	block.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
-	parent.add_child(block)
-	block.add_child(ControlsDiagram.label(heading, "heading", ControlsDiagram.GOLD))
-	var text := RichTextLabel.new()
-	text.bbcode_enabled = true
-	text.fit_content = true
-	text.scroll_active = false
-	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	text.add_theme_font_size_override("normal_font_size", GameBalance.get_int("ui_howto_body_font_size"))
-	text.add_theme_color_override("default_color", ControlsDiagram.PAPER)
-	for keyword in ["KHÍ THẾ", "SỨC", "sườn", "lưng", "sát rào", "Gạt sừng", "%d giây" % GameBalance.get_int("match_duration_s"), "bốc thăm"]:
-		body = body.replace(keyword, "[b][color=#E8BC65]%s[/color][/b]" % keyword)
-	text.text = body
-	block.add_child(text)

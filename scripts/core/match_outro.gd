@@ -69,6 +69,30 @@ func is_done() -> bool:
 	return elapsed >= GameBalance.get_number("result_outro_s", 4.0)
 
 
+## Only Solo's unfinished presentation can be skipped, after the final-hit grace period.
+func can_skip() -> bool:
+	return controller.mode == &"SOLO" and running and not is_done() and time >= GameBalance.get_number("result_skip_grace_s")
+
+
+## Consumes a fresh key, mouse or gamepad button press without changing the locked result.
+func skip(event: InputEvent) -> bool:
+	if not can_skip():
+		return false
+	if not is_skip_press(event):
+		return false
+	running = false
+	waypoints.clear()
+	handler_path.clear()
+	if is_instance_valid(loser):
+		loser.hide()
+	_dismiss_handler()
+	return true
+
+
+static func is_skip_press(event: InputEvent) -> bool:
+	return (event is InputEventKey and event.pressed and not event.echo) or ((event is InputEventMouseButton or event is InputEventJoypadButton) and event.pressed)
+
+
 ## True while a LOT result is still being drawn: nobody moves and the winner is not shown yet.
 func is_revealing_lot() -> bool:
 	return running and time < reveal_duration()

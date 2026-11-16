@@ -69,7 +69,7 @@ Chỉ theo dõi **khung 5 giờ** của Codex; khung tuần owner tự theo dõi
 **Nhịp đọc** theo phần trăm còn lại: trên 50%: 15 phút · 31–50%: 5 phút · 20–30%: 90 giây ·
 7–19%: 1 phút · dưới 7%: 30 giây.
 
-**Dưới 20%: dừng êm**, không để worker bị cắt ngang:
+**Dưới 12%: dừng êm** (owner hạ từ 20% xuống 12% ngày 15/11/2026), không để worker bị cắt ngang:
 1. Leader nhắn worker bằng `orca orchestration send --to dispatch:<id>`: làm nốt việc đang dở tới điểm
    lưu gần nhất rồi dừng, không nhận việc mới.
 2. Worker dừng ở điểm lưu, ghi tiến độ vào report của run: phần đã xong, phần dở, vị trí cụ thể

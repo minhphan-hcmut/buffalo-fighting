@@ -23,6 +23,7 @@ func run() -> void:
 	SessionState.mode = &"SOLO"
 	arena = load("res://scenes/arena.tscn").instantiate() as MatchController
 	root.add_child(arena)
+	await test_warm_up()
 	arena.set_physics_process(false)
 	arena.start_playing()
 	vfx = arena.vfx
@@ -209,9 +210,64 @@ func run() -> void:
 	await process_frame
 	check(vfx.bursts.get_child_count() == 0, "all capped emitters eventually free")
 	await test_client(snapshot)
+	test_low_quality()
 	arena.free()
 	print("MATCH VFX TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
+
+
+# Shader warm-up: under a cover, one burst of every preset in front of the match camera,
+# kept out of the gameplay bursts, then nothing left behind.
+func test_warm_up() -> void:
+	for frame in GameBalance.get_int("vfx_warm_up_settle_frames") + 1:
+		await process_frame
+	var warm := arena.vfx.get_node_or_null("WarmUp")
+	var emitters: Array[Node] = []
+	if warm != null:
+		emitters = warm.find_children("*", "CPUParticles3D", false, false)
+	var camera := root.get_viewport().get_camera_3d()
+	var in_front := not emitters.is_empty() and camera != null
+	for emitter: CPUParticles3D in emitters:
+		var offset := emitter.global_position - camera.global_position
+		in_front = in_front and offset.dot(-camera.global_basis.z) > 0.0 and offset.length() < GameBalance.get_number("vfx_warm_up_distance_m") + 0.5
+	check(emitters.size() == arena.vfx.WARM_UP_PRESETS.size() and in_front, "warm-up fires one burst of every preset in front of the match camera (%d)" % emitters.size())
+	check(arena.vfx.get_node_or_null("WarmUpCover") != null and arena.vfx.bursts.get_child_count() == 0, "warm-up runs under a cover and stays out of the gameplay bursts")
+	for frame in GameBalance.get_int("vfx_warm_up_frames") + 1:
+		await process_frame
+	check(arena.vfx.get_node_or_null("WarmUp") == null and arena.vfx.get_node_or_null("WarmUpCover") == null, "warm-up frees its bursts, light and cover")
+
+
+func test_low_quality() -> void:
+	var dust_presets := ["dust", "clash_dust", "hoof_dust", "breath", "dash_blast", "dash_ring"]
+	var secondary_presets := ["shock", "ring", "dash_ring", "muzzle", "debris", "skid_debris", "clash_dust", "breath"]
+	for quality in [GraphicsQuality.HIGH, GraphicsQuality.MEDIUM, GraphicsQuality.LOW]:
+		GraphicsQuality.set_preset(quality)
+		for preset: String in MatchVFX.WARM_UP_PRESETS:
+			reset_duel()
+			var snapshot := arena.get_snapshot()
+			var emitter: CPUParticles3D = vfx._burst(&"QualityProbe", Vector3.ZERO, Color.WHITE, preset)
+			if quality == GraphicsQuality.LOW and preset in secondary_presets:
+				check(emitter == null and arena.get_snapshot() == snapshot, "Thấp omits decorative secondary emitters without changing gameplay: " + preset)
+				continue
+			var count := GameBalance.get_int("vfx_" + preset + "_count")
+			var lifetime := GameBalance.get_number("vfx_" + preset + "_s")
+			if quality == GraphicsQuality.LOW:
+				check(emitter.amount < count if count > 1 else emitter.amount == 1, "Thấp reduces multi-particle %s without removing its single flash" % preset)
+				check(emitter.lifetime < lifetime if preset in dust_presets else is_equal_approx(emitter.lifetime, lifetime), "Thấp shortens only dust lifetimes: " + preset)
+			else:
+				check(emitter.amount == count and is_equal_approx(emitter.lifetime, lifetime), "Cao/Vừa preserve count and lifetime: " + preset)
+			check(arena.get_snapshot() == snapshot, "quality knobs do not change gameplay: " + preset)
+		reset_duel()
+		var secondary := 0
+		var primary := 0
+		for index in 8:
+			if vfx._burst(&"SecondaryProbe", Vector3.ZERO, Color.WHITE, "shock") != null:
+				secondary += 1
+			if vfx._burst(&"PrimaryProbe", Vector3.ZERO, Color.WHITE, "flash") != null:
+				primary += 1
+		check(secondary == (0 if quality == GraphicsQuality.LOW else 8) and primary == 8, "Thấp omits secondary bursts while every primary flash remains; Cao/Vừa keep all")
+	GraphicsQuality.set_preset(GraphicsQuality.HIGH)
+	reset_duel()
 
 
 func reset_duel() -> void:

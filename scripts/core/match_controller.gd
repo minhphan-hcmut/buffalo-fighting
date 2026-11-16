@@ -33,6 +33,7 @@ var hud
 var network: Node
 var match_seed := 0
 var mud_zones: Array[StringName] = []
+var training: Dictionary = {}
 var local_slot := 1
 var combat := CombatResolver.new(self)
 var clash := ClashSystem.new(self)
@@ -41,6 +42,8 @@ var local_input := MatchInput.new()
 ## Null outside LAN.
 var lan: MatchNetwork
 var vfx: MatchVFX
+var rumble: MatchRumble
+var replay: MatchReplay
 ## Live CLASH state, empty when no CLASH is running (see ClashSystem.active).
 var active_clash: Dictionary:
 	get:
@@ -50,12 +53,14 @@ var active_clash: Dictionary:
 ## True once the match is over and its outro has played; the result screen waits for this.
 var result_ready: bool:
 	get:
-		return finished and outro.is_done()
+		return finished and (replay == null or not replay.active) and outro.is_done()
 
 
 func _ready() -> void:
 	mode = SessionState.mode
 	level_id = SessionState.level_id
+	if SessionState.training and mode == &"SOLO":
+		training = SessionState.training_config()
 	network = get_node_or_null("/root/NetworkManager")
 	if mode == &"LAN" and network == null:
 		mode = &"SOLO"
@@ -66,13 +71,15 @@ func _ready() -> void:
 	ArenaBuilder.build(self, mud_zones)
 	var spawn_x := GameBalance.get_number("buffalo_spawn_offset_x", 10.0)
 	player = spawn_buffalo(Vector3(-spawn_x, 0.0, 0.0), 1, Color("#B6453B"), "06", "GIÁP ĐÔNG")
-	opponent = spawn_buffalo(Vector3(spawn_x, 0.0, 0.0), 2, Color("#33546D"), "17", "GIÁP TÂY")
+	opponent = spawn_buffalo(Vector3(spawn_x, 0.0, 0.0), 2, Color("#33546D"), level["opponent_number"], level["opponent_giap"])
 	player.rotation.y = -PI / 2.0
 	opponent.rotation.y = PI / 2.0
 	player.camera_yaw = player.rotation.y
 	opponent.camera_yaw = opponent.rotation.y
 	local_slot = 1 if mode != &"LAN" or network.is_host else 2
 	$CameraRig.setup(player if local_slot == 1 else opponent)
+	rumble = get_node("/root/JoyRumble") as MatchRumble
+	rumble.setup(self)
 	if mode == &"LAN":
 		lan = MatchNetwork.new(self, network)
 		lan.connect_signals()
@@ -105,19 +112,40 @@ func _ready() -> void:
 	var audio := Node.new()
 	audio.set_script(preload("res://scripts/core/match_audio.gd"))
 	add_child(audio)
+	replay = MatchReplay.new()
+	replay.name = "MatchReplay"
+	add_child(replay)
+	replay.completed.connect(outro.start)
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT]:
+		if SessionState.auto_pause_enabled and mode == &"SOLO" and phase in [&"COUNTDOWN", &"PLAYING"] and not finished and not paused:
+			request_pause_from_menu()
 
 
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
+	if replay != null and replay.skip(event):
+		get_viewport().set_input_as_handled()
+		return
+	if phase == &"RESULT" and outro.skip(event):
+		get_viewport().set_input_as_handled()
+		return
+	if not event.is_action_pressed("ui_cancel"):
 		return
 	if phase == &"RESULT":
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		get_viewport().set_input_as_handled()
+		if mode == &"LAN" and result_ready:
+			hud._return_to_menu()
 		return
 	if phase != &"PLAYING" and not (mode == &"SOLO" and phase == &"COUNTDOWN"):
 		return
 	# Esc on the settings page steps back to the pause menu, like its QUAY LẠI button.
 	if is_instance_valid(hud) and hud.showing_settings:
+		if SettingsControls.close_comfort(hud.pause_actions) or SettingsControls.close_graphics(hud.pause_actions):
+			get_viewport().set_input_as_handled()
+			return
 		hud.show_pause()
 		get_viewport().set_input_as_handled()
 		return
@@ -150,22 +178,26 @@ func _request_lan_pause(requested_state: bool) -> void:
 
 func _set_paused(is_paused: bool) -> void:
 	paused = is_paused
+	if paused and is_instance_valid(rumble):
+		rumble.stop()
 	$CameraRig.gameplay_enabled = not paused
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused else Input.MOUSE_MODE_CAPTURED
 	if is_instance_valid(hud):
 		if paused:
 			hud.show_pause()
 		else:
+			local_input.arm_release_gates()
 			hud.hide_pause()
 
 
 func _on_pause_request_received(peer_id: int, requested_state: bool) -> void:
-	if is_instance_valid(hud):
+	if not finished and is_instance_valid(hud):
 		hud.show_pause_confirmation(peer_id, requested_state)
 
 
 func _on_pause_state_changed(is_paused: bool) -> void:
-	_set_paused(is_paused)
+	if not finished:
+		_set_paused(is_paused)
 
 
 func _on_combat_event(event_name: StringName, source_slot: int, target_slot: int, value: float) -> void:
@@ -173,9 +205,9 @@ func _on_combat_event(event_name: StringName, source_slot: int, target_slot: int
 	if is_instance_valid(vfx):
 		vfx.on_combat_event(event_name, source_slot, target_slot)
 	if lan == null or not lan.is_client():
-		if event_name in [&"HORN_HIT", &"DASH_HIT"]:
+		if (mode == &"LAN" or SessionState.hitstop_enabled) and event_name in [&"HORN_HIT", &"DASH_HIT"]:
 			hitstop_ticks = maxi(hitstop_ticks, GameBalance.get_int("hitstop_hit_ticks"))
-		elif event_name in [&"PARRY_SUCCESS", &"COUNTER_HIT", &"CLASH_START"]:
+		elif (mode == &"LAN" or SessionState.hitstop_enabled) and event_name in [&"PARRY_SUCCESS", &"COUNTER_HIT", &"CLASH_START"]:
 			hitstop_ticks = maxi(hitstop_ticks, GameBalance.get_int("hitstop_heavy_ticks"))
 		if lan != null:
 			network.send_event({"type": "COMBAT", "event": event_name, "source": source_slot, "target": target_slot, "value": value})
@@ -189,6 +221,10 @@ func _level_config() -> Dictionary:
 	var levels := DataFile.load_json("res://data/levels.json")
 	if levels.is_empty():
 		return {}
+	if not training.is_empty():
+		var level: Dictionary = levels.LAN01.duplicate(true)
+		level.ai_profile = training.ai_profile
+		return level
 	return levels.get(String(level_id), levels["L01"])
 
 
@@ -205,10 +241,12 @@ func start_countdown() -> void:
 func announcer_active() -> bool:
 	var elapsed := GameBalance.get_number("countdown_s", 3.0) - countdown_time
 	var delay := GameBalance.get_number("announcer_intro_delay_s")
-	return mode == &"SOLO" and phase == &"COUNTDOWN" and elapsed >= delay and elapsed < delay + GameBalance.get_number("announcer_intro_duration_s", 3.0)
+	return training.is_empty() and mode == &"SOLO" and phase == &"COUNTDOWN" and elapsed >= delay and elapsed < delay + GameBalance.get_number("announcer_intro_duration_s", 3.0)
 
 
 func announcer_text() -> String:
+	if not training.is_empty():
+		return ""
 	return "%s · %s gặp %s" % [_level_config().get("title", String(level_id)), player.get_meta("announcer_name"), opponent.get_meta("announcer_name")]
 
 
@@ -224,6 +262,8 @@ func _physics_process(delta: float) -> void:
 	if paused:
 		return
 	if finished:
+		if replay != null and replay.active:
+			return
 		outro.process(delta)
 		if mode == &"SOLO" and result_ready and is_instance_valid(outro.winner):
 			$CameraRig.show_winner(outro.winner)
@@ -259,6 +299,9 @@ func simulate_tick(delta: float, player_frame: InputFrame, opponent_frame: Input
 	if lan != null and lan.is_client():
 		return
 	tick += 1
+	_refill_training_stamina()
+	if mode == &"SOLO" and not SessionState.hitstop_enabled:
+		hitstop_ticks = 0
 	if hitstop_ticks > 0:
 		if opponent_frame == null:
 			opponent_frame = lan.remote_frame if lan != null else InputFrame.new(2)
@@ -286,7 +329,9 @@ func simulate_tick(delta: float, player_frame: InputFrame, opponent_frame: Input
 		ArenaBounds.constrain(opponent)
 		ArenaBounds.separate(player, opponent)
 		combat.resolve_attacks()
-	remaining_time = maxf(0.0, remaining_time - delta)
+	if training.is_empty():
+		remaining_time = maxf(0.0, remaining_time - delta)
+	_refill_training_stamina()
 	_emit_resources()
 	_check_match_end()
 
@@ -328,7 +373,21 @@ func _simulate_actor(actor: Buffalo, frame: InputFrame, delta: float) -> void:
 	actor.simulate_movement(delta, move_dir, terrain_factor)
 
 
+func _refill_training_stamina() -> void:
+	if training.is_empty():
+		return
+	opponent.stamina = GameBalance.get_number("stamina_max")
+	if SessionState.training_unlimited_stamina:
+		player.stamina = GameBalance.get_number("stamina_max")
+
+
 func _check_match_end() -> void:
+	if not training.is_empty():
+		for actor: Buffalo in [player, opponent]:
+			if actor.spirit <= GameBalance.get_number("training_spirit_refill_at"):
+				actor.spirit = GameBalance.get_number("spirit_max")
+				combat_event.emit(&"TRAINING_REFILL", actor.slot, actor.slot, 0.0)
+		return
 	if finished:
 		return
 	if player.spirit <= 0.0 and opponent.spirit <= 0.0:
@@ -352,15 +411,18 @@ func _finish_lot() -> void:
 
 
 func _finish(winner: int, reason: StringName) -> void:
-	if finished:
+	if finished or not training.is_empty():
 		return
+	if replay != null and replay.eligible() and reason == &"FLEE":
+		replay.capture(0.0)
 	finished = true
 	phase = &"RESULT"
 	winner_slot = winner
 	end_reason = reason
 	player.freeze()
 	opponent.freeze()
-	outro.start()
+	if replay == null or not replay.start():
+		outro.start()
 	match_ended.emit(winner_slot, end_reason)
 
 

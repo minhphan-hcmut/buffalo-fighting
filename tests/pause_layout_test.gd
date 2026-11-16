@@ -69,12 +69,19 @@ func run() -> void:
 
 func check_settings(container: Container, screen: String) -> void:
 	var toggles := container.find_children("*", "CheckButton", true, false)
-	check(toggles.size() == 2, "%s shares both settings toggles" % screen)
+	check(toggles.size() == 1 and toggles[0].text == "Toàn màn hình", "%s keeps fullscreen in the main settings" % screen)
+	var opener := container.find_child("ComfortButton", true, false) as Button
+	opener.pressed.emit()
+	var comfort := container.get_node("ComfortPage")
+	var comfort_toggles := comfort.find_children("*", "CheckButton", true, false)
+	check(comfort_toggles.size() == 6 and comfort_toggles.map(func(toggle: CheckButton): return toggle.name) == [&"CameraShake", &"CameraPunch", &"Hitstop", &"AutoPause", &"Rumble", &"Replay"] and comfort.find_child("CameraShake", true, false).text == "Rung camera", "%s preserves the five Hiệu ứng toggles and adds replay" % screen)
+	toggles.append_array(comfort_toggles)
 	for toggle: CheckButton in toggles:
 		var on := toggle.get_theme_icon("checked")
 		var off := toggle.get_theme_icon("unchecked")
 		check(on.get_size() == Vector2(44, 24) and off.get_size() == on.get_size(), "%s toggle has clear 44x24 icons in both states" % screen)
 		check(on.get_image().get_pixel(22, 12).is_equal_approx(Color("#E8BC65")) and off.get_image().get_pixel(22, 12).get_luminance() < 0.2, "%s toggle uses gold ON and a dark OFF track" % screen)
+	SettingsControls.close_comfort(container)
 	var slider := container.get_child(0).get_child(1) as HSlider
 	var fill := slider.get_theme_stylebox("grabber_area") as StyleBoxFlat
 	var focused := slider.get_theme_stylebox("grabber_area_highlight") as StyleBoxFlat

@@ -22,9 +22,11 @@ var recent_thumps: Dictionary = {}
 var impact_variants: Dictionary = {}
 var flee_before := false
 var last_cheer_frame := -1
+var exiting := false
 
 
 func _ready() -> void:
+	exiting = false
 	controller = get_parent() as MatchController
 	struggle = AudioStreamPlayer.new()
 	struggle.bus = &"SFX"
@@ -129,9 +131,18 @@ func _process(delta: float) -> void:
 
 
 func _exit_tree() -> void:
-	if is_instance_valid(intro_voice) and intro_voice.stream == GameAudio.stream_for("announcer_intro_vi"):
+	exiting = true
+	if is_instance_valid(GameAudio) and is_instance_valid(intro_voice) and intro_voice.stream == GameAudio.streams.get("announcer_intro_vi"):
 		intro_voice.stop()
 		intro_voice.stream_paused = false
+	intro_voice = null
+	for player in [struggle, crowd]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream_paused = false
+			player.stream = null
+	pending_impacts.clear()
+	recent_thumps.clear()
 
 
 func _combat_event(event: StringName, source: int, target: int, _value: float) -> void:
@@ -180,6 +191,8 @@ func _combat_event(event: StringName, source: int, target: int, _value: float) -
 
 
 func _play_impact(pair: Vector2i) -> void:
+	if exiting or not pending_impacts.has(pair):
+		return
 	var heavy: bool = pending_impacts[pair]
 	pending_impacts.erase(pair)
 	var cue := "sfx_heavy_impact_" if heavy else "sfx_horn_impact_"

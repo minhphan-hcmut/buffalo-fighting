@@ -100,3 +100,14 @@ func _on_node_added(node: Node) -> void:
 	if node is Button and not node is CheckButton:
 		var back: bool = node.text.to_upper().contains("QUAY LẠI") or node.text.to_upper().contains("ĐÓNG") or node.text.to_upper().contains("TRỞ VỀ")
 		node.pressed.connect(play_sfx.bind("ui_back" if back else "ui_confirm"))
+
+
+func _exit_tree() -> void:
+	# Stop playbacks before dropping their resources; do not load anything during teardown.
+	for player in get_children():
+		if player is AudioStreamPlayer:
+			player.stop()
+			player.stream_paused = false
+			player.stream = null
+	voices.clear()
+	streams.clear()

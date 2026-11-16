@@ -38,6 +38,20 @@ func run() -> void:
 	crew._update()
 	check(not red.visible and not crew.handlers[1].visible, "both handlers have left before the signal")
 	check(absf(red.position.x) > GameBalance.get_number("arena_rx"), "handler leaves outside the fence")
+	# Wherever a handler crosses the fence line it is inside the gate gap, never through the rails.
+	var rx := GameBalance.get_number("arena_rx")
+	var rz := GameBalance.get_number("arena_rz")
+	var gap := GameBalance.get_number("gate_width") * 0.5
+	for index in crew.handlers.size():
+		var worst := 0.0
+		var was_inside := true
+		for step in 201:
+			var spot := crew._path(index, step / 200.0)
+			var inside := Vector2(spot.x / rx, spot.z / rz).length() < 1.0
+			if inside != was_inside:
+				worst = maxf(worst, absf(spot.z))
+			was_inside = inside
+		check(worst > 0.0 and worst < gap - 0.3, "handler %d leaves through the gate gap (crosses the fence at |z| %.2f, gap ±%.2f)" % [index + 1, worst, gap])
 	arena.start_playing()
 	crew._update()
 	check(not red.visible, "no handler in the arena while PLAYING")

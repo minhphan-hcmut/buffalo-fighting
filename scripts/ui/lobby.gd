@@ -9,6 +9,7 @@ var join_button: Button
 
 
 func _ready() -> void:
+	MatchInput.configure_ui()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var background := ColorRect.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -41,6 +42,7 @@ func _ready() -> void:
 	content.add_child(intro)
 
 	host_button = Button.new()
+	UiMotion.attach(host_button)
 	host_button.text = "TẠO PHÒNG"
 	host_button.custom_minimum_size.y = 48
 	host_button.pressed.connect(_host)
@@ -68,6 +70,7 @@ func _ready() -> void:
 	address_row.add_child(port_input)
 
 	join_button = Button.new()
+	UiMotion.attach(join_button)
 	join_button.text = "JOIN PHÒNG"
 	join_button.custom_minimum_size.y = 48
 	join_button.pressed.connect(_join)
@@ -80,6 +83,7 @@ func _ready() -> void:
 	content.add_child(status_label)
 
 	var back := Button.new()
+	UiMotion.attach(back)
 	back.text = "QUAY LẠI"
 	back.pressed.connect(_back)
 	content.add_child(back)
@@ -91,6 +95,13 @@ func _ready() -> void:
 	if not NetworkManager.connection_lost.is_connected(_on_connection_lost):
 		NetworkManager.connection_lost.connect(_on_connection_lost)
 	_set_status("Host mở phòng hoặc nhập IPv4 máy host để Join.")
+	host_button.grab_focus()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_back()
 
 
 func _exit_tree() -> void:
@@ -128,6 +139,11 @@ func _set_controls_enabled(enabled: bool) -> void:
 	join_button.disabled = not enabled
 	address_edit.editable = enabled
 	port_input.editable = enabled
+	if enabled:
+		host_button.grab_focus()
+	else:
+		var back := host_button.get_parent().get_child(-1) as Button
+		back.grab_focus()
 
 
 func _set_status(message: String) -> void:

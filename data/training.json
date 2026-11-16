@@ -1,0 +1,51 @@
+{
+  "drills": [
+    {
+      "id": "dummy",
+      "name": "Bao cát",
+      "goal": "Tập Húc, Hổ lao và đánh sườn/lưng.",
+      "ai_profile": "DRILL_DUMMY",
+      "moves": ["horn", "dash"],
+      "counters": ["hits", "flanks"],
+      "counter_text": "Trúng {hits} · Sườn/lưng {flanks}"
+    },
+    {
+      "id": "dash",
+      "name": "Gạt Hổ lao",
+      "goal": "Gạt đúng lúc rồi húc để phản đòn.",
+      "ai_profile": "DRILL_DASH",
+      "moves": ["parry"],
+      "attack_event": "DASH_START",
+      "counters": ["parried", "attacks", "counters"],
+      "counter_text": "Gạt {parried}/{attacks} · Phản đòn {counters}"
+    },
+    {
+      "id": "horn",
+      "name": "Gạt Húc",
+      "goal": "Canh nhịp Húc để gạt và phản đòn.",
+      "ai_profile": "DRILL_HORN",
+      "moves": ["parry"],
+      "attack_event": "HORN_START",
+      "counters": ["parried", "attacks", "counters"],
+      "counter_text": "Gạt {parried}/{attacks} · Phản đòn {counters}"
+    },
+    {
+      "id": "release",
+      "name": "Khóa sừng: tập Nhả",
+      "goal": "Cùng Húc để khóa; nhả khi trâu xanh móc.",
+      "ai_profile": "DRILL_HOOK",
+      "moves": ["clash"],
+      "counters": ["releases", "hooks"],
+      "counter_text": "Nhả đúng {releases} · Đối thủ móc {hooks}"
+    },
+    {
+      "id": "hook",
+      "name": "Khóa sừng: tập Móc",
+      "goal": "Cùng Húc để khóa; móc để thắng giằng co.",
+      "ai_profile": "DRILL_PUSH",
+      "moves": ["clash"],
+      "counters": ["wins", "locks"],
+      "counter_text": "Thắng khóa {wins}/{locks}"
+    }
+  ]
+}
