@@ -11,6 +11,8 @@ const EARTH := Color("8a5a3b")
 const GOLD := Color("e8bc65")
 const PAPER := Color("f2e6cf")
 const PARRY := BuffaloFeedback.GLOW_PARRY
+## Every burst preset, drawn once by `warm_up()` so their shaders compile before the match.
+const WARM_UP_PRESETS := ["flash", "spark", "shock", "ring", "debris", "dust", "guard", "parry", "dash_blast", "dash_clods", "dash_ring", "muzzle", "swing", "clash_dust", "hoof_dust", "breath", "skid_debris", "clash_spark"]
 
 var controller: MatchController
 var bursts: Node3D
@@ -38,6 +40,9 @@ var muzzle_mesh: QuadMesh
 var swing_mesh: QuadMesh
 var dash_ring_mesh: QuadMesh
 var impact_groups: Dictionary = {}
+var warm_cover: CanvasLayer
+var warm_node: Node3D
+var warm_frames_left := 0
 
 
 func _ready() -> void:
@@ -172,6 +177,77 @@ void fragment() {
 		marker.visible = false
 		add_child(marker)
 		pinned_markers[actor.slot] = marker
+	warm_up.call_deferred()
+
+
+## Shader warm-up: under a dark cover for the arena's first frames (the scene fade already
+## hides them), fires one burst of every preset in front of the match camera and lights the
+## buffaloes with a near-black impact light, so the GPU compiles those shaders now instead
+## of stalling on the first hit or horn lock. Everything is freed after `vfx_warm_up_frames`.
+func warm_up() -> void:
+	if not is_inside_tree():
+		return
+	var cover := CanvasLayer.new()
+	warm_cover = cover
+	cover.name = "WarmUpCover"
+	cover.layer = GameBalance.get_int("ui_fade_layer") - 1
+	var dark := ColorRect.new()
+	dark.color = Color("#1E1914")
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cover.add_child(dark)
+	add_child(cover)
+	warm_frames_left = GameBalance.get_int("vfx_warm_up_settle_frames")
+	# A node-bound callback disconnects on destruction; an awaited coroutine can outlive us.
+	get_tree().process_frame.connect(_warm_up_frame)
+	if warm_frames_left == 0:
+		_warm_up_frame()
+
+
+func _warm_up_frame() -> void:
+	warm_frames_left -= 1
+	if warm_frames_left > 0:
+		return
+	if warm_node == null:
+		_begin_warm_up()
+		warm_frames_left = GameBalance.get_int("vfx_warm_up_frames")
+		if warm_frames_left > 0:
+			return
+	warm_node.queue_free()
+	warm_cover.queue_free()
+	get_tree().process_frame.disconnect(_warm_up_frame)
+
+
+func _exit_tree() -> void:
+	if get_tree().process_frame.is_connected(_warm_up_frame):
+		get_tree().process_frame.disconnect(_warm_up_frame)
+
+
+func _begin_warm_up() -> void:
+	var camera := get_viewport().get_camera_3d()
+	var spot := Vector3.UP * GameBalance.get_number("vfx_light_height")
+	if camera != null:
+		spot = camera.global_position - camera.global_basis.z * GameBalance.get_number("vfx_warm_up_distance_m")
+	var warm := Node3D.new()
+	warm_node = warm
+	warm.name = "WarmUp"
+	add_child(warm)
+	var saved := bursts
+	bursts = warm
+	for preset in WARM_UP_PRESETS:
+		# Looping, so a long first frame after loading cannot end a short burst before a draw.
+		var emitter := _burst(&"WarmUp", spot, Color.WHITE, preset, 1.0, Vector3.UP, true)
+		if emitter != null:
+			# Some presets snap to ground height; keep every copy in front of the camera.
+			emitter.global_position = spot
+			emitter.restart()
+	bursts = saved
+	var light := OmniLight3D.new()
+	light.light_energy = GameBalance.get_number("vfx_warm_up_light_energy")
+	light.omni_range = GameBalance.get_number("vfx_warm_up_light_range_m")
+	light.shadow_enabled = false
+	warm.add_child(light)
+	light.global_position = Vector3.UP * GameBalance.get_number("vfx_light_height")
 
 
 func _process(delta: float) -> void:
@@ -340,12 +416,16 @@ func _impact(at: Vector3, tint: Color, strength: float, direction: Vector3 = Vec
 	_burst(&"ImpactShock", at, Color(tint, GameBalance.get_number("vfx_shock_alpha")), "shock", strength)
 
 
+func _comfort_flash_scale() -> float:
+	return SessionState.flash_scale()
+
+
 func _flash_light(at: Vector3, tint: Color, strength: float) -> OmniLight3D:
 	if lights.get_child_count() >= GameBalance.get_int("vfx_max_lights"):
 		return null
 	var light := OmniLight3D.new()
 	light.light_color = tint
-	light.light_energy = GameBalance.get_number("vfx_light_energy") * strength
+	light.light_energy = GameBalance.get_number("vfx_light_energy") * strength * _comfort_flash_scale()
 	light.omni_range = GameBalance.get_number("vfx_light_range")
 	light.shadow_enabled = false
 	light.set_meta("remaining", GameBalance.get_number("vfx_light_s"))
@@ -429,8 +509,11 @@ func _skid(actor: Buffalo, slide: Vector3) -> void:
 
 
 # One-shot emitter; skipped once `vfx_max_emitters` are alive so effects stay cheap.
-func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength: float = 1.0, direction: Vector3 = Vector3.UP) -> CPUParticles3D:
+# `looping` keeps it emitting until freed by the caller (the shader warm-up).
+func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength: float = 1.0, direction: Vector3 = Vector3.UP, looping: bool = false) -> CPUParticles3D:
 	if bursts.get_child_count() >= GameBalance.get_int("vfx_max_emitters"):
+		return null
+	if not looping and not GraphicsQuality.vfx_secondary_enabled() and preset in ["shock", "ring", "dash_ring", "muzzle", "debris", "skid_debris", "clash_dust", "breath"]:
 		return null
 	var emitter := CPUParticles3D.new()
 	emitter.name = kind
@@ -440,8 +523,10 @@ func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength
 	emitter.explosiveness = 1.0
 	emitter.local_coords = false
 	emitter.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	emitter.amount = GameBalance.get_int("vfx_" + preset + "_count")
+	emitter.amount = maxi(1, roundi(GameBalance.get_int("vfx_" + preset + "_count") * GraphicsQuality.vfx_particle_scale()))
 	emitter.lifetime = GameBalance.get_number("vfx_" + preset + "_s")
+	if preset in ["dust", "clash_dust", "hoof_dust", "breath", "dash_blast", "dash_ring"]:
+		emitter.lifetime *= GraphicsQuality.vfx_dust_lifetime_scale()
 	emitter.scale_amount_min = GameBalance.get_number("vfx_" + preset + "_size") * 0.7 * strength
 	emitter.scale_amount_max = GameBalance.get_number("vfx_" + preset + "_size") * strength
 	emitter.initial_velocity_min = GameBalance.get_number("vfx_" + preset + "_speed") * 0.5 * strength
@@ -487,7 +572,7 @@ func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength
 		emitter.local_coords = true
 		emitter.scale_amount_min = emitter.scale_amount_max
 		if preset == "flash":
-			tint.a = GameBalance.get_number("vfx_flash_alpha")
+			tint.a = GameBalance.get_number("vfx_flash_alpha") * _comfort_flash_scale()
 			emitter.angle_min = randf_range(-180.0, 180.0)
 			emitter.angle_max = emitter.angle_min
 	elif preset in ["dust", "clash_dust", "hoof_dust", "breath"]:
@@ -526,7 +611,10 @@ func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength
 		ramp.colors = PackedColorArray([Color.WHITE, GOLD, orange, Color(orange, 0.0)])
 	emitter.color_ramp = ramp
 	emitter.set_meta("remaining", emitter.lifetime * 2.0)
-	emitter.finished.connect(emitter.queue_free)
+	if looping:
+		emitter.one_shot = false
+	else:
+		emitter.finished.connect(emitter.queue_free)
 	bursts.add_child(emitter)
 	emitter.global_position = at
 	emitter.restart()

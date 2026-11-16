@@ -1,7 +1,7 @@
 extends Node3D
 
 ## Third-person 2.5D camera: gameplay stays on XZ. A low, fixed pitch over the buffalo's
-## right shoulder (camera_pitch_deg, camera_shoulder_offset) so the player sees both
+## chosen shoulder (camera_pitch_deg, camera_shoulder_offset) so the player sees both
 ## buffaloes' heads and horns; the mouse only turns yaw. Hits give a short punch
 ## (push in + narrower FOV) and shake. Presentation only: never changes match state.
 @export_range(1.0, 20.0) var distance := 9.0
@@ -11,6 +11,9 @@ extends Node3D
 var target: Buffalo
 var yaw := 0.0
 var gameplay_enabled := true
+var _pitch := 0.0
+var _shoulder := 0.0
+var _fov := 0.0
 var shake_elapsed := 1.0
 var shake_duration := 0.0
 var shake_strength := 0.0
@@ -38,10 +41,9 @@ var _winner_from_length := 0.0
 func _ready() -> void:
 	process_physics_priority = 10
 	camera.current = true
-	distance = GameBalance.get_number("camera_distance", distance)
-	height = GameBalance.get_number("camera_look_height", height)
+	_update_framing(1.0)
 	mouse_sensitivity = SessionState.get_mouse_sensitivity()
-	camera.fov = GameBalance.get_number("camera_fov_deg", camera.fov)
+	camera.fov = _fov
 
 
 func setup(actor: Buffalo) -> void:
@@ -91,10 +93,11 @@ func _follow_overview() -> void:
 	global_position = _overview_from.lerp(Vector3.UP * height, weight)
 	yaw = lerp_angle(_overview_yaw_from, _overview_yaw_to, weight)
 	global_rotation = Vector3(0.0, yaw, 0.0)
-	arm.position = Vector3.RIGHT * GameBalance.get_number("camera_shoulder_offset") * (1.0 - weight)
-	var pitch := lerpf(GameBalance.get_angle("camera_pitch_deg", 45.0), GameBalance.get_angle("result_camera_pitch_deg", 60.0), weight)
+	arm.position = Vector3.RIGHT * _shoulder * (1.0 - weight)
+	var pitch := lerpf(_pitch, GameBalance.get_angle("result_camera_pitch_deg", 60.0), weight)
 	arm.rotation = Vector3(-pitch, 0.0, 0.0)
 	arm.spring_length = lerpf(distance, GameBalance.get_number("result_camera_distance", 22.0), weight)
+	_keep_inside_arena()
 
 
 ## Solo result screen: after the outro, glide from the overview down to a slow orbit
@@ -118,7 +121,8 @@ func _follow_winner() -> void:
 	var weight := 1.0 if blend <= 0.0 else smoothstep(0.0, 1.0, winner_time / blend)
 	var focus := _winner.global_position + Vector3.UP * GameBalance.get_number("result_winner_look_height")
 	# The camera sits behind `yaw`, so face the winner by looking from its front.
-	var orbit_yaw := _winner.global_rotation.y + PI + deg_to_rad(GameBalance.get_number("result_winner_angle_deg") + GameBalance.get_number("result_winner_orbit_deg_s") * winner_time)
+	var side := 1.0 if SessionState.camera_side == 0 else -1.0
+	var orbit_yaw := _winner.global_rotation.y + PI + side * deg_to_rad(GameBalance.get_number("result_winner_angle_deg") + GameBalance.get_number("result_winner_orbit_deg_s") * winner_time)
 	global_position = _winner_from_position.lerp(focus, weight)
 	yaw = lerp_angle(_winner_from_yaw, orbit_yaw, weight)
 	global_rotation = Vector3(0.0, yaw, 0.0)
@@ -126,6 +130,7 @@ func _follow_winner() -> void:
 	arm.rotation = Vector3(-lerpf(_winner_from_pitch, GameBalance.get_angle("result_winner_pitch_deg"), weight), 0.0, 0.0)
 	arm.spring_length = lerpf(_winner_from_length, GameBalance.get_number("result_winner_distance"), weight)
 	camera.h_offset = GameBalance.get_number("result_winner_h_offset") * weight
+	_keep_inside_arena()
 
 
 func follow_target() -> void:
@@ -148,9 +153,74 @@ func follow_target() -> void:
 			sin(phase * 0.83) * shake_strength * envelope
 		)
 	global_rotation = Vector3(0.0, yaw, 0.0)
-	arm.position = Vector3.RIGHT * GameBalance.get_number("camera_shoulder_offset")
-	arm.rotation = Vector3(-GameBalance.get_angle("camera_pitch_deg", 45.0), 0.0, 0.0)
+	arm.position = Vector3.RIGHT * _shoulder
+	arm.rotation = Vector3(-_pitch, 0.0, 0.0)
 	arm.spring_length = distance - punch_weight() * GameBalance.get_number("camera_punch_push")
+	_keep_inside_arena()
+
+
+func _update_framing(weight: float) -> void:
+	var suffix: String = ["_near", "", "_far"][SessionState.camera_view]
+	distance = lerpf(distance, GameBalance.get_number("camera_distance" + suffix, GameBalance.get_number("camera_distance")), weight)
+	height = lerpf(height, GameBalance.get_number("camera_look_height" + suffix, GameBalance.get_number("camera_look_height")), weight)
+	_pitch = lerpf(_pitch, deg_to_rad(GameBalance.get_number("camera_pitch_deg" + suffix, GameBalance.get_number("camera_pitch_deg"))), weight)
+	_fov = lerpf(_fov, GameBalance.get_number("camera_fov_deg" + suffix, GameBalance.get_number("camera_fov_deg")), weight)
+	var side := 1.0 if SessionState.camera_side == 0 else -1.0
+	_shoulder = lerpf(_shoulder, side * GameBalance.get_number("camera_shoulder_offset"), weight)
+
+
+func _keep_inside_arena() -> void:
+	# Gate leaves have no collision; keep the lens inside the oval even through a gate gap.
+	var margin := GameBalance.get_number("camera_bounds_margin_m")
+	var half := Vector2(GameBalance.get_number("arena_rx"), GameBalance.get_number("arena_rz")) - Vector2.ONE * margin
+	if _lens_inside(half):
+		return
+	if overview_time < 0.0 and winner_time < 0.0:
+		# Pull the lens in along the arm first (the GDD pitch stays, the camera keeps looking at
+		# the buffalo, as the old fence-colliding spring arm did); only when the arm is down to
+		# its shortest, crane up. Either way the lens never leaves the oval, even at a gate gap.
+		var shortest := minf(arm.spring_length, GameBalance.get_number("camera_bounds_min_length_m"))
+		var full := arm.spring_length
+		arm.spring_length = shortest
+		if _lens_inside(half):
+			_bisect(full, shortest, func(value: float) -> void: arm.spring_length = value, half)
+			return
+		var low := -arm.rotation.x
+		var high := maxf(low, deg_to_rad(GameBalance.get_number("camera_bounds_max_pitch_deg")))
+		arm.rotation.x = -high
+		if _lens_inside(half):
+			_bisect(low, high, func(value: float) -> void: arm.rotation.x = -value, half)
+			return
+	# Result shots (and a lens still outside): move the pivot in until the lens is inside.
+	var lens := _lens()
+	var scaled := Vector2(lens.x / half.x, lens.z / half.y)
+	var inside := scaled.normalized() * half
+	global_position += Vector3(inside.x - lens.x, 0.0, inside.y - lens.z)
+
+
+# Smallest change from `from` toward `to` (10 halvings) that puts the lens inside; `apply`
+# sets the value being searched. Returns that value, already applied.
+func _bisect(from: float, to: float, apply: Callable, half: Vector2) -> float:
+	var outside := from
+	var inside := to
+	for step in 10:
+		var middle := (outside + inside) * 0.5
+		apply.call(middle)
+		if _lens_inside(half):
+			inside = middle
+		else:
+			outside = middle
+	apply.call(inside)
+	return inside
+
+
+func _lens() -> Vector3:
+	return arm.global_position + arm.global_basis.z * arm.spring_length
+
+
+func _lens_inside(half: Vector2) -> bool:
+	var lens := _lens()
+	return Vector2(lens.x / half.x, lens.z / half.y).length() <= 1.0
 
 
 func _physics_process(delta: float) -> void:
@@ -167,28 +237,29 @@ func set_clash_zoom(active: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_framing(1.0 - exp(-delta / GameBalance.get_number("camera_settings_blend_s")))
 	var blend := GameBalance.get_number("vfx_clash_zoom_blend_s", 0.15)
 	clash_zoom_weight = move_toward(clash_zoom_weight, 1.0 if clash_zoom_active and overview_time < 0.0 else 0.0, delta / maxf(0.001, blend))
 	punch_time += delta
-	camera.fov = GameBalance.get_number("camera_fov_deg", 75.0) - clash_zoom_weight * GameBalance.get_number("vfx_clash_zoom_deg", 5.0) 		- punch_weight() * GameBalance.get_number("camera_punch_fov_deg")
+	camera.fov = _fov - clash_zoom_weight * GameBalance.get_number("vfx_clash_zoom_deg", 5.0) - punch_weight() * GameBalance.get_number("camera_punch_fov_deg")
 
 
 ## Current punch amount: `punch_strength` at the hit, easing out to 0 over camera_punch_s.
 ## Runs on real time, so the punch plays through hitstop.
 func punch_weight() -> float:
 	var duration := GameBalance.get_number("camera_punch_s")
-	if duration <= 0.0 or punch_time >= duration or overview_time >= 0.0:
+	if not SessionState.camera_punch_enabled or duration <= 0.0 or punch_time >= duration or overview_time >= 0.0:
 		return 0.0
 	var remaining := 1.0 - punch_time / duration
 	return punch_strength * remaining * remaining
 
 
 func trigger_shake(event_name: StringName) -> void:
-	if not SessionState.camera_shake_enabled:
-		return
-	if event_name in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT"]:
+	if SessionState.camera_punch_enabled and event_name in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT"]:
 		punch_time = 0.0
 		punch_strength = GameBalance.get_number("camera_punch_heavy_scale") if event_name != &"HORN_HIT" else 1.0
+	if not SessionState.camera_shake_enabled:
+		return
 	if event_name not in [&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT", &"PARRY_SUCCESS", &"CLASH_START"]:
 		return
 	shake_elapsed = 0.0

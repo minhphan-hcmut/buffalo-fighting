@@ -15,11 +15,17 @@ var client_input_accumulator := 0.0
 var snapshot_accumulator := 0.0
 var remote_targets: Dictionary = {}
 var pinned_slots: Dictionary = {}
+var epoch := 0
+var local_wants_rematch := false
+var remote_wants_rematch := false
+var restarting := false
+var peer_left := false
 
 
 func _init(owner: MatchController, manager: Node) -> void:
 	controller = owner
 	network = manager
+	epoch = manager.match_epoch
 
 
 func connect_signals() -> void:
@@ -45,6 +51,8 @@ func broadcast_snapshot(delta: float, snapshot: Dictionary) -> void:
 
 ## Host: the snapshot that ends the match goes out once and reliably; no snapshot follows RESULT.
 func send_result(snapshot: Dictionary) -> void:
+	snapshot = snapshot.duplicate()
+	snapshot["match_epoch"] = epoch
 	network.send_event({"type": "RESULT", "snapshot": snapshot})
 
 
@@ -107,7 +115,7 @@ static func payload_to_frame(payload: Dictionary) -> InputFrame:
 
 
 func _on_remote_input(_peer_id: int, payload: Dictionary) -> void:
-	if not network.is_host:
+	if not network.is_host or not _current_match(payload):
 		return
 	remote_frame = payload_to_frame(payload)
 	if controller.phase != &"PLAYING":
@@ -127,14 +135,27 @@ func _on_remote_input(_peer_id: int, payload: Dictionary) -> void:
 
 
 func _on_event_received(payload: Dictionary) -> void:
+	if not _current_match(payload):
+		return
 	if payload.get("type") == "RESULT" and payload.get("snapshot") is Dictionary:
 		_on_snapshot_received(payload["snapshot"])
 	elif payload.get("type") == "COMBAT" and is_client():
 		controller.combat_event.emit(StringName(payload.get("event", "")), int(payload.get("source", 0)), int(payload.get("target", 0)), float(payload.get("value", 0.0)))
+	elif payload.get("type") == "REMATCH_WANT" and network.is_host and can_rematch():
+		remote_wants_rematch = true
+		_host_rematch_status()
+	elif payload.get("type") == "REMATCH_STATUS" and is_client() and controller.finished:
+		remote_wants_rematch = payload.get("host", false) == true
+		local_wants_rematch = local_wants_rematch or payload.get("client", false) == true
+		_refresh_rematch()
+	elif payload.get("type") == "REMATCH_START" and is_client() and controller.finished:
+		var next: Variant = payload.get("next_epoch")
+		if next is int and next == epoch + 1:
+			_restart(next)
 
 
 func _on_snapshot_received(snapshot: Dictionary) -> void:
-	if network.is_host or not is_instance_valid(controller.player):
+	if not _current_match(snapshot) or network.is_host or controller.finished or not is_instance_valid(controller.player):
 		return
 	controller.phase = StringName(snapshot.get("phase", controller.phase))
 	controller.tick = int(snapshot.get("tick", controller.tick))
@@ -226,8 +247,54 @@ func _apply_clash_snapshot(snapshot: Dictionary) -> void:
 
 
 func _on_connection_lost() -> void:
+	peer_left = true
+	if controller.finished:
+		if is_instance_valid(controller.hud):
+			controller.hud.update_lan_rematch(true)
+		return
 	controller.finished = true
 	controller.phase = &"RESULT"
 	controller.end_reason = &"CONNECTION_LOST"
 	if is_instance_valid(controller.hud):
 		controller.hud.show_result(0, controller.end_reason)
+
+
+func _current_match(payload: Dictionary) -> bool:
+	return epoch == network.match_epoch and network.same_match(payload)
+
+
+func can_rematch() -> bool:
+	return controller.finished and controller.phase == &"RESULT" and controller.end_reason != &"CONNECTION_LOST" and network.connected and not network.multiplayer.get_peers().is_empty() and not restarting and not peer_left
+
+
+func request_rematch() -> void:
+	if not can_rematch() or local_wants_rematch:
+		return
+	local_wants_rematch = true
+	if network.is_host:
+		_host_rematch_status()
+	else:
+		network.request_rematch()
+		_refresh_rematch()
+
+
+func _host_rematch_status() -> void:
+	if local_wants_rematch and remote_wants_rematch:
+		network.send_event({"type": "REMATCH_START", "next_epoch": epoch + 1})
+		_restart(epoch + 1)
+	else:
+		network.send_event({"type": "REMATCH_STATUS", "host": local_wants_rematch, "client": remote_wants_rematch})
+		_refresh_rematch()
+
+
+func _refresh_rematch() -> void:
+	if is_instance_valid(controller.hud):
+		controller.hud.update_lan_rematch()
+
+
+func _restart(next_epoch: int) -> void:
+	if restarting:
+		return
+	restarting = true
+	network.begin_rematch(next_epoch)
+	controller.get_tree().reload_current_scene.call_deferred()

@@ -11,6 +11,7 @@ var guard_blocked_until_release := false
 
 
 static func configure() -> void:
+	configure_ui()
 	var keys := {
 		"move_left": KEY_A,
 		"move_right": KEY_D,
@@ -34,6 +35,15 @@ static func configure() -> void:
 		InputMap.action_add_event("dash", dash_event)
 
 
+static func configure_ui() -> void:
+	for entry in [["ui_accept", JOY_BUTTON_A], ["ui_cancel", JOY_BUTTON_B]]:
+		var button := InputEventJoypadButton.new()
+		button.device = -1
+		button.button_index = entry[1]
+		if not InputMap.action_has_event(entry[0], button):
+			InputMap.action_add_event(entry[0], button)
+
+
 static func _add_mouse_action(action: StringName, button: MouseButton) -> void:
 	if not InputMap.has_action(action):
 		InputMap.add_action(action)
@@ -43,13 +53,13 @@ static func _add_mouse_action(action: StringName, button: MouseButton) -> void:
 		InputMap.action_add_event(action, event)
 
 
-## Called when a countdown starts: block every button currently held down.
+## Gate menu presses, including a click released in the same frame, until fresh gameplay input.
 func arm_release_gates() -> void:
 	previous_guard = false
-	horn_blocked_until_release = Input.is_action_pressed("horn")
-	dash_blocked_until_release = Input.is_action_pressed("dash")
-	parry_blocked_until_release = Input.is_action_pressed("parry")
-	guard_blocked_until_release = Input.is_action_pressed("guard")
+	horn_blocked_until_release = Input.is_action_pressed("horn") or Input.is_action_just_pressed("horn")
+	dash_blocked_until_release = Input.is_action_pressed("dash") or Input.is_action_just_pressed("dash")
+	parry_blocked_until_release = Input.is_action_pressed("parry") or Input.is_action_just_pressed("parry")
+	guard_blocked_until_release = Input.is_action_pressed("guard") or Input.is_action_just_pressed("guard")
 
 
 func update_release_gates() -> void:

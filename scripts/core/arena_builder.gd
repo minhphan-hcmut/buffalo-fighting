@@ -51,6 +51,8 @@ static func add_lighting(parent: Node3D) -> void:
 	# On the Compatibility renderer, objects wholly beyond the shadow distance are
 	# over-lit by the sun; far scenery sits on its own layer and gets sky light only.
 	light.light_cull_mask = ~FAR_SCENERY_LAYER & 0xFFFFF
+	GraphicsQuality.apply_sun(light)
+	GraphicsQuality.apply_live()
 	parent.add_child(light)
 	var world := WorldEnvironment.new()
 	var environment := Environment.new()
@@ -95,6 +97,7 @@ static func add_handler(parent: Node3D, gate: Vector3, shirt: Color) -> Node3D:
 
 
 static func _build_fence(parent: Node3D) -> void:
+	var panels: Array[StaticBody3D] = []
 	var rx := GameBalance.get_number("arena_rx")
 	var rz := GameBalance.get_number("arena_rz")
 	var count := GameBalance.get_int("arena_fence_segments", 32)
@@ -112,8 +115,35 @@ static func _build_fence(parent: Node3D) -> void:
 		var segment := _fence_segment(midpoint, tangent.length())
 		segment.rotation.y = atan2(-tangent.z, tangent.x)
 		parent.add_child(segment)
+		panels.append(segment)
+	var batch_size := GraphicsQuality.fence_batch_size()
+	if batch_size > 1:
+		_batch_fence_visuals(parent, panels, batch_size)
 	# Shut during play, so the gaps do not look open where the arena oval still stops a buffalo.
 	parent.add_child(ArenaGates.new())
+
+
+## Merge only the opaque bamboo meshes; collision bodies and animated gates stay intact.
+static func _batch_fence_visuals(parent: Node3D, panels: Array[StaticBody3D], batch_size: int) -> void:
+	for start in range(0, panels.size(), batch_size):
+		var surfaces := {}
+		for panel: StaticBody3D in panels.slice(start, start + batch_size):
+			for child in panel.get_children():
+				if not child is MeshInstance3D:
+					continue
+				var material := (child as MeshInstance3D).get_active_material(0)
+				if not surfaces.has(material):
+					var surface := SurfaceTool.new()
+					surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+					surface.set_material(material)
+					surfaces[material] = surface
+				(surfaces[material] as SurfaceTool).append_from(child.mesh, 0, panel.transform * child.transform)
+				child.free()
+		for surface: SurfaceTool in surfaces.values():
+			var batch := MeshInstance3D.new()
+			batch.name = "FenceBatch"
+			batch.mesh = surface.commit()
+			parent.add_child(batch)
 
 
 static func _fence_segment(position: Vector3, length: float) -> StaticBody3D:

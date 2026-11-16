@@ -107,5 +107,6 @@
   "back_damage_multiplier": 1.25,
   "hitstop_hit_ticks": 4,
   "hitstop_heavy_ticks": 6,
-  "ai_parry_lead_s": 0.1
+  "ai_parry_lead_s": 0.1,
+  "training_spirit_refill_at": 25.0
 }

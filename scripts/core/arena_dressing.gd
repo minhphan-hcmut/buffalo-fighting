@@ -167,10 +167,16 @@ static func _build_stands(root: Node3D) -> void:
 static func _build_crowd(root: Node3D, seats: Array[Transform3D]) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = CROWD_SEED
+	# Lower graphics presets thin the crowd with their own RNG, so Cao keeps the same layout.
+	var thin := RandomNumberGenerator.new()
+	thin.seed = CROWD_SEED + 3
+	var density := GraphicsQuality.crowd_density()
 	var transforms: Array = [[], []]
 	var looks: Array = [PackedColorArray(), PackedColorArray()]
 	for seat in seats:
 		if rng.randf() < 0.12:
+			continue
+		if thin.randf() >= density:
 			continue
 		var jitter := Transform3D(Basis(Vector3.UP, rng.randf_range(-0.35, 0.35)), Vector3(rng.randf_range(-0.12, 0.12), 0.0, rng.randf_range(-0.08, 0.12)))
 		var height := rng.randf_range(0.92, 1.04)
@@ -192,7 +198,7 @@ static func _build_crowd(root: Node3D, seats: Array[Transform3D]) -> void:
 		var multimesh := MultiMesh.new()
 		multimesh.transform_format = MultiMesh.TRANSFORM_3D
 		multimesh.use_custom_data = true
-		multimesh.mesh = LowPoly.crowd_villager_mesh(pose)
+		multimesh.mesh = GraphicsQuality.crowd_mesh(LowPoly.crowd_villager_mesh(pose))
 		multimesh.instance_count = transforms[pose].size()
 		for index in multimesh.instance_count:
 			multimesh.set_instance_transform(index, transforms[pose][index])
@@ -318,7 +324,7 @@ static func _build_trees(root: Node3D) -> void:
 	# [tree count, nearest and farthest offset outside the stands]. The grove stays inside
 	# the sun's shadow distance, where Compatibility lights scenery correctly. Each band
 	# has its own seed, so adding the grove left the ring behind the stands unchanged.
-	var bands := [[46, 2.5, 7.0], [GameBalance.get_int("scenery_grove_count", 30), GameBalance.get_number("scenery_grove_min_m"), GameBalance.get_number("scenery_grove_max_m")]]
+	var bands := [[46, 2.5, 7.0], [GraphicsQuality.grove_count(GameBalance.get_int("scenery_grove_count", 30)), GameBalance.get_number("scenery_grove_min_m"), GameBalance.get_number("scenery_grove_max_m")]]
 	# The first band keeps the original generator, which the hills below continue from.
 	var ring_rng := RandomNumberGenerator.new()
 	ring_rng.seed = CROWD_SEED + 1

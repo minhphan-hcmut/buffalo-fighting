@@ -19,6 +19,7 @@ func _ready() -> void:
 	devices.add_child(keyboard)
 	keyboard.add_child(label("BÀN PHÍM", "heading", GOLD))
 	_key_row(keyboard, ["Esc"], "Tạm dừng")
+	_key_row(keyboard, ["F12"], "Chụp màn hình")
 	_key_row(keyboard, ["Q", "W", "E", "R", "T"], "W A S D · Đi theo hướng camera")
 	_key_row(keyboard, ["A", "S", "D", "F", "G"], "G · Gạt sừng đúng lúc")
 	_key_row(keyboard, ["Space"], "Hổ lao")
@@ -70,7 +71,7 @@ func _key_row(parent: Container, keys: Array, action: String) -> void:
 	row.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
 	parent.add_child(row)
 	for key: String in keys:
-		var cap := keycap(key, key in ["Esc", "W", "A", "S", "D", "G", "Space"])
+		var cap := keycap(key, key in ["Esc", "F12", "W", "A", "S", "D", "G", "Space"])
 		if key == "Space":
 			cap.custom_minimum_size.x = GameBalance.get_number("ui_howto_space_width")
 		row.add_child(cap)

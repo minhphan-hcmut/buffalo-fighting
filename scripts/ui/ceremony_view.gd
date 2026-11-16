@@ -80,7 +80,7 @@ func _build_viewport() -> void:
 	add_child(container)
 	var viewport := SubViewport.new()
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_2X
+	GraphicsQuality.apply_viewport(viewport)
 	container.add_child(viewport)
 	diorama = CeremonyDiorama.new()
 	diorama.name = "Diorama"
