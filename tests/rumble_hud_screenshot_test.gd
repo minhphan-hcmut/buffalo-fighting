@@ -163,17 +163,19 @@ func hud_scale(node: MatchController) -> void:
 	var normal: int = hud.spirit_labels[0].get_theme_font_size("font_size")
 	var normal_name := (hud.top_bar.find_children("*", "Label", true, false)[0] as Label).get_theme_font_size("font_size")
 	node.request_pause_from_menu()
+	var pause_font: int = hud.pause_actions.get_child(0).get_theme_font_size("font_size")
 	hud.show_settings()
-	(hud.pause_actions.find_child("ComfortButton", true, false) as Button).pressed.emit()
-	var size_option := hud.pause_actions.find_child("HudTextSize", true, false) as OptionButton
+	hud.settings_screen.select_tab(4)
+	var size_option := hud.settings_screen.find_child("HudTextSize", true, false) as SettingsSelector
 	size_option.select(1)
 	size_option.item_selected.emit(1)
 	await settle()
 	check(SessionState.hud_text_large and hud.spirit_labels[0].get_theme_font_size("font_size") == roundi(normal * GameBalance.get_number("hud_text_scale_large")), "pause choice enlarges HUD text live")
 	check((hud.top_bar.find_children("*", "Label", true, false)[0] as Label).get_theme_font_size("font_size") > normal_name, "buffalo name text grows")
-	var comfort_panel: Control = hud.pause_actions.get_node("ComfortPage").find_children("*", "PanelContainer", true, false)[0]
+	var comfort_panel: Control = hud.settings_screen.panel
 	check(root.get_visible_rect().encloses(comfort_panel.get_global_rect()), "Hiệu ứng with both new rows fits 720p")
-	SettingsControls.close_comfort(hud.pause_actions)
+	hud.settings_screen.close()
+	check(hud.pause_actions.get_child(0).get_theme_font_size("font_size") == roundi(pause_font * GameBalance.get_number("hud_text_scale_large")), "closing settings applies text size to retained pause buttons")
 	hud.show_pause()
 	await settle()
 	check(root.get_visible_rect().encloses(hud.pause_panel.get_global_rect()), "large pause text and buttons fit viewport")

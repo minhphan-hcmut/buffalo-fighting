@@ -20,7 +20,7 @@ func check(condition: bool, description: String) -> void:
 func check_centered(hud: CanvasLayer, screen: String) -> void:
 	await process_frame
 	var overlay: Rect2 = hud.pause_overlay.get_global_rect()
-	var panel: Rect2 = hud.pause_panel.get_global_rect()
+	var panel: Rect2 = (hud.settings_screen.panel if hud.showing_settings else hud.pause_panel).get_global_rect()
 	check(overlay.encloses(panel), "%s panel lies fully inside the screen (panel %s, screen %s)" % [screen, panel, overlay])
 	check(panel.get_center().distance_to(overlay.get_center()) < 1.0, "%s panel is centred (panel centre %s, screen centre %s)" % [screen, panel.get_center(), overlay.get_center()])
 
@@ -37,7 +37,7 @@ func run() -> void:
 	check(hud.pause_panel.get_global_rect().end.y - last_button.get_global_rect().end.y < 40.0, "pause panel hugs its buttons (no empty band under VỀ MENU)")
 	hud.show_settings()
 	await check_centered(hud, "settings")
-	check_settings(hud.pause_actions, "pause")
+	check_settings(hud.settings_screen, "pause")
 	hud.show_pause()
 	await check_centered(hud, "pause after settings")
 	hud.show_pause_wait(true)
@@ -61,28 +61,28 @@ func run() -> void:
 	root.add_child(menu)
 	menu._show_settings()
 	await process_frame
-	check_settings(menu.menu_settings_actions, "main menu")
+	check_settings(menu.menu_settings_layer, "main menu")
 	menu.free()
 	print("PAUSE LAYOUT TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
 
 
-func check_settings(container: Container, screen: String) -> void:
-	var toggles := container.find_children("*", "CheckButton", true, false)
-	check(toggles.size() == 1 and toggles[0].text == "Toàn màn hình", "%s keeps fullscreen in the main settings" % screen)
-	var opener := container.find_child("ComfortButton", true, false) as Button
-	opener.pressed.emit()
-	var comfort := container.get_node("ComfortPage")
+func check_settings(screen: SettingsScreen, context: String) -> void:
+	screen.select_tab(1)
+	var toggles := screen.pages[1].find_children("*", "CheckButton", true, false)
+	check(toggles.size() == 1 and toggles[0].name == &"Fullscreen", "%s keeps fullscreen in Điều khiển" % context)
+	screen.tabs[4].pressed.emit()
+	var comfort := screen.pages[4]
 	var comfort_toggles := comfort.find_children("*", "CheckButton", true, false)
-	check(comfort_toggles.size() == 6 and comfort_toggles.map(func(toggle: CheckButton): return toggle.name) == [&"CameraShake", &"CameraPunch", &"Hitstop", &"AutoPause", &"Rumble", &"Replay"] and comfort.find_child("CameraShake", true, false).text == "Rung camera", "%s preserves the five Hiệu ứng toggles and adds replay" % screen)
+	check(comfort_toggles.size() == 6 and comfort_toggles.map(func(toggle: CheckButton): return toggle.name) == [&"CameraShake", &"CameraPunch", &"Hitstop", &"AutoPause", &"Rumble", &"Replay"] and comfort.find_child("CameraShakeRow", true, false).get_child(0).get_child(0).get_child(0).text == "Rung camera", "%s preserves the five Hiệu ứng toggles and adds replay" % context)
 	toggles.append_array(comfort_toggles)
 	for toggle: CheckButton in toggles:
 		var on := toggle.get_theme_icon("checked")
 		var off := toggle.get_theme_icon("unchecked")
-		check(on.get_size() == Vector2(44, 24) and off.get_size() == on.get_size(), "%s toggle has clear 44x24 icons in both states" % screen)
-		check(on.get_image().get_pixel(22, 12).is_equal_approx(Color("#E8BC65")) and off.get_image().get_pixel(22, 12).get_luminance() < 0.2, "%s toggle uses gold ON and a dark OFF track" % screen)
-	SettingsControls.close_comfort(container)
-	var slider := container.get_child(0).get_child(1) as HSlider
+		check(on.get_size() == Vector2(44, 24) and off.get_size() == on.get_size(), "%s toggle has clear 44x24 icons in both states" % context)
+		check(on.get_image().get_pixel(22, 12).is_equal_approx(Color("#E8BC65")) and off.get_image().get_pixel(22, 12).get_luminance() < 0.2, "%s toggle uses gold ON and a dark OFF track" % context)
+	screen.select_tab(0)
+	var slider := screen.find_child("Master", true, false) as HSlider
 	var fill := slider.get_theme_stylebox("grabber_area") as StyleBoxFlat
 	var focused := slider.get_theme_stylebox("grabber_area_highlight") as StyleBoxFlat
-	check(fill.bg_color == focused.bg_color and focused.bg_color.is_equal_approx(Color("#E8BC65")), "%s slider fill stays gold when focused" % screen)
+	check(fill.bg_color == focused.bg_color and focused.bg_color.is_equal_approx(Color("#E8BC65")), "%s slider fill stays gold when focused" % context)

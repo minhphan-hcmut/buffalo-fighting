@@ -104,7 +104,7 @@ func run() -> void:
 	check(root.get_visible_rect().encloses(settings_panel.get_global_rect()), "menu settings are completely on screen")
 	check(settings_panel.get_global_rect().get_center().distance_to(root.get_visible_rect().get_center()) < 1.0, "menu settings stay centered")
 	check(not menu.menu_layout.visible and menu.get_viewport().gui_get_focus_owner().is_visible_in_tree(), "settings hide background menu and focus a visible control")
-	menu.menu_settings_actions.get_child(-1).pressed.emit()
+	menu.menu_settings_layer.done.pressed.emit()
 	check(menu.menu_layout.visible and not menu.menu_settings_layer.visible, "settings back restores menu")
 	menu._show_settings()
 	check(not menu.menu_layout.visible, "reopening settings hides menu again")

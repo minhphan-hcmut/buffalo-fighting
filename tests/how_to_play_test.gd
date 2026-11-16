@@ -125,7 +125,7 @@ func run() -> void:
 		var victim := demo.red if move.id == &"guard" else demo.blue
 		var gap := mesh_contact_gap(attacker, victim, move.id == &"flank")
 		check(gap < 0.15, "%s actual forehead/horn-to-body gap is below 0.15 m (%.3f m)" % [move.name, gap])
-		check(demo.impact.visible and demo.impact.position.distance_to(demo.callout.position - Vector3.UP * GameBalance.get_number("demo_callout_height")) < 0.01, "impact sparks and callout follow the contact point: " + move.name)
+		check(demo.vfx.bursts.get_child_count() > 0 and not demo.callout.text.is_empty(), "shared match effects and callout play at contact: " + move.name)
 	demo.move_buttons[0].grab_focus()
 	await key(KEY_DOWN)
 	check(demo.selected_move == &"dash" and demo.move_buttons[1].has_focus(), "Down selects the next move")
@@ -152,7 +152,9 @@ func run() -> void:
 	check(key_positions.W.y < key_positions.S.y and is_equal_approx(key_positions.W.x, key_positions.S.x) and key_positions.A.x < key_positions.S.x and key_positions.D.x > key_positions.S.x, "WASD preserves keyboard geometry")
 	howto.tabs[0].grab_focus()
 	await key(KEY_TAB)
-	check(howto.selected_tab == 1 and howto.tabs[1].has_focus(), "Tab reaches and selects the next tab")
+	check(howto.tabs[1].has_focus() and howto.selected_tab == 2, "Tab focuses the next tab without hiding the current page")
+	await key(KEY_ENTER)
+	check(howto.selected_tab == 1, "Enter activates the focused tab")
 	check(viewport.render_target_update_mode == SubViewport.UPDATE_WHEN_VISIBLE, "returning to Moves resumes rendering")
 	var closed := [false]
 	howto.closed.connect(func(): closed[0] = true)

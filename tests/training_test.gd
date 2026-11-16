@@ -77,10 +77,10 @@ func _check_entry() -> void:
 	check(focus.has_focus(), "drill page initially focuses Bao cát")
 	for drill: Dictionary in drills:
 		var button := page.find_child(drill.id, true, false) as Button
-		check(button != null and button.text.contains(drill.name) and button.text.contains(drill.goal), "drill page shows name and goal: %s" % drill.id)
+		check(button != null and button.text == drill.name and button.get_node("Description").text == drill.goal, "drill row shows name and goal: %s" % drill.id)
 		for move: Dictionary in MoveDemo.MOVES:
 			if drill.moves.has(String(move.id)):
-				check(button.text.contains(move.keys), "drill keys reuse MOVES text: %s/%s" % [drill.id, move.id])
+				check(button.get_node("Keys").get_children().any(func(cap: PanelContainer): return cap.get_child(0).text == move.keys), "drill keycaps reuse MOVES text: %s/%s" % [drill.id, move.id])
 		check(focus == button, "native keyboard/gamepad focus reaches %s" % drill.id)
 		focus = focus.find_next_valid_focus()
 	var toggle := page.find_child("UnlimitedStamina", true, false) as CheckButton

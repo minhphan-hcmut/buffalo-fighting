@@ -178,9 +178,10 @@ func _check_live_settings() -> void:
 	var rig := arena.get_node("CameraRig")
 	arena.request_pause_from_menu()
 	arena.hud.show_settings()
+	arena.hud.settings_screen.select_tab(2)
 	await process_frame
-	var view := arena.hud.pause_actions.find_child("CameraView", true, false) as OptionButton
-	var side := arena.hud.pause_actions.find_child("CameraSide", true, false) as OptionButton
+	var view := arena.hud.settings_screen.find_child("CameraView", true, false) as SettingsSelector
+	var side := arena.hud.settings_screen.find_child("CameraSide", true, false) as SettingsSelector
 	check(view != null and side != null, "pause settings include both camera choices")
 	var old_length: float = rig.arm.spring_length
 	view.select(2)
@@ -194,7 +195,7 @@ func _check_live_settings() -> void:
 	rig._process(5.0)
 	rig.follow_target()
 	check(is_equal_approx(rig.arm.spring_length, GameBalance.get_number("camera_distance_far")) and rig.arm.position.x < 0.0, "live pause changes settle at Xa / Trái")
-	check(arena.hud.pause_panel.size.y < 660.0 and root.get_visible_rect().encloses(arena.hud.pause_panel.get_global_rect()), "pause settings stay below 660 px and inside the screen")
+	check(arena.hud.settings_screen.panel.size.y < 660.0 and root.get_visible_rect().encloses(arena.hud.settings_screen.panel.get_global_rect()), "pause settings stay below 660 px and inside the screen")
 	await physics_frame
 	await physics_frame
 	arena.free()
@@ -203,12 +204,13 @@ func _check_live_settings() -> void:
 	menu._show_settings()
 	await process_frame
 	await process_frame
-	var actions: Container = menu.menu_settings_actions
-	var focused: Control = actions.get_child(0).get_child(1)
+	var screen: SettingsScreen = menu.menu_settings_layer
+	screen.select_tab(2)
+	var focused: Control = screen.pages[2].get_child(0)
 	var stops: Array[Control] = []
 	for index in 10:
 		stops.append(focused)
 		focused = focused.find_next_valid_focus()
-	check(stops.has(actions.find_child("CameraView", true, false)) and stops.has(actions.find_child("CameraSide", true, false)) and stops.has(actions.find_child("ComfortButton", true, false)) and stops.has(actions.find_child("GraphicsButton", true, false)) and stops.has(actions.get_child(-1)), "keyboard/gamepad focus reaches camera choices, Hiệu ứng, Đồ họa and Back")
-	check(menu.menu_settings_layer.get_child(1).size.y < 660.0, "main-menu settings retain the existing 660 px cap")
+	check(stops.has(screen.find_child("CameraViewRow", true, false)) and stops.has(screen.find_child("CameraSideRow", true, false)) and stops.has(screen.tabs[4]) and stops.has(screen.tabs[3]) and stops.has(screen.done), "keyboard/gamepad focus reaches camera rows, Hiệu ứng, Đồ họa and Done")
+	check(screen.panel.size.y < 660.0, "main-menu settings retain the existing 660 px cap")
 	menu.free()

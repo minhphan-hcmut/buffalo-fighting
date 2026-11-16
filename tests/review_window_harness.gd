@@ -100,19 +100,17 @@ func menus() -> void:
 	click(menu.menu_layout.get_node("SettingsButton"))
 	await wait_view()
 	check(menu.menu_settings_layer.visible, "mouse opens settings")
-	await shot("settings", menu.menu_settings_actions.get_parent().get_parent())
-	var actions: Container = menu.menu_settings_actions
-	(actions.find_child("GraphicsButton", true, false) as Button).pressed.emit()
-	var page: Control = actions.get_node("GraphicsPage")
-	await shot("graphics", page.find_children("*", "PanelContainer", true, false)[0])
+	var settings: SettingsScreen = menu.menu_settings_layer
+	await shot("settings", settings.panel)
+	settings.tabs[3].pressed.emit()
+	await shot("graphics", settings.panel)
 	key(KEY_ESCAPE)
-	check(menu.menu_settings_layer.visible and actions.get_node_or_null("GraphicsPage") == null, "graphics Esc returns one page")
-	(actions.find_child("ComfortButton", true, false) as Button).pressed.emit()
-	page = actions.get_node("ComfortPage")
-	await shot("comfort", page.find_children("*", "PanelContainer", true, false)[0])
+	check(not settings.visible and menu.menu_layout.visible, "graphics Esc returns to the main menu")
+	menu._show_settings()
+	settings.tabs[4].pressed.emit()
+	await shot("comfort", settings.panel)
 	key(KEY_ESCAPE)
-	key(KEY_ESCAPE)
-	check(menu.menu_layout.visible, "two Esc presses return from comfort to main menu")
+	check(menu.menu_layout.visible, "Esc returns from effects to main menu")
 	click(menu.menu_layout.get_node("HowToPlayButton"))
 	await wait_view()
 	var howto := menu.get_node("HowToPlay") as HowToPlay
@@ -248,13 +246,15 @@ func training() -> void:
 		if drill.id == "dummy":
 			await shot("pause", arena.hud.pause_panel)
 			button(arena.hud.pause_actions, "CÀI ĐẶT").pressed.emit()
-			var slider := arena.hud.pause_actions.get_child(3).get_child(1) as HSlider
+			arena.hud.settings_screen.select_tab(1)
+			var slider := arena.hud.settings_screen.find_child("Sensitivity", true, false) as HSlider
 			slider.value = 0.7
 			check(is_equal_approx(arena.get_node("CameraRig").mouse_sensitivity, SessionState.mouse_sensitivity), "pause sensitivity applies live")
-			(arena.hud.pause_actions.find_child("GraphicsButton", true, false) as Button).pressed.emit()
+			arena.hud.settings_screen.tabs[3].pressed.emit()
 			await shot("pause-graphics")
 			key(KEY_ESCAPE)
-			check(arena.paused and arena.hud.showing_settings, "pause graphics Esc returns to settings")
+			check(arena.paused and not arena.hud.showing_settings, "pause graphics Esc returns to pause")
+			arena.hud.show_settings()
 			key(KEY_ESCAPE)
 			check(arena.paused and not arena.hud.showing_settings, "pause settings Esc returns to pause")
 		if drill.id != "hook":
@@ -268,7 +268,7 @@ func training() -> void:
 
 func lobby() -> void:
 	var menu: Control = current_scene
-	button(menu.menu_layout, "LAN · HOST / JOIN").pressed.emit()
+	button(menu.menu_layout, "LAN").pressed.emit()
 	await scene_changed
 	var room: Control = current_scene
 	await shot("lobby", room.host_button.get_parent().get_parent())

@@ -93,6 +93,16 @@ func run() -> void:
 	check(button.scale.is_equal_approx(Vector2.ONE), "hidden button resets its scale")
 	check(button.size == original_size and button.custom_minimum_size == minimum, "motion preserves size and custom minimum size")
 	button.free()
+	var item := Button.new()
+	item.set_meta("menu_item", true)
+	UiMotion.attach(item)
+	root.add_child(item)
+	item.focus_entered.emit()
+	await settle()
+	check(is_equal_approx(item.position.x, GameBalance.get_number("ui_menu_focus_slide")) and item.scale == Vector2.ONE, "text menu focus slides without scaling")
+	item.hide()
+	check(is_zero_approx(item.position.x), "hidden text menu clears its focus slide")
+	item.free()
 
 	check(UiMotion.banner_scale(0.0).x > 1.0, "banner pop starts larger than one")
 	var halfway := UiMotion.banner_scale(GameBalance.get_number("ui_banner_pop_s") * 0.5).x

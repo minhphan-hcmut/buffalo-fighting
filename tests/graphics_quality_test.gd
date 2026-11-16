@@ -187,30 +187,33 @@ func run() -> void:
 	GraphicsQuality.set_preset(GraphicsQuality.HIGH)
 
 	# The Đồ họa page in the settings.
-	var holder := VBoxContainer.new()
-	root.add_child(holder)
-	SettingsControls.populate(holder)
-	var opener := holder.find_child("GraphicsButton", true, false) as Button
-	check(opener != null and opener.text.contains("Cao"), "settings show an Đồ họa button with the current preset")
-	opener.pressed.emit()
-	var page := holder.find_child("GraphicsPage", true, false) as Control
-	var options := page.find_children("*", "OptionButton", true, false) if page != null else []
-	check(options.size() == 2 + GraphicsQuality.DETAILS.size(), "the Đồ họa page has a preset row, one row per detail and an FPS limit row")
+	var screen := SettingsScreen.new()
+	root.add_child(screen)
+	screen.open(null)
+	screen.tabs[3].pressed.emit()
+	check(screen.selected_tab == 3 and screen.tabs[3].text == "Đồ họa" and (screen.find_child("Preset", true, false) as SettingsSelector).value_label.text == "Cao", "settings show an Đồ họa tab with the current preset")
+	var page := screen.pages[3]
+	var options: Array[SettingsSelector] = []
+	for row: SettingsRow in page.get_children():
+		if row.control is SettingsSelector:
+			options.append(row.control)
+	check(options.size() == 2 + GraphicsQuality.DETAILS.size(), "Đồ họa has a preset row, one row per detail and an FPS limit row")
 	await process_frame
-	var panel := page.find_children("*", "PanelContainer", true, false)[0] as Control if page != null else null
-	check(panel != null and root.get_visible_rect().encloses(panel.get_global_rect()), "the Đồ họa page fits the window (%s)" % (panel.get_global_rect() if panel != null else "none"))
+	var panel := screen.panel
+	check(root.get_visible_rect().encloses(panel.get_global_rect()), "the Đồ họa tab fits the window (%s)" % panel.get_global_rect())
 	if options.size() == 7:
-		(options[6] as OptionButton).select(GraphicsQuality.FPS_LIMITS.find(30))
-		(options[6] as OptionButton).item_selected.emit(GraphicsQuality.FPS_LIMITS.find(30))
-		check(Engine.max_fps == 30, "picking 30 on the page limits the frame rate at once")
-		(options[6] as OptionButton).item_selected.emit(0)
-		(options[0] as OptionButton).select(GraphicsQuality.LOW)
-		(options[0] as OptionButton).item_selected.emit(GraphicsQuality.LOW)
-		check(GraphicsQuality.preset() == GraphicsQuality.LOW and (options[1] as OptionButton).selected == 0, "picking Thấp on the page sets the details and shows them")
-		(options[2] as OptionButton).select(2)
-		(options[2] as OptionButton).item_selected.emit(2)
-		check((options[0] as OptionButton).selected == GraphicsQuality.CUSTOM and opener.text.contains("Tùy chỉnh"), "changing a detail on the page shows Tùy chỉnh")
-	holder.free()
+		options[6].select(GraphicsQuality.FPS_LIMITS.find(30))
+		options[6].item_selected.emit(GraphicsQuality.FPS_LIMITS.find(30))
+		check(Engine.max_fps == 30, "picking 30 on the tab limits the frame rate at once")
+		options[6].item_selected.emit(0)
+		options[0].select(GraphicsQuality.LOW)
+		options[0].item_selected.emit(GraphicsQuality.LOW)
+		check(GraphicsQuality.preset() == GraphicsQuality.LOW and options[1].selected == 0, "picking Thấp on the tab sets the details and shows them")
+		options[2].select(2)
+		options[2].item_selected.emit(2)
+		check(options[0].selected == GraphicsQuality.CUSTOM and options[0].value_label.text == "Tùy chỉnh", "changing a detail on the tab shows Tùy chỉnh")
+	screen.close()
+	screen.free()
 
 	GraphicsQuality.set_preset(GraphicsQuality.HIGH)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))

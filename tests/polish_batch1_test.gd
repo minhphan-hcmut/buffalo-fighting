@@ -46,15 +46,15 @@ func run() -> void:
 	var old_rect := first._label_rect(camera, first.label.global_position)
 	var new_rect := second._label_rect(camera, second.label.global_position)
 	check(old_rect.end.y <= new_rect.position.y - GameBalance.get_number("combat_label_gap_px") + 0.01, "projected label bounds are separated by configured pixel gap")
-	check(second.label_importance > first.label_importance and second.label.modulate.is_equal_approx(BuffaloFeedback.GLOW_HORN), "counter word is larger and matches yellow horn glow")
+	check(second.label_importance > first.label_importance and second.label.modulate.is_equal_approx(ControlsDiagram.GOLD), "counter word is larger and uses palette gold")
 	second._process(GameBalance.get_number("combat_label_pop_s"))
 	check(is_equal_approx(second.label.scale.x, GameBalance.get_number("combat_label_important_scale")), "important label settles larger than ordinary label")
 	arena.combat_event.emit(&"PARRY_SUCCESS", 1, 2, 0.0)
 	second._process(0.0)
-	check(first.label.modulate.is_equal_approx(BuffaloFeedback.GLOW_PARRY) and second.label.modulate.a < first.label.modulate.a, "newer event reverses label priority and parry is green")
+	check(first.label.modulate.is_equal_approx(BuffaloFeedback.GLOW_PARRY.lerp(ControlsDiagram.PAPER, GameBalance.get_number("combat_callout_parry_paper_mix"))) and second.label.modulate.a < first.label.modulate.a, "newer event reverses label priority and parry uses a softer tint")
 	arena.opponent.position.x = 12.0
 	second._process(0.0)
-	check(second.label.global_position.is_equal_approx(second._label_position()) and second.label.modulate.a == 1.0, "separate projected words restore normal position and opacity")
+	check(second.label.visible and root.get_visible_rect().grow(1.0).encloses(second._label_rect(camera, second.label.global_position)) and second.label.modulate.a == 1.0, "separate projected words stay on screen and restore full opacity")
 	arena.paused = true
 	var remaining := first.label_time
 	var position_before := first.label.global_position
@@ -69,7 +69,7 @@ func run() -> void:
 	camera.clear_current(false)
 	arena.combat_event.emit(&"WHIFF_START", 1, 2, 0.0)
 	first._process(0.0)
-	check(first.label.visible and first.label.modulate == Color.WHITE, "feedback works without an active camera")
+	check(first.label.visible and first.label.modulate.is_equal_approx(ControlsDiagram.PAPER), "feedback works without an active camera")
 	camera.make_current()
 	var vfx := arena.vfx as MatchVFX
 	vfx.set_process(false)

@@ -312,9 +312,9 @@ func _presentation_and_input() -> void:
 	for action in [&"HORN", &"DASH", &"PARRY", &"COUNTER", &"WHIFF"]:
 		a.action_started.emit(a.slot, action)
 		b.action_started.emit(b.slot, action)
-		check(feedback.label.visible and other.label.visible and feedback.label.outline_size > 0 and is_equal_approx(feedback.label_time, 0.6), "outlined 0.6s Label3D for both buffaloes: " + String(action))
-	feedback._process(0.61)
-	check(not feedback.label.visible, "floating label expires after 0.6s")
+		check(feedback.label_time > 0.0 and other.label_time > 0.0 and feedback.label.outline_size > 0 and is_equal_approx(feedback.label_time, GameBalance.get_number("combat_label_s")), "outlined timed callout for both buffaloes: " + String(action))
+	feedback._process(GameBalance.get_number("combat_label_s") + DT)
+	check(not feedback.label.visible, "floating label expires after configured lifetime")
 	for sample in [[Buffalo.State.HORN_STARTUP, Color("ffd12a")], [Buffalo.State.DASH_ACTIVE, Color("ff3030")], [Buffalo.State.PARRY_ACTIVE, Color("40ff50")]]:
 		a.state = sample[0]
 		check(feedback.glow_color().is_equal_approx(sample[1]), "horn glow color for " + String(a.state_name()))

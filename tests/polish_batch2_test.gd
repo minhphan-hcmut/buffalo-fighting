@@ -54,14 +54,16 @@ func run() -> void:
 	menu._show_settings()
 	for i in 3:
 		await process_frame
-	var actions: VBoxContainer = menu.menu_settings_actions
-	var master := actions.get_child(0).get_child(1) as HSlider
-	var music := actions.get_child(1).get_child(1) as HSlider
-	var sfx := actions.get_child(2).get_child(1) as HSlider
-	var sensitivity := actions.get_child(3).get_child(1) as HSlider
-	var sensitivity_value := actions.get_child(3).find_child("Value", true, false) as Label
+	var screen: SettingsScreen = menu.menu_settings_layer
+	var actions: VBoxContainer = screen.pages[0]
+	var master := screen.find_child("Master", true, false) as HSlider
+	var music := screen.find_child("Music", true, false) as HSlider
+	var sfx := screen.find_child("SFX", true, false) as HSlider
+	var sensitivity := screen.find_child("Sensitivity", true, false) as HSlider
+	var sensitivity_value := screen.find_child("SensitivityRow", true, false).find_child("Value", true, false) as Label
 	check(sensitivity_value.text == "5" and is_equal_approx(sensitivity.ratio, 0.5), "default sensitivity displays 5 at the exact slider midpoint")
-	sensitivity.grab_focus()
+	screen.select_tab(1)
+	screen.find_child("SensitivityRow", true, false).grab_focus()
 	var right := InputEventKey.new()
 	right.keycode = KEY_RIGHT
 	right.pressed = true
@@ -80,15 +82,15 @@ func run() -> void:
 	music.value = 42
 	sfx.value = 81
 	sensitivity.ratio = 0.75
-	var comfort_opener := actions.find_child("ComfortButton", true, false) as Button
+	var comfort_opener := screen.tabs[4]
 	comfort_opener.pressed.emit()
-	var comfort_page := actions.find_child("ComfortPage", true, false)
+	var comfort_page := screen.pages[4]
 	var shake := comfort_page.find_child("CameraShake", true, false) as CheckButton
 	check(shake.button_pressed, "Rung camera moves to Hiệu ứng and defaults to Bật")
 	check(shake.pressed.get_connections().is_empty(), "moved shake toggle still does not trigger a menu click sound")
 	shake.button_pressed = false
 	check(not SessionState.camera_shake_enabled, "Hiệu ứng shake choice updates the existing saved setting")
-	SettingsControls.close_comfort(actions)
+	screen.select_tab(0)
 	check(labels(actions.get_child(0)).contains("63%") and sensitivity_value.text == "7.5" and is_equal_approx(SessionState.mouse_sensitivity, 0.325), "volume keeps its percentage while sensitivity uses the 1–10 scale")
 	var config := ConfigFile.new()
 	check(config.load(SETTINGS_PATH) == OK and is_equal_approx(config.get_value("audio", "Master"), 0.63) and is_equal_approx(config.get_value("audio", "Music"), 0.42) and is_equal_approx(config.get_value("audio", "SFX"), 0.81), "each slider change saves the three bus volumes to the injected path")
@@ -101,12 +103,12 @@ func run() -> void:
 	AudioServer.set_bus_volume_linear(FestivalAudio.ensure_bus(&"Master"), 1.0)
 	SessionState.load_settings(SETTINGS_PATH)
 	check(not SessionState.camera_shake_enabled and SessionState.fullscreen_enabled and is_equal_approx(SessionState.mouse_sensitivity, 0.24) and is_equal_approx(AudioServer.get_bus_volume_linear(FestivalAudio.ensure_bus(&"Master")), 0.63), "reload restores toggles, mouse sensitivity and volume")
-	var reopened := VBoxContainer.new()
+	var reopened := SettingsScreen.new()
 	var callback_values: Array[float] = []
-	SettingsControls.populate(reopened, func(value: float): callback_values.append(value))
+	reopened.on_sensitivity = func(value: float): callback_values.append(value)
 	root.add_child(reopened)
-	var restored_slider := reopened.get_child(3).get_child(1) as HSlider
-	check(is_equal_approx(restored_slider.ratio, 0.63) and reopened.get_child(3).find_child("Value", true, false).text == "6.3" and is_equal_approx(SessionState.mouse_sensitivity, 0.24), "old real sensitivity restores the slider and label without rewriting the saved value")
+	var restored_slider := reopened.find_child("Sensitivity", true, false) as HSlider
+	check(is_equal_approx(restored_slider.ratio, 0.63) and reopened.find_child("SensitivityRow", true, false).find_child("Value", true, false).text == "6.3" and is_equal_approx(SessionState.mouse_sensitivity, 0.24), "old real sensitivity restores the slider and label without rewriting the saved value")
 	restored_slider.ratio = 0.75
 	check(callback_values.size() == 1 and is_equal_approx(callback_values[0], 0.325), "shared pause callback receives real sensitivity rather than the display scale")
 	reopened.free()
@@ -128,13 +130,15 @@ func run() -> void:
 	config.save(SETTINGS_PATH)
 	SessionState.load_settings(SETTINGS_PATH)
 	check(SessionState.camera_shake_enabled and not SessionState.fullscreen_enabled and is_equal_approx(SessionState.mouse_sensitivity, GameBalance.get_number("mouse_sensitivity")) and is_equal_approx(AudioServer.get_bus_volume_linear(0), 1.0), "wrong types and out-of-range settings use defaults")
-	var focus: Control = master
 	var reached: Array[Control] = []
-	for i in 10:
-		reached.append(focus)
-		focus = focus.find_next_valid_focus()
-	check(reached.has(music) and reached.has(sfx) and reached.has(sensitivity) and reached.has(actions.get_child(4)) and reached.has(comfort_opener) and reached.has(actions.find_child("GraphicsButton", true, false)) and reached.has(actions.get_child(-1)), "keyboard focus reaches all settings controls, Hiệu ứng, Đồ họa and Back")
-	check(reached.has(actions.find_child("CameraView", true, false)) and reached.has(actions.find_child("CameraSide", true, false)), "keyboard focus also reaches both camera choices")
+	for tab in screen.tabs.size():
+		screen.select_tab(tab)
+		var focus: Control = screen.pages[tab].get_child(0)
+		for i in screen.pages[tab].get_child_count() + 7:
+			reached.append(focus)
+			focus = focus.find_next_valid_focus()
+	check(reached.has(screen.find_child("MasterRow", true, false)) and reached.has(screen.find_child("MusicRow", true, false)) and reached.has(screen.find_child("SFXRow", true, false)) and reached.has(screen.find_child("SensitivityRow", true, false)) and reached.has(screen.find_child("FullscreenRow", true, false)) and reached.has(comfort_opener) and reached.has(screen.tabs[3]) and reached.has(screen.done), "keyboard focus reaches every settings tab's controls and Done")
+	check(reached.has(screen.find_child("CameraViewRow", true, false)) and reached.has(screen.find_child("CameraSideRow", true, false)), "keyboard focus also reaches both camera choices")
 	var settings_panel := menu.menu_settings_layer.get_child(1) as PanelContainer
 	check(root.get_visible_rect().encloses(settings_panel.get_global_rect()) and settings_panel.get_global_rect().get_center().distance_to(root.get_visible_rect().get_center()) < 1.0, "settings panel fits the viewport and stays centered")
 	check(settings_panel.size.y < 660.0, "settings panel shrinks to its content (one row added for Đồ họa)")
@@ -148,7 +152,7 @@ func run() -> void:
 	var settings_button := menu.menu_layout.get_node("SettingsButton") as Button
 	check(howto_button.get_index() + 1 == settings_button.get_index(), "How to Play sits between LAN and Settings")
 	check(howto_button.pressed.get_connections().size() == 2 and settings_button.pressed.get_connections().size() == 2, "new menu buttons keep their action and global click sound")
-	for toggle in [actions.get_child(4)]:
+	for toggle in [screen.find_child("Fullscreen", true, false)]:
 		check(toggle.pressed.get_connections().is_empty(), "settings toggle does not trigger a menu click sound")
 	check(master.value_changed.get_connections().size() == 2, "slider only updates its setting and value label")
 	howto_button.pressed.emit()
