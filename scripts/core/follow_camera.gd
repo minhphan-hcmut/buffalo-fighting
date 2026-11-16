@@ -27,7 +27,7 @@ var overview_time := -1.0
 var _overview_from := Vector3.ZERO
 var _overview_yaw_from := 0.0
 var _overview_yaw_to := 0.0
-## Seconds since the Solo result's winner shot started, or -1. Set by show_winner().
+## Seconds since the result's winner shot started, or -1. Set by show_winner().
 var winner_time := -1.0
 var _winner: Node3D
 var _winner_from_position := Vector3.ZERO
@@ -100,7 +100,7 @@ func _follow_overview() -> void:
 	_keep_inside_arena()
 
 
-## Solo result screen: after the outro, glide from the overview down to a slow orbit
+## Result screen: after the outro, glide from the overview down to a slow orbit
 ## around the winner, seen from the front three-quarter, framed right of the result
 ## panel. Idempotent.
 func show_winner(actor: Node3D) -> void:

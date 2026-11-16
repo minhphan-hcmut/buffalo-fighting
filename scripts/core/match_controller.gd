@@ -100,6 +100,9 @@ func _ready() -> void:
 	vfx = MatchVFX.new()
 	vfx.name = "MatchVFX"
 	add_child(vfx)
+	var audio_service := get_node("/root/GameAudio") as FestivalAudio
+	for cue: String in audio_service.settings.get("cues", {}):
+		audio_service.stream_for(cue)
 	start_countdown()
 	var crowd := CrowdReaction.new()
 	crowd.name = "CrowdReaction"
@@ -141,14 +144,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if phase != &"PLAYING" and not (mode == &"SOLO" and phase == &"COUNTDOWN"):
 		return
-	# Esc on the settings page steps back to the pause menu, like its QUAY LẠI button.
+	# Closing settings preserves the current Solo/LAN pause state and opener.
 	if is_instance_valid(hud) and hud.showing_settings:
-		if SettingsControls.close_comfort(hud.pause_actions) or SettingsControls.close_graphics(hud.pause_actions):
-			get_viewport().set_input_as_handled()
-			return
-		hud.show_pause()
+		hud.settings_screen.close()
 		get_viewport().set_input_as_handled()
 		return
+
 	if mode == &"LAN":
 		_request_lan_pause(not paused)
 	else:
@@ -264,8 +265,9 @@ func _physics_process(delta: float) -> void:
 	if finished:
 		if replay != null and replay.active:
 			return
+		hitstop_ticks = 0
 		outro.process(delta)
-		if mode == &"SOLO" and result_ready and is_instance_valid(outro.winner):
+		if result_ready and is_instance_valid(outro.winner):
 			$CameraRig.show_winner(outro.winner)
 		return
 	if phase == &"COUNTDOWN":

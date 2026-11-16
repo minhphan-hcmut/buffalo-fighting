@@ -14,7 +14,9 @@ const PARRY := BuffaloFeedback.GLOW_PARRY
 ## Every burst preset, drawn once by `warm_up()` so their shaders compile before the match.
 const WARM_UP_PRESETS := ["flash", "spark", "shock", "ring", "debris", "dust", "guard", "parry", "dash_blast", "dash_clods", "dash_ring", "muzzle", "swing", "clash_dust", "hoof_dust", "breath", "skid_debris", "clash_spark"]
 
-var controller: MatchController
+## Source contract: player/opponent, paused, phase, finished, active_clash,
+## and presentation_pinned(actor); shared by the match and the tutorial world.
+var controller: Node
 var bursts: Node3D
 var pinned_markers: Dictionary = {}
 var dash_times: Dictionary = {}
@@ -39,6 +41,7 @@ var shock_mesh: QuadMesh
 var muzzle_mesh: QuadMesh
 var swing_mesh: QuadMesh
 var dash_ring_mesh: QuadMesh
+var dash_ring_growth: Curve
 var impact_groups: Dictionary = {}
 var warm_cover: CanvasLayer
 var warm_node: Node3D
@@ -46,7 +49,8 @@ var warm_frames_left := 0
 
 
 func _ready() -> void:
-	controller = get_parent() as MatchController
+	if controller == null:
+		controller = get_parent()
 	bursts = Node3D.new()
 	bursts.name = "Bursts"
 	add_child(bursts)
@@ -156,6 +160,11 @@ void fragment() {
 	ring_growth.max_value = GameBalance.get_number("vfx_ring_growth_end")
 	ring_growth.add_point(Vector2(0.0, GameBalance.get_number("vfx_ring_growth_start")))
 	ring_growth.add_point(Vector2(1.0, GameBalance.get_number("vfx_ring_growth_end")))
+	dash_ring_growth = Curve.new()
+	dash_ring_growth.max_value = GameBalance.get_number("vfx_dash_ring_growth_end")
+	dash_ring_growth.add_point(Vector2(0.0, GameBalance.get_number("vfx_dash_ring_growth_start")))
+	dash_ring_growth.add_point(Vector2(GameBalance.get_number("vfx_dash_ring_peak_at"), GameBalance.get_number("vfx_dash_ring_growth_end")))
+	dash_ring_growth.add_point(Vector2(1.0, GameBalance.get_number("vfx_dash_ring_growth_end")))
 	debris_mesh = dust_mesh.duplicate()
 	var debris_material := dust_material.duplicate() as StandardMaterial3D
 	debris_material.albedo_texture = preload("res://assets/vfx/kenney_particle_pack/dirt_01.png")
@@ -250,6 +259,23 @@ func _begin_warm_up() -> void:
 	light.global_position = Vector3.UP * GameBalance.get_number("vfx_light_height")
 
 
+## Clear a presentation timeline without changing either actor's gameplay state.
+func reset() -> void:
+	for container in [bursts, lights, furrows]:
+		for child in container.get_children():
+			child.free()
+	for timers in [dash_times, skid_times, breath_times, dash_hooves, last_positions, impact_groups]:
+		timers.clear()
+	clock = 0.0
+	clash_dust_time = 0.0
+	clash_spark_time = 0.0
+
+
+func set_paused(value: bool) -> void:
+	for emitter: CPUParticles3D in bursts.get_children():
+		emitter.speed_scale = 0.0 if value else 1.0
+
+
 func _process(delta: float) -> void:
 	for emitter: CPUParticles3D in bursts.get_children():
 		emitter.speed_scale = 0.0 if controller.paused else 1.0
@@ -298,7 +324,7 @@ func _process(delta: float) -> void:
 			var slide := Vector3(actor.velocity.x, 0.0, actor.velocity.z)
 			if not controller.active_clash.is_empty() and delta > 0.0:
 				slide = travel / delta
-			var sliding_back := not controller.active_clash.is_empty() and slide.dot(actor.forward()) < 0.0
+			var sliding_back: bool = not controller.active_clash.is_empty() and slide.dot(actor.forward()) < 0.0
 			if (actor.knockback_time > 0.0 or sliding_back) and slide.length() > GameBalance.get_number("vfx_skid_min_speed") and skid_times[actor.slot] <= 0.0:
 				_skid(actor, slide)
 			if actor.stamina < GameBalance.get_number("stamina_max") * GameBalance.get_number("vfx_breath_stamina_fraction") and breath_times[actor.slot] <= 0.0:
@@ -321,11 +347,11 @@ func _process(delta: float) -> void:
 
 
 ## Spawns the effect for one combat event; `source` and `target` are slots 1 or 2.
-func on_combat_event(event: StringName, source: int, target: int) -> void:
+func on_combat_event(event: StringName, source: int, target: int, heavy_impact: bool = false) -> void:
 	if controller.paused or source not in [1, 2] or target not in [1, 2]:
 		return
-	var attacker := controller.player if source == 1 else controller.opponent
-	var victim := controller.player if target == 1 else controller.opponent
+	var attacker: Buffalo = controller.player if source == 1 else controller.opponent
+	var victim: Buffalo = controller.player if target == 1 else controller.opponent
 	var pair := Vector2i(source, target)
 	var group: Dictionary = impact_groups.get(pair, {})
 	var recent := not group.is_empty() and clock - float(group.time) < GameBalance.get_number("vfx_impact_merge_s")
@@ -333,7 +359,7 @@ func on_combat_event(event: StringName, source: int, target: int) -> void:
 		&"HORN_HIT", &"DASH_HIT", &"COUNTER_HIT", &"FLANK_HIT", &"BACK_HIT":
 			if recent and group.get("guard", false):
 				return
-			var strength := GameBalance.get_number("vfx_impact_heavy_scale") if event in [&"DASH_HIT", &"COUNTER_HIT"] else 1.0
+			var strength := GameBalance.get_number("vfx_impact_heavy_scale") if heavy_impact or event in [&"DASH_HIT", &"COUNTER_HIT"] else 1.0
 			# Resolver sends COUNTER/FLANK/BACK after the base hit; upgrade that burst once.
 			if recent and event in [&"COUNTER_HIT", &"FLANK_HIT", &"BACK_HIT"]:
 				_upgrade_impact(group, strength)
@@ -561,12 +587,7 @@ func _burst(kind: StringName, at: Vector3, tint: Color, preset: String, strength
 			at.y = GameBalance.get_number("vfx_muzzle_ground_height")
 		elif preset == "dash_ring":
 			emitter.mesh = dash_ring_mesh
-			var growth := Curve.new()
-			growth.max_value = GameBalance.get_number("vfx_dash_ring_growth_end")
-			growth.add_point(Vector2(0.0, GameBalance.get_number("vfx_dash_ring_growth_start")))
-			growth.add_point(Vector2(GameBalance.get_number("vfx_dash_ring_peak_at"), GameBalance.get_number("vfx_dash_ring_growth_end")))
-			growth.add_point(Vector2(1.0, GameBalance.get_number("vfx_dash_ring_growth_end")))
-			emitter.scale_amount_curve = growth
+			emitter.scale_amount_curve = dash_ring_growth
 			at.y = GameBalance.get_number("vfx_muzzle_ground_height")
 		# A stationary contact flash must use its placed transform on the first frame.
 		emitter.local_coords = true
