@@ -21,11 +21,23 @@ func run() -> void:
 	SessionState.mode = &"SOLO"
 	SessionState.level_id = &"L01"
 	change_scene_to_file("res://scenes/main_menu.tscn")
-	await process_frame
-	await process_frame
+	await scene_changed
 	var status := ResourceLoader.load_threaded_get_status(arena)
 	check(status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "main menu requests the arena on a background thread (status %d)" % status)
 	var menu := current_scene
+	var menu_script: Script = menu.get_script()
+	var menu_ref: WeakRef = weakref(menu)
+	change_scene_to_file("res://scenes/lobby.tscn")
+	await scene_changed
+	var deadline := Time.get_ticks_msec() + 5000
+	while menu_script.get("_arena_scene") == null and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(menu_script.get("_arena_scene") is PackedScene, "completed prefetch is collected without entering Solo (menu/LAN/quit path)")
+	check(ResourceLoader.load_threaded_get_status(arena) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "completed native background request is released")
+	check(menu_ref.get_ref() == null, "background completion does not retain the freed menu")
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await scene_changed
+	menu = current_scene
 	menu.call("_go_to_arena")
 	await process_frame
 	await process_frame

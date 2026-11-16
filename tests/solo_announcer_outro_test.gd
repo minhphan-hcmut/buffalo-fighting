@@ -26,7 +26,7 @@ func check(condition: bool, description: String) -> void:
 
 func run() -> void:
 	SessionState.mode = &"SOLO"
-	SessionState.level_id = &"L02"
+	SessionState.level_id = &"L04"
 	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
 	root.add_child(arena)
 	arena.set_physics_process(false)
@@ -42,8 +42,8 @@ func run() -> void:
 	hud.set_process(false)
 	hud._process(0.0)
 	check(hud.announcer_label.visible, "subtitle is visible during Solo countdown")
-	check(hud.announcer_label.text.begins_with("Bán kết — sân lầy"), "round title comes from the current level")
-	check(hud.announcer_label.text.contains("06 cờ đỏ Giáp Đông") and hud.announcer_label.text.contains("17 cờ xanh Giáp Tây"), "subtitle uses the buffalo identifiers")
+	check(hud.announcer_label.text.begins_with("Bán kết"), "round title comes from the current level")
+	check(hud.announcer_label.text.contains("06 cờ đỏ Giáp Đông") and hud.announcer_label.text.contains("03 cờ xanh Giáp Thượng"), "subtitle uses the buffalo identifiers")
 	ArenaBuilder.add_identifier(arena.player, Color.BLUE, "23", "GIÁP NAM")
 	check(arena.announcer_text().contains("23 cờ xanh Giáp Nam"), "announcement follows changed identity without duplicate constants")
 	audio._process(0.0)

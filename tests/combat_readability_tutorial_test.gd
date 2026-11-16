@@ -56,7 +56,7 @@ func run() -> void:
 	hud._process(duration)
 	check(hud.tutorial_seen == [1, 2, 3, 4, 5, 6] and hud.tutorial_queue.is_empty(), "each context hint appears once")
 	check(hud.tutorial_label.get_parsed_text().contains("G Gạt sừng"), "control guide includes G after hints")
-	for variant in [[&"SOLO", &"L02"], [&"LAN", &"L01"]]:
+	for variant in [[&"SOLO", &"L02"], [&"SOLO", &"L03"], [&"SOLO", &"L04"], [&"SOLO", &"L05"], [&"LAN", &"L01"]]:
 		arena.mode = variant[0]
 		arena.level_id = variant[1]
 		hud.tutorial_seen.clear()

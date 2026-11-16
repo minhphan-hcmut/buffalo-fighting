@@ -18,7 +18,7 @@ func check(ok: bool, description: String) -> void:
 func run() -> void:
 	root.size = Vector2i(1280, 720)
 	SessionState.mode = &"SOLO"
-	for level in [&"L01", &"L02"]:
+	for level in [&"L01", &"L02", &"L03", &"L04", &"L05"]:
 		SessionState.level_id = level
 		var preview: MatchController = load("res://scenes/arena.tscn").instantiate()
 		root.add_child(preview)
@@ -29,7 +29,7 @@ func run() -> void:
 			preview.hud._process(0.0)
 			await process_frame
 			var center: Vector2 = preview.hud.center_label.get_global_rect().get_center()
-			check(center.y > preview.hud.timer_label.get_global_rect().end.y and center.y < 140.0, "%s digit %d stays directly below the central timer" % [level, digit])
+			check(center.y > preview.hud.timer_label.get_global_rect().end.y and is_equal_approx(center.y, GameBalance.get_number("hud_banner_top") + preview.hud.center_label.size.y * 0.5) and is_equal_approx(center.x, root.get_visible_rect().size.x * 0.5), "%s digit %d stays centred at the configured safe banner position" % [level, digit])
 		preview.free()
 	SessionState.level_id = &"L02"
 	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
@@ -37,8 +37,8 @@ func run() -> void:
 	arena.set_physics_process(false)
 	var hud = arena.hud
 	hud.set_process(false)
-	var punch := GameBalance.get_number("ui_countdown_punch_s")
-	var punch_scale := GameBalance.get_number("ui_countdown_punch_scale")
+	var punch := GameBalance.get_number("ui_banner_pop_s")
+	var punch_scale := GameBalance.get_number("ui_banner_pop_scale")
 	var hold := GameBalance.get_number("ui_fight_banner_s")
 	var fade := GameBalance.get_number("ui_fight_banner_fade_s")
 	var hint := GameBalance.get_number("ui_controls_hint_s")
@@ -57,8 +57,8 @@ func run() -> void:
 	check(hud.center_label.pivot_offset == hud.center_label.size * 0.5, "punch pivots around label center")
 	await process_frame
 	var digit_rect: Rect2 = hud.center_label.get_global_rect()
-	check(digit_rect.get_center().y < 140.0 and digit_rect.get_center().y > hud.timer_label.get_global_rect().end.y, "countdown sits directly below the central timer")
-	check(GameBalance.get_int("ui_countdown_font_size") >= 96 and GameBalance.get_int("ui_countdown_font_size") <= 110 and punch_scale <= 1.1, "compact countdown font and restrained punch leave the distant opponent visible")
+	check(is_equal_approx(digit_rect.position.y, GameBalance.get_number("hud_banner_top")) and digit_rect.position.y > hud.top_bar.get_global_rect().end.y and digit_rect.position.y > hud.timer_label.get_global_rect().end.y, "countdown sits at the configured top, clear of both strips and timer")
+	check(GameBalance.get_int("ui_countdown_font_size") >= 96 and GameBalance.get_int("ui_countdown_font_size") <= 110 and punch_scale <= 1.2, "compact countdown font and short pop leave the distant opponent visible")
 	check(not hud.tutorial_label.visible and hud.tutorial_label.get_parsed_text().contains("G Gạt sừng"), "controls wait for VÀO TRẬN! so the loa ribbon speaks alone")
 	arena.phase = &"PLAYING"
 	hud._process(0.0)

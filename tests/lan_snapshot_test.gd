@@ -73,6 +73,60 @@ func run() -> void:
 	check(player.global_position.is_equal_approx(before), "sparse snapshot does not move anyone")
 	lan._on_snapshot_received({"players": [{"slot": 1, "facing": "bad", "position": Vector2(1, 2)}]})
 	check(lan.remote_targets.has(1), "bad facing type is ignored without losing the position")
+	var result := _snapshot(false, 0.0, 0.0)
+	arena.mode = &"LAN"
+	result.phase = "RESULT"
+	result.winner_slot = 1
+	result.end_reason = "TIME"
+	lan._on_event_received({"type": "RESULT", "snapshot": result})
+	check(arena.finished and arena.phase == &"RESULT", "reliable result ends the client match")
+	lan._on_snapshot_received(_snapshot(true, 50.0, 1.0))
+	check(arena.phase == &"RESULT" and arena.active_clash.is_empty(), "a delayed unreliable snapshot cannot reopen a finished match")
+	check(opponent.state == Buffalo.State.FLEE, "a delayed snapshot cannot reset the loser's outro state")
+	arena.outro.running = false
+	arena.hud._process(0.0)
+	check(arena.hud.pause_overlay.visible, "LAN result panel is visible before a peer leaves")
+	arena._on_pause_state_changed(false)
+	lan._on_connection_lost()
+	check(arena.end_reason == &"TIME" and arena.winner_slot == 1 and arena.hud.result_label.text.contains("THẮNG THỜI GIAN"), "a peer leaving after the match preserves the locked result")
+	arena.hud._process(0.0)
+	check(arena.hud.pause_overlay.visible, "disconnect's pause reset cannot hide the LAN result panel")
+	arena._on_pause_request_received(2, true)
+	check(arena.hud.pause_title.text == "KẾT QUẢ TRẬN LAN", "late pause requests cannot cover the finished result")
+	arena.lan = lan
+	arena.hud._show_lan_result()
+	check(arena.hud.rematch_button.disabled and arena.hud.rematch_note.text.contains("rời trận"), "result built after a disconnect still shows the peer-left message")
+	# A new scene/epoch must reject packets from the finished match, including reliable ones.
+	var manager := root.get_node("NetworkManager")
+	manager.begin_rematch(1)
+	var fresh := MatchNetwork.new(arena, manager)
+	arena.finished = false
+	arena.phase = &"COUNTDOWN"
+	arena.outro.running = false
+	var old := _snapshot(true, 90.0, 1.0)
+	fresh._on_snapshot_received(old)
+	check(arena.phase == &"COUNTDOWN" and arena.active_clash.is_empty() and fresh.remote_targets.is_empty(), "new epoch ignores old or untagged snapshots")
+	old["match_epoch"] = 0
+	old.phase = "RESULT"
+	old.winner_slot = 2
+	old.end_reason = "FLEE"
+	fresh._on_event_received({"type": "RESULT", "match_epoch": 0, "snapshot": old})
+	check(not arena.finished and arena.phase == &"COUNTDOWN", "old reliable result cannot finish the rematch")
+	var counts: Dictionary = arena.hud.stats.counts.duplicate()
+	fresh._on_event_received({"type": "COMBAT", "match_epoch": 0, "event": "HORN_HIT", "source": 1, "target": 2})
+	check(arena.hud.stats.counts == counts, "old combat event cannot pollute new match stats")
+	var current := _snapshot(false, 0.0, 0.0)
+	current["match_epoch"] = 1
+	fresh._on_snapshot_received(current)
+	check(arena.phase == &"PLAYING" and fresh.remote_targets.has(1), "new epoch still accepts its current snapshots")
+	manager.is_host = true
+	fresh._on_remote_input(2, {"match_epoch": 0, "horn": true, "move_x": 1.0})
+	check(not fresh.remote_frame.horn_pressed and fresh.remote_frame.move == Vector2.ZERO, "old input cannot carry an attack or movement into rematch")
+	fresh._on_remote_input(2, {"match_epoch": 1, "horn": true, "move_x": 1.0})
+	check(fresh.remote_frame.horn_pressed and fresh.remote_frame.move.x == 1.0, "current epoch input remains playable")
+	check(manager.same_match({"match_epoch": 1}) and not manager.same_match({"match_epoch": "1"}) and not manager.same_match({"match_epoch": 0}), "transport validates epoch type and equality")
+	manager.is_host = false
+	manager.begin_rematch(0)
 	arena.free()
 	print("LAN SNAPSHOT TEST FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)

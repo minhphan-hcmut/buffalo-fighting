@@ -70,14 +70,14 @@ func run() -> void:
 	root.add_child(howto)
 	for i in 4:
 		await process_frame
-	check(howto.tabs.size() == 3 and howto.tabs.map(func(tab: Button): return tab.text) == ["LUẬT CHƠI", "CÁC ĐÒN", "ĐIỀU KHIỂN"], "three named festival tabs exist")
+	check(howto.tabs.size() == 4 and howto.tabs.map(func(tab: Button): return tab.text) == ["LUẬT CHƠI", "CÁC ĐÒN", "ĐIỀU KHIỂN", "SỔ TAY"], "four named festival tabs preserve the original three and add Notebook")
 	check(howto.demo == null, "demo scene is lazy on Rules")
 	check(root.get_visible_rect().encloses(howto.panel.get_global_rect()), "panel fits 1280 × 720")
 	var rules := text_of(howto.pages[0])
-	for keyword in ["MỤC TIÊU", "GIỮ SỨC", "MẸO TRÊN SỚI", "KHÍ THẾ", "SỨC", "sườn", "lưng", "sát rào", "Gạt sừng", "bốc thăm", "%d giây" % GameBalance.get_int("match_duration_s")]:
+	for keyword in ["THẮNG THẾ NÀO", "GIỮ SỨC", "ĐÁNH CHỖ NÀO", "KHÍ THẾ", "SỨC", "Sườn", "Lưng", "sát rào", "Gạt sừng", "bốc thăm", "%d giây" % GameBalance.get_int("match_duration_s")]:
 		check(rules.contains(keyword), "Rules preserves " + keyword)
 	for block in howto.pages[0].get_children():
-		check((block.get_child(1) as RichTextLabel).text.contains("[b][color=#E8BC65]"), "Rules highlights keywords in bold gold")
+		check((block.get_node("Caption") as RichTextLabel).text.contains("[b][color=#E8BC65]"), "Rules highlights keywords in bold gold")
 	howto.tabs[0].grab_focus()
 	await key(KEY_RIGHT)
 	check(howto.selected_tab == 1 and howto.tabs[1].has_focus(), "Right selects and focuses Moves")
@@ -135,7 +135,7 @@ func run() -> void:
 	check(howto.selected_tab == 2 and viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED and not demo.is_physics_processing() and demo.world.process_mode == Node.PROCESS_MODE_DISABLED, "hidden Moves stops rendering, timeline and animator")
 	var controls := howto.pages[2]
 	var controls_text := text_of(controls)
-	for binding in ["W", "A", "S", "D", "Space", "G", "Esc", "Húc", "Ghìm (giữ)", "Di chuột:", "nhìn quanh", "Đẩy", "Móc", "Nhả"]:
+	for binding in ["W", "A", "S", "D", "Space", "G", "Esc", "F12", "Chụp màn hình", "Húc", "Ghìm (giữ)", "Di chuột:", "nhìn quanh", "Đẩy", "Móc", "Nhả"]:
 		check(controls_text.contains(binding), "Controls includes " + binding)
 	check(text_of(controls.find_child("MouseLeft", true, false)) == "Chuột trái\nHúc\n" and text_of(controls.find_child("MouseRight", true, false)) == "Chuột phải\nGhìm (giữ)\n", "mouse buttons have their correct separate labels")
 	var caps := controls.find_children("*", "PanelContainer", true, false)
@@ -148,7 +148,7 @@ func run() -> void:
 			if (cap.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == ControlsDiagram.GOLD:
 				used_caps += 1
 			check(howto.panel.get_global_rect().encloses(cap.get_global_rect()), "visible keycap fits panel: " + label.text)
-	check(used_caps >= 12, "used keys use gold fill")
+	check(used_caps >= 13, "used keys including F12 use gold fill")
 	check(key_positions.W.y < key_positions.S.y and is_equal_approx(key_positions.W.x, key_positions.S.x) and key_positions.A.x < key_positions.S.x and key_positions.D.x > key_positions.S.x, "WASD preserves keyboard geometry")
 	howto.tabs[0].grab_focus()
 	await key(KEY_TAB)

@@ -106,17 +106,17 @@ func run() -> void:
 	overlay._show_result("win-L01")
 	check(overlay.result_actions.get_child_count() == 3 and overlay.result_actions.get_child(0).text.begins_with("TRẬN TIẾP THEO") and overlay.result_actions.get_child(0).has_focus(), "L01 win puts next-round button first and focuses it")
 	check(overlay.result_actions.get_child(1).text == "CHƠI LẠI TRẬN NÀY", "retry remains available second after a win")
-	SessionState.last_match_level = &"L02"
-	SessionState.level_id = &"L03"
-	overlay._show_result("win-L02")
+	SessionState.last_match_level = &"L04"
+	SessionState.level_id = &"L05"
+	overlay._show_result("win-L04")
 	check(overlay.result_actions.get_child(0).text.ends_with("CHUNG KẾT") and overlay.result_actions.get_child(0).has_focus(), "semifinal win focuses next-round final action")
 	SessionState.last_match_level = &"L02"
 	SessionState.last_winner = 2
 	overlay._show_result("loss-L02")
 	check(overlay.result_actions.get_child_count() == 2 and overlay.result_actions.get_child(0).text == "CHƠI LẠI TRẬN NÀY" and overlay.result_actions.get_child(0).has_focus(), "loss keeps retry first and focused")
-	SessionState.last_match_level = &"L03"
+	SessionState.last_match_level = &"L05"
 	SessionState.last_winner = 1
-	overlay._show_result("final-L03")
+	overlay._show_result("final-L05")
 	var ceremony := overlay.find_child("Ceremony", true, false) as CeremonyView
 	check(ceremony != null and not overlay.result_panel.visible, "final win still shows closing ceremony first")
 	if ceremony != null:

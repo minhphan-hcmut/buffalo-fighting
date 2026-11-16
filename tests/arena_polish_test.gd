@@ -19,14 +19,14 @@ func check(condition: bool, description: String) -> void:
 
 func run() -> void:
 	SessionState.mode = &"SOLO"
-	SessionState.level_id = &"L03"
+	SessionState.level_id = &"L05"
 	var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
 	root.add_child(arena)
 	arena.set_physics_process(false)
 	await process_frame
 
 	var mud_patches := arena.get_children().filter(func(n): return n is MeshInstance3D and n.material_override is ShaderMaterial and (n.material_override as ShaderMaterial).shader.resource_path.ends_with("mud_patch.gdshader"))
-	check(mud_patches.size() == 2, "L03 draws both mud zones with the mud shader")
+	check(mud_patches.size() == 2, "L05 draws both mud zones with the mud shader")
 	if mud_patches.size() > 0:
 		var plane := (mud_patches[0] as MeshInstance3D).mesh as PlaneMesh
 		check(plane.size.x * 0.5 >= GameBalance.get_number("mud_radius"), "mud quad covers the whole gameplay radius")

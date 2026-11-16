@@ -76,7 +76,7 @@ func run() -> void:
 			if child is Label3D and child != feedback.label:
 				has_identifier = true
 		check(not has_identifier, "buffalo has no floating identifier outside combat feedback")
-		check(str(actor.get_meta("announcer_name", "")).contains("06" if actor == arena.player else "17"), "announcer metadata retains buffalo number")
+		check(str(actor.get_meta("announcer_name", "")).contains("06" if actor == arena.player else "09"), "announcer metadata retains buffalo number")
 		var body := actor.find_child("HeroBody", true, false) as MeshInstance3D
 		var hide := body.get_active_material(0) as BaseMaterial3D
 		check(hide.resource_name == "SKIN_01_Natural" and hide.albedo_texture.resource_path.contains("buffalo_basecolor"), "buffalo wears the natural hide, not the silver show skin")
@@ -120,7 +120,7 @@ func run() -> void:
 	await process_frame
 	check(overlay.visible and not hud.visible, "Solo results hide the HUD so it cannot draw above the result scrim")
 	check(overlay.result_actions.get_child_count() == 3 and overlay.result_actions.get_child(0).has_focus(), "Solo win keeps retry, next-round and menu actions with keyboard focus")
-	var result_panel := overlay.get_child(1) as PanelContainer
+	var result_panel := overlay.result_panel as PanelContainer
 	check(root.get_visible_rect().encloses(result_panel.get_global_rect()), "Solo result panel is on screen at 1280x720")
 	overlay.free()
 	arena.free()

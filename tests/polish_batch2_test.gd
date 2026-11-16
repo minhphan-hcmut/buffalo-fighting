@@ -80,7 +80,15 @@ func run() -> void:
 	music.value = 42
 	sfx.value = 81
 	sensitivity.ratio = 0.75
-	(actions.get_child(5) as CheckButton).button_pressed = false
+	var comfort_opener := actions.find_child("ComfortButton", true, false) as Button
+	comfort_opener.pressed.emit()
+	var comfort_page := actions.find_child("ComfortPage", true, false)
+	var shake := comfort_page.find_child("CameraShake", true, false) as CheckButton
+	check(shake.button_pressed, "Rung camera moves to Hiệu ứng and defaults to Bật")
+	check(shake.pressed.get_connections().is_empty(), "moved shake toggle still does not trigger a menu click sound")
+	shake.button_pressed = false
+	check(not SessionState.camera_shake_enabled, "Hiệu ứng shake choice updates the existing saved setting")
+	SettingsControls.close_comfort(actions)
 	check(labels(actions.get_child(0)).contains("63%") and sensitivity_value.text == "7.5" and is_equal_approx(SessionState.mouse_sensitivity, 0.325), "volume keeps its percentage while sensitivity uses the 1–10 scale")
 	var config := ConfigFile.new()
 	check(config.load(SETTINGS_PATH) == OK and is_equal_approx(config.get_value("audio", "Master"), 0.63) and is_equal_approx(config.get_value("audio", "Music"), 0.42) and is_equal_approx(config.get_value("audio", "SFX"), 0.81), "each slider change saves the three bus volumes to the injected path")
@@ -122,13 +130,14 @@ func run() -> void:
 	check(SessionState.camera_shake_enabled and not SessionState.fullscreen_enabled and is_equal_approx(SessionState.mouse_sensitivity, GameBalance.get_number("mouse_sensitivity")) and is_equal_approx(AudioServer.get_bus_volume_linear(0), 1.0), "wrong types and out-of-range settings use defaults")
 	var focus: Control = master
 	var reached: Array[Control] = []
-	for i in 7:
+	for i in 10:
 		reached.append(focus)
 		focus = focus.find_next_valid_focus()
-	check(reached.has(music) and reached.has(sfx) and reached.has(sensitivity) and reached.has(actions.get_child(4)) and reached.has(actions.get_child(5)) and reached.has(actions.get_child(-1)), "keyboard focus reaches all settings controls and Back")
+	check(reached.has(music) and reached.has(sfx) and reached.has(sensitivity) and reached.has(actions.get_child(4)) and reached.has(comfort_opener) and reached.has(actions.find_child("GraphicsButton", true, false)) and reached.has(actions.get_child(-1)), "keyboard focus reaches all settings controls, Hiệu ứng, Đồ họa and Back")
+	check(reached.has(actions.find_child("CameraView", true, false)) and reached.has(actions.find_child("CameraSide", true, false)), "keyboard focus also reaches both camera choices")
 	var settings_panel := menu.menu_settings_layer.get_child(1) as PanelContainer
 	check(root.get_visible_rect().encloses(settings_panel.get_global_rect()) and settings_panel.get_global_rect().get_center().distance_to(root.get_visible_rect().get_center()) < 1.0, "settings panel fits the viewport and stays centered")
-	check(settings_panel.size.y < 620.0, "settings panel shrinks to its content")
+	check(settings_panel.size.y < 660.0, "settings panel shrinks to its content (one row added for Đồ họa)")
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
 	escape.pressed = true
@@ -139,7 +148,7 @@ func run() -> void:
 	var settings_button := menu.menu_layout.get_node("SettingsButton") as Button
 	check(howto_button.get_index() + 1 == settings_button.get_index(), "How to Play sits between LAN and Settings")
 	check(howto_button.pressed.get_connections().size() == 2 and settings_button.pressed.get_connections().size() == 2, "new menu buttons keep their action and global click sound")
-	for toggle in [actions.get_child(4), actions.get_child(5)]:
+	for toggle in [actions.get_child(4)]:
 		check(toggle.pressed.get_connections().is_empty(), "settings toggle does not trigger a menu click sound")
 	check(master.value_changed.get_connections().size() == 2, "slider only updates its setting and value label")
 	howto_button.pressed.emit()
@@ -152,7 +161,7 @@ func run() -> void:
 	check(text.contains("%d giây" % GameBalance.get_int("match_duration_s")) and text.contains("bốc thăm") and text.contains("khí thế không hồi"), "How to Play follows current time, tie-break and resource rules")
 	var howto_panel := howto.get_child(1) as PanelContainer
 	check(root.get_visible_rect().encloses(howto_panel.get_global_rect()), "How to Play fits 1280 x 720")
-	check(howto.tabs.size() == 3, "How to Play delegates to its three-tab control")
+	check(howto.tabs.size() == 4 and howto.tabs.map(func(tab: Button): return tab.text) == ["LUẬT CHƠI", "CÁC ĐÒN", "ĐIỀU KHIỂN", "SỔ TAY"], "How to Play preserves its original three tabs and adds Notebook")
 	check(not menu.menu_layout.visible and menu.find_child("MenuBackdrop", true, false) != null, "How to Play opens above the 3D menu background")
 	Input.parse_input_event(escape)
 	await process_frame
