@@ -6,6 +6,7 @@ extends Node3D
 ## MatchController adds one as the child "CombatFeedback" of each Buffalo.
 
 const HORN_SHADER := preload("res://assets/shaders/horn_glow.gdshader")
+const UI_THEME := preload("res://assets/ui/festival_theme.tres")
 
 ## Floating words, only for moments worth calling out: a successful parry, a counter, a
 ## flank/back hit and a whiff (the punish window). Ordinary starts (húc, hổ lao, móc, nhả)
@@ -41,8 +42,8 @@ func _ready() -> void:
 	label = Label3D.new()
 	label.position = Vector3.UP * GameBalance.get_number("combat_label_height")
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = GameBalance.get_int("combat_label_font_size")
-	label.outline_size = GameBalance.get_int("combat_label_outline_size")
+	label.font_size = roundi(GameBalance.get_number("combat_label_font_size") * GameBalance.get_number("combat_callout_size_scale"))
+	label.outline_size = roundi(GameBalance.get_number("combat_label_outline_size") * GameBalance.get_number("combat_callout_size_scale"))
 	label.pixel_size = GameBalance.get_number("combat_label_pixel_size")
 	label.no_depth_test = true
 	label.visible = false
@@ -92,14 +93,12 @@ func _on_event(event: StringName, source: int, _target: int, _value: float) -> v
 		label_sequence += 1
 		label_order = label_sequence
 		label_importance = GameBalance.get_number("combat_label_important_scale") if label.text.ends_with("!") else 1.0
-		label.modulate = Color.WHITE
-		match event:
-			&"PARRY_START", &"PARRY_SUCCESS":
-				label.modulate = GLOW_PARRY
-			&"DASH_START":
-				label.modulate = GLOW_DASH
-			&"HORN_START", &"COUNTER_START", &"COUNTER_HIT", &"CLASH_HOOK":
-				label.modulate = GLOW_HORN
+		var paper := UI_THEME.get_color("font_color", "Label")
+		label.modulate = paper
+		if event == &"PARRY_SUCCESS":
+			label.modulate = GLOW_PARRY.lerp(paper, GameBalance.get_number("combat_callout_parry_paper_mix"))
+		elif event in [&"COUNTER_HIT", &"FLANK_HIT", &"BACK_HIT"]:
+			label.modulate = (UI_THEME.get_stylebox("normal", "PrimaryButton") as StyleBoxFlat).bg_color
 		label.visible = true
 		_update_label()
 	if event == &"PARRY_SUCCESS":
@@ -141,9 +140,11 @@ func _update_label() -> void:
 	var camera := get_viewport().get_camera_3d()
 	var other_actor := controller.opponent if actor == controller.player else controller.player
 	var other := other_actor.get_node_or_null("CombatFeedback") as BuffaloFeedback
-	if camera != null and other != null and other.label_time > 0.0 and label_order < other.label_order:
-		var at := _label_position()
-		var other_at := other._label_position()
+	if camera != null:
+		_avoid_head(camera, other_actor)
+	if label.visible and camera != null and other != null and other.label.visible and label_order < other.label_order:
+		var at := label.global_position
+		var other_at := other.label.global_position
 		if not camera.is_position_behind(at) and not camera.is_position_behind(other_at):
 			var rect := _label_rect(camera, at)
 			var other_rect := other._label_rect(camera, other_at)
@@ -152,9 +153,59 @@ func _update_label() -> void:
 				var screen := camera.unproject_position(at)
 				screen.y -= rect.end.y - other_rect.position.y + gap
 				label.global_position = camera.project_position(screen, -camera.to_local(at).z)
+				rect = _label_rect(camera, label.global_position)
+				if rect.position.y < GameBalance.get_number("combat_callout_safe_top") or rect.grow(gap * 0.5).intersects(_head_rect(camera, other_actor)):
+					label.visible = false
 				alpha *= GameBalance.get_number("combat_label_older_alpha")
 	label.modulate.a = alpha
 	label.outline_modulate.a = alpha
+
+
+## Conservative head/horn bounds; animation stays untouched and never drives a gameplay state.
+func _head_rect(camera: Camera3D, other: Buffalo) -> Rect2:
+	var center := other.global_position + other.forward() * GameBalance.get_number("combat_callout_head_forward") + Vector3.UP * GameBalance.get_number("combat_callout_head_height")
+	var width := GameBalance.get_number("combat_callout_head_half_width")
+	var height := GameBalance.get_number("combat_callout_head_half_height")
+	var rect := Rect2()
+	for corner in 8:
+		var at := center + Vector3(width if corner & 1 else -width, height if corner & 2 else -height, width if corner & 4 else -width)
+		if camera.is_position_behind(at):
+			return get_viewport().get_visible_rect()
+		var point := camera.unproject_position(at)
+		rect = Rect2(point, Vector2.ZERO) if corner == 0 else rect.expand(point)
+	return rect
+
+
+func _avoid_head(camera: Camera3D, other: Buffalo) -> void:
+	if camera.is_position_behind(label.global_position):
+		label.visible = false
+		return
+	var margin := GameBalance.get_number("combat_callout_view_margin")
+	var top := GameBalance.get_number("combat_callout_safe_top")
+	var safe := Rect2(Vector2(margin, top), get_viewport().get_visible_rect().size - Vector2(margin * 2.0, top + margin))
+	var rect := _label_rect(camera, label.global_position)
+	var half := rect.size * 0.5
+	if rect.size.x > safe.size.x or rect.size.y > safe.size.y:
+		label.visible = false
+		return
+	var point := rect.get_center().clamp(safe.position + half, safe.end - half)
+	var head := _head_rect(camera, other)
+	var gap := GameBalance.get_number("combat_label_gap_px")
+	if Rect2(point - half, rect.size).grow(gap).intersects(head):
+		var above := head.position.y - gap - half.y
+		var left := head.position.x - gap - half.x
+		var right := head.end.x + gap + half.x
+		if above >= safe.position.y + half.y:
+			point.y = above
+		elif left >= safe.position.x + half.x and (right > safe.end.x - half.x or absf(point.x - left) <= absf(point.x - right)):
+			point.x = left
+		elif right <= safe.end.x - half.x:
+			point.x = right
+		else:
+			# At extreme close range, omit the word rather than cover the opponent's face.
+			label.visible = false
+			return
+	label.global_position = camera.project_position(point, -camera.to_local(label.global_position).z)
 
 
 # Swaps the model's keratin surface for horn_glow.gdshader, copying its textures.

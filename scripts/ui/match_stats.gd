@@ -37,15 +37,18 @@ func create_block() -> GridContainer:
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", GameBalance.get_int("stats_column_gap"))
 	grid.add_theme_constant_override("v_separation", GameBalance.get_int("stats_row_gap"))
-	for text: String in [
-		"Trúng đòn: %d" % counts.hits, "Sườn / lưng: %d" % counts.sides,
-		"Gạt thành công: %d" % counts.parries, "Phản đòn: %d" % counts.counters,
-		"Hổ lao trúng: %d" % counts.dashes, "Thắng khóa sừng: %d / %d" % [counts.wins, counts.locks],
-		"Bị trúng đòn: %d" % counts.received
+	for row: Array in [
+		["Trúng đòn", str(counts.hits)], ["Sườn / lưng", str(counts.sides)],
+		["Gạt thành công", str(counts.parries)], ["Phản đòn", str(counts.counters)],
+		["Hổ lao trúng", str(counts.dashes)], ["Thắng khóa sừng", "%d / %d" % [counts.wins, counts.locks]],
+		["Bị trúng đòn", str(counts.received)]
 	]:
-		var label := Label.new()
-		label.text = text
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.add_theme_font_size_override("font_size", GameBalance.get_int("stats_font_size"))
-		grid.add_child(label)
+		for column in 2:
+			var label := Label.new()
+			label.text = row[column]
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if column == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+			label.add_theme_color_override("font_color", SettingsControls.MUTED if column == 0 else ControlsDiagram.PAPER)
+			label.add_theme_font_size_override("font_size", GameBalance.get_int("stats_font_size"))
+			grid.add_child(label)
 	return grid

@@ -60,10 +60,10 @@ func _ready() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_gap"))
 	content.add_child(row)
-	for item in [["W A S D", "Đẩy"], ["Chuột trái", "Móc"], ["Chuột phải", "Nhả"]]:
+	for item in [["W A S D", "Đẩy về đối thủ"], ["Chuột trái", "Móc"], ["Chuột phải", "Nhả"]]:
 		row.add_child(keycap(item[0]))
 		row.add_child(label(item[1], "body", PAPER))
-	content.add_child(label("Nhả khi đối thủ đang móc khiến đối thủ mất khí thế.", "body", PAPER))
+	content.add_child(label("Nhả lúc đối thủ móc khiến họ mất khí thế; nhả sai lúc bạn mất khí thế.", "body", PAPER))
 
 
 func _key_row(parent: Container, keys: Array, action: String) -> void:

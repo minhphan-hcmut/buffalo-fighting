@@ -112,6 +112,7 @@ func _build_caption(scene: Dictionary) -> void:
 	text.add_child(caption_label)
 	text.add_child(_label(String(settings.get("skip_hint", "")), 15, Color("#C9B48A")))
 	continue_button = Button.new()
+	continue_button.theme_type_variation = &"PrimaryButton"
 	continue_button.name = "Continue"
 	continue_button.text = String(scene.get("button", "TIẾP TỤC"))
 	continue_button.custom_minimum_size = Vector2(240, 54)

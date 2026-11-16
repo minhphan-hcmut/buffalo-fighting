@@ -13,6 +13,8 @@ var spirit_tweens: Array[Tween] = []
 var low_stamina: Array[bool] = [false, false]
 var warning_time := 0.0
 var timer_label: Label
+var ping_label: Label
+var displayed_ping := -2
 var center_label: Label
 var previous_phase: StringName = &""
 var center_punch_time := 0.0
@@ -31,13 +33,13 @@ var tutorial_label: RichTextLabel
 var top_bar: HBoxContainer
 var result_fade_time := 0.0
 const CONTROLS := "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · G Gạt sừng · Esc Tạm dừng"
-const CLASH_KEYS := "WASD Đẩy · Trái Móc · Phải Nhả"
+const CLASH_KEYS := "WASD Đẩy tới · Trái Móc · Phải Nhả"
 const TUTORIAL := {
 	1: "WASD để đi, chuột để nhìn",
 	2: "Chuột trái để húc khi sừng hướng về đối thủ",
 	3: "Space để hổ lao",
 	4: "Giữ chuột phải để ghìm đòn phía trước",
-	5: "Giữ hướng để đẩy · chuột trái móc · chuột phải nhả",
+	5: "Đẩy về đối thủ · chuột trái móc · chuột phải nhả",
 	6: "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn"
 }
 var tutorial_seen: Array[int] = []
@@ -52,6 +54,7 @@ var pause_detail: Label
 var pause_actions: VBoxContainer
 ## True while the pause overlay shows the settings page (Esc then goes back to the pause menu).
 var showing_settings := false
+var settings_screen: SettingsScreen
 var lan_result_shown := false
 var rematch_button: Button
 var rematch_note: Label
@@ -117,11 +120,34 @@ func _color(label: Label, value: Color) -> void:
 		label.add_theme_color_override("font_color", value)
 
 
+func _update_ping(milliseconds: int) -> void:
+	if ping_label == null or displayed_ping == milliseconds:
+		return
+	displayed_ping = milliseconds
+	_label(ping_label, "Ping %d ms" % milliseconds if milliseconds >= 0 else "Ping —")
+	_color(ping_label, TIMER_WARNING if milliseconds > GameBalance.get_int("lan_ping_warning_ms") else SettingsControls.MUTED)
+
+
 func _ready() -> void:
 	layer = 10
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
+	if controller.mode == &"LAN":
+		ping_label = Label.new()
+		ping_label.name = "LanPing"
+		root.add_child(ping_label)
+		ping_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		ping_label.size = Vector2(GameBalance.get_number("hud_ping_width_px"), GameBalance.get_number("hud_ping_height_px"))
+		ping_label.offset_left = -ping_label.size.x - GameBalance.get_number("hud_ping_margin_px")
+		ping_label.offset_top = -ping_label.size.y - GameBalance.get_number("hud_ping_margin_px")
+		ping_label.offset_right = -GameBalance.get_number("hud_ping_margin_px")
+		ping_label.offset_bottom = -GameBalance.get_number("hud_ping_margin_px")
+		ping_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		ping_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ping_label.add_theme_font_size_override("font_size", GameBalance.get_int("hud_ping_font_size"))
+		controller.network.ping_changed.connect(_update_ping)
+		_update_ping(controller.network.ping_ms)
 	var top := HBoxContainer.new()
 	top.position = Vector2(24, 20)
 	top.size = Vector2(1232, 140)
@@ -355,6 +381,7 @@ func _build_pause_overlay(root: Control) -> void:
 	pause_overlay.visible = false
 	root.add_child(pause_overlay)
 	var shade := ColorRect.new()
+	shade.name = "PauseShade"
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.color = Color("#17262EE8")
 	pause_overlay.add_child(shade)
@@ -367,6 +394,7 @@ func _build_pause_overlay(root: Control) -> void:
 	pause_title = Label.new()
 	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_title.add_theme_font_size_override("font_size", 30)
+	pause_title.add_theme_color_override("font_color", ControlsDiagram.GOLD)
 	content.add_child(pause_title)
 	pause_detail = Label.new()
 	pause_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -401,10 +429,11 @@ func _clear_pause_actions() -> void:
 		child.queue_free()
 
 
-func _pause_button(text: String, callback: Callable, container: Container = null) -> Button:
+func _pause_button(text: String, callback: Callable, container: Container = null, tier: StringName = &"SecondaryButton") -> Button:
 	var button := Button.new()
+	button.theme_type_variation = tier
 	button.text = text
-	button.custom_minimum_size.y = 44
+	button.custom_minimum_size.y = GameBalance.get_number("ui_action_height")
 	button.focus_mode = Control.FOCUS_ALL
 	UiMotion.attach(button)
 	button.pressed.connect(callback)
@@ -414,6 +443,8 @@ func _pause_button(text: String, callback: Callable, container: Container = null
 
 
 func show_pause() -> void:
+	if is_instance_valid(settings_screen):
+		settings_screen.close()
 	showing_settings = false
 	pause_overlay.visible = true
 	_place_pause_panel(Vector2(520, 0))
@@ -421,21 +452,23 @@ func show_pause() -> void:
 	pause_detail.text = "Trận solo đã dừng." if controller.mode == &"SOLO" else "Hai người chơi đã đồng ý tạm dừng."
 	_clear_pause_actions()
 	if controller.mode == &"LAN":
-		_pause_button("GỬI YÊU CẦU TIẾP TỤC", controller.resume_from_menu)
+		_pause_button("GỬI YÊU CẦU TIẾP TỤC", controller.resume_from_menu, null, &"PrimaryButton")
 	else:
-		_pause_button("TIẾP TỤC", controller.resume_from_menu)
+		_pause_button("TIẾP TỤC", controller.resume_from_menu, null, &"PrimaryButton")
 	if not controller.training.is_empty():
 		_pause_button("ĐỔI BÀI TẬP", _change_training)
 	_pause_button("CÀI ĐẶT", show_settings)
 	if controller.mode == &"SOLO" and controller.training.is_empty():
 		_pause_button("CHƠI LẠI", _restart_match)
-	_pause_button("VỀ MENU", _return_to_menu)
+	_pause_button("VỀ MENU", _return_to_menu, null, &"QuietButton")
 	HudText.apply(pause_title)
 	HudText.apply(pause_detail)
 	pause_actions.get_child(0).grab_focus()
 
 
 func show_pause_wait(requested_pause: bool) -> void:
+	if is_instance_valid(settings_screen):
+		settings_screen.close()
 	pause_overlay.visible = true
 	_place_pause_panel(Vector2(520, 0))
 	pause_title.text = "ĐANG CHỜ XÁC NHẬN"
@@ -445,14 +478,16 @@ func show_pause_wait(requested_pause: bool) -> void:
 		else "Yêu cầu tiếp tục trận đã gửi tới đối phương."
 	)
 	_clear_pause_actions()
-	_pause_button("CÀI ĐẶT", show_settings)
-	_pause_button("RỜI TRẬN", _return_to_menu)
+	_pause_button("CÀI ĐẶT", show_settings, null, &"PrimaryButton")
+	_pause_button("RỜI TRẬN", _return_to_menu, null, &"QuietButton")
 	HudText.apply(pause_title)
 	HudText.apply(pause_detail)
 	pause_actions.get_child(0).grab_focus()
 
 
 func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
+	if is_instance_valid(settings_screen):
+		settings_screen.close()
 	pause_overlay.visible = true
 	_place_pause_panel(Vector2(520, 0))
 	pause_title.text = "YÊU CẦU TỪ NGƯỜI CHƠI %d" % peer_id
@@ -462,7 +497,7 @@ func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
 		else "Đối phương muốn tiếp tục trận."
 	)
 	_clear_pause_actions()
-	_pause_button("CHẤP NHẬN", func(): controller.network.answer_pause(true))
+	_pause_button("CHẤP NHẬN", func(): controller.network.answer_pause(true), null, &"PrimaryButton")
 	_pause_button("TỪ CHỐI", func(): controller.network.answer_pause(false))
 	HudText.apply(pause_title)
 	HudText.apply(pause_detail)
@@ -470,11 +505,38 @@ func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
 
 
 func _show_lan_result() -> void:
+	if is_instance_valid(settings_screen):
+		settings_screen.close()
 	lan_result_shown = true
 	showing_settings = false
 	pause_overlay.show()
-	_place_pause_panel(Vector2(520, 0))
+	_place_pause_panel(Vector2(GameBalance.get_number("stats_result_width"), 0))
+	pause_panel.anchor_left = 0.0
+	pause_panel.anchor_right = 0.0
+	pause_panel.offset_left = GameBalance.get_number("lan_result_panel_left")
+	pause_panel.offset_right = pause_panel.offset_left + GameBalance.get_number("stats_result_width")
+	pause_overlay.get_node("PauseShade").hide()
+	if not pause_overlay.has_node("ResultShade"):
+		var gradient := Gradient.new()
+		gradient.offsets = PackedFloat32Array([0.0, GameBalance.get_number("lan_result_shade_mid"), GameBalance.get_number("lan_result_shade_end")])
+		gradient.colors = PackedColorArray([Color("#17120EE6"), Color("#17120EB0"), Color("#17120E00")])
+		var texture := GradientTexture2D.new()
+		texture.gradient = gradient
+		texture.width = GameBalance.get_int("lan_result_shade_texture_width")
+		texture.height = GameBalance.get_int("lan_result_shade_texture_height")
+		var shade := TextureRect.new()
+		shade.name = "ResultShade"
+		shade.texture = texture
+		shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pause_overlay.add_child(shade)
+		pause_overlay.move_child(shade, 0)
 	pause_title.text = "KẾT QUẢ TRẬN LAN"
+	HudText.set_size(pause_title, "font_size", GameBalance.get_int("ui_result_title_size"))
+	HudText.set_size(pause_detail, "font_size", GameBalance.get_int("ui_result_reason_size"))
+	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	pause_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	pause_detail.text = result_label.text
 	_clear_pause_actions()
 	if stats != null:
@@ -491,15 +553,18 @@ func _show_lan_result() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", GameBalance.get_int("stats_column_gap"))
 		pause_actions.add_child(row)
-		rematch_button = _pause_button("ĐẤU LẠI", controller.lan.request_rematch, row)
+		rematch_button = _pause_button("ĐẤU LẠI", controller.lan.request_rematch, row, &"PrimaryButton")
 		rematch_button.name = "RematchButton"
 		rematch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var menu := _pause_button("VỀ MENU", _return_to_menu, row)
+		var menu := _pause_button("VỀ MENU", _return_to_menu, row, &"QuietButton")
 		menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		update_lan_rematch()
 		(rematch_button if not rematch_button.disabled else menu).grab_focus()
 	else:
-		_pause_button("VỀ MENU", _return_to_menu).grab_focus()
+		_pause_button("VỀ MENU", _return_to_menu, null, &"PrimaryButton").grab_focus()
+	for button: Button in pause_actions.find_children("*", "Button", true, false):
+		button.custom_minimum_size.y = GameBalance.get_number("ui_result_action_height")
+		HudText.set_size(button, "font_size", GameBalance.get_int("ui_result_action_size"))
 	HudText.apply(pause_title)
 	HudText.apply(pause_detail)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -511,6 +576,8 @@ func update_lan_rematch(disconnected: bool = false) -> void:
 	var lan: MatchNetwork = controller.lan
 	disconnected = disconnected or lan.peer_left
 	rematch_button.disabled = disconnected or not lan.can_rematch() or lan.local_wants_rematch
+	rematch_button.theme_type_variation = &"SecondaryButton" if rematch_button.disabled else &"PrimaryButton"
+	(rematch_button.get_parent().get_child(-1) as Button).theme_type_variation = &"PrimaryButton" if rematch_button.disabled else &"QuietButton"
 	if disconnected:
 		rematch_note.text = "Đối phương đã rời trận."
 	elif lan.local_wants_rematch:
@@ -527,21 +594,35 @@ func update_lan_rematch(disconnected: bool = false) -> void:
 
 
 func hide_pause() -> void:
+	if is_instance_valid(settings_screen):
+		settings_screen.close()
 	showing_settings = false
 	if is_instance_valid(pause_overlay):
 		pause_overlay.visible = false
 
 
 func show_settings() -> void:
+	if showing_settings:
+		return
+	var opener: Control
+	for button in pause_actions.get_children():
+		if button is Button and button.text == "CÀI ĐẶT":
+			opener = button
+	if not is_instance_valid(settings_screen):
+		settings_screen = SettingsScreen.new()
+		settings_screen.on_sensitivity = _set_mouse_sensitivity
+		settings_screen.closed.connect(func():
+			showing_settings = false
+			HudText.apply(pause_actions)
+			pause_overlay.get_node("PauseShade").show()
+			pause_panel.show()
+		)
+		pause_overlay.add_child(settings_screen)
 	showing_settings = true
-	pause_overlay.visible = true
-	_place_pause_panel(Vector2(520, 620))
-	pause_title.text = "CÀI ĐẶT"
-	pause_detail.text = "Âm lượng áp dụng cho các bus audio của project."
-	_clear_pause_actions()
-	SettingsControls.populate(pause_actions, _set_mouse_sensitivity)
-	_pause_button("QUAY LẠI", show_pause)
-	pause_actions.get_child(0).get_child(1).grab_focus()
+	pause_overlay.show()
+	pause_overlay.get_node("PauseShade").hide()
+	pause_panel.hide()
+	settings_screen.open(opener)
 
 
 ## Applies a new sensitivity to the live camera (SessionState is updated by SettingsControls).
@@ -645,7 +726,7 @@ func _make_player_panel(title: String, color: Color, mirror: bool = false) -> Pa
 	spirit_row.add_child(spirit_text)
 	var stamina := ProgressBar.new()
 	stamina.max_value = GameBalance.get_number("stamina_max")
-	stamina.custom_minimum_size = Vector2(380, 6)
+	stamina.custom_minimum_size = Vector2(GameBalance.get_number("ui_stamina_bar_width"), GameBalance.get_number("ui_stamina_bar_height"))
 	stamina.fill_mode = trail.fill_mode
 	stamina.show_percentage = false
 	stamina.add_theme_stylebox_override("fill", _bar_style(Color("#E8BC65")))
@@ -654,9 +735,9 @@ func _make_player_panel(title: String, color: Color, mirror: bool = false) -> Pa
 	content.add_child(stamina)
 	# Only shown when stamina is low, so the warning never relies on colour alone.
 	var stamina_text := Label.new()
-	stamina_text.add_theme_font_size_override("font_size", 14)
+	stamina_text.add_theme_font_size_override("font_size", GameBalance.get_int("ui_stamina_warning_size"))
 	stamina_text.add_theme_color_override("font_outline_color", Color("#1E1914"))
-	stamina_text.add_theme_constant_override("outline_size", 4)
+	stamina_text.add_theme_constant_override("outline_size", GameBalance.get_int("ui_stamina_warning_outline"))
 	stamina_text.horizontal_alignment = title_label.horizontal_alignment
 	content.add_child(stamina_text)
 	spirit_trails.append(trail)
@@ -897,11 +978,11 @@ func _tutorial_event(event: StringName, source: int, target: int, _value: float)
 func _update_tutorial(delta: float) -> void:
 	hint_visible = true
 	var alpha := 1.0
+	if not controller.paused:
+		controls_hint_time += delta
 	HudText.set_size(tutorial_label, "normal_font_size", GameBalance.get_int("ui_controls_font_size"))
 	if not _tutorial_enabled():
 		_set_tutorial_text(CONTROLS)
-		if not controller.paused:
-			controls_hint_time += delta
 		var duration := GameBalance.get_number("ui_controls_hint_s")
 		var fade := GameBalance.get_number("ui_controls_hint_fade_s")
 		hint_visible = controls_hint_time < duration
@@ -909,7 +990,6 @@ func _update_tutorial(delta: float) -> void:
 			alpha = (duration - controls_hint_time) / fade
 		_alpha(tutorial_label, alpha)
 		return
-	_alpha(tutorial_label, alpha)
 	_queue_tutorial(1)
 	var distance := controller.player.global_position.distance_to(controller.opponent.global_position)
 	if distance <= GameBalance.get_number("tutorial_horn_range"):
@@ -927,6 +1007,10 @@ func _update_tutorial(delta: float) -> void:
 			tutorial_seen.append(tutorial_current)
 			tutorial_time = GameBalance.get_number("tutorial_hint_s")
 	_set_tutorial_text(TUTORIAL[tutorial_current] if tutorial_current > 0 else CONTROLS)
+	var remaining := tutorial_time if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_s") - controls_hint_time
+	var fade := GameBalance.get_number("tutorial_hint_fade_s") if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_fade_s")
+	hint_visible = remaining > 0.0
+	_alpha(tutorial_label, clampf(remaining / fade, 0.0, 1.0))
 
 
 ## Tug-of-war bar: the right half is always the local player's side.
