@@ -169,10 +169,10 @@ func _check_menu() -> void:
 	await process_frame
 	await process_frame
 	var subtitle := menu.menu_layout.get_child(-1) as Label
-	check(subtitle.text == "Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết" and subtitle.get_line_count() == 1, "all five round names fit on one menu subtitle line")
+	check(subtitle.text == "Mùa hội: Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết" and subtitle.get_line_count() == 1, "labelled season footer fits all five round names on one line")
 	var font := subtitle.get_theme_font("font")
 	var size := subtitle.get_theme_font_size("font_size")
-	var full_width := font.get_string_size("Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var full_width := font.get_string_size(subtitle.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	check(full_width <= menu.menu_layout.size.x, "all five round names fit within the left column")
 	check(menu.menu_layout.get_global_rect().encloses(subtitle.get_global_rect()), "subtitle stays inside the menu column at 1280x720")
 	print("SUBTITLE WIDTH full=", full_width, " column=", menu.menu_layout.size.x)

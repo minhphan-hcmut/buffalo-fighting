@@ -151,16 +151,17 @@ func run() -> void:
 		arena.free()
 
 	arena = fixture()
-	var opener := Button.new()
-	arena.hud.pause_actions.add_child(opener)
-	var comfort := SettingsControls.open_comfort(arena.hud.pause_actions, opener)
+	arena.hud.show_pause()
+	arena.hud.show_settings()
+	var comfort: SettingsScreen = arena.hud.settings_screen
+	comfort.select_tab(4)
 	var toggle := comfort.find_child("Replay", true, false) as CheckButton
 	check(toggle != null and toggle.button_pressed, "Hiệu ứng exposes the default-on replay setting")
 	toggle.button_pressed = false
 	check(not SessionState.replay_enabled, "Hiệu ứng toggles replay immediately")
 	await process_frame
 	await process_frame
-	check(root.get_visible_rect().encloses((comfort.find_children("*", "PanelContainer", true, false)[0] as Control).get_global_rect()), "expanded Hiệu ứng page fits 1280x720")
+	check(root.get_visible_rect().encloses(comfort.panel.get_global_rect()), "expanded Hiệu ứng page fits 1280x720")
 	for frame in GameBalance.get_int("vfx_warm_up_settle_frames") + GameBalance.get_int("vfx_warm_up_frames") + 2:
 		await process_frame
 	arena.free()

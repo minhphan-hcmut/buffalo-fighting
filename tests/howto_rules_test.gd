@@ -31,7 +31,7 @@ func run() -> void:
 		var caption := card.get_node("Caption") as RichTextLabel
 		check(diagram.has_method("refresh") and diagram.custom_minimum_size.y > 0.0, "each card has a drawn diagram")
 		check(howto.panel.get_global_rect().encloses(card.get_global_rect()) and card.get_global_rect().encloses(diagram.get_global_rect()), "card and diagram fit the panel")
-		check(caption.get_line_count() <= 2 and caption.get_content_width() <= caption.size.x, "card caption fits within two short lines")
+		check(caption.get_line_count() <= 3 and caption.get_content_width() <= caption.size.x, "card caption fits within three short lines")
 		check(caption.get_theme_font_size("normal_font_size") >= GameBalance.get_int("ui_howto_body_font_size"), "card caption retains the body font size")
 		for label: Label in diagram.get_children():
 			check(label.get_theme_font_size("font_size") >= GameBalance.get_int("ui_howto_body_font_size") and diagram.get_global_rect().encloses(label.get_global_rect()), "diagram label is readable and fits: " + label.name)
@@ -56,8 +56,10 @@ func run() -> void:
 	root.push_input(key)
 	check(howto.selected_tab == 1 and howto.tabs[1].has_focus() and howto.demo != null, "Right still reaches the unchanged lazy move demos")
 	howto.tabs[2].grab_focus()
+	howto.tabs[2].pressed.emit()
 	check(howto.selected_tab == 2 and not howto.demo.is_physics_processing(), "Controls tab still suspends the demos")
 	howto.tabs[0].grab_focus()
+	howto.tabs[0].pressed.emit()
 	check(howto.selected_tab == 0 and rules.visible, "returning to Rules restores the three cards")
 	var closed := [false]
 	howto.closed.connect(func(): closed[0] = true)

@@ -11,6 +11,7 @@ signal event_received(payload: Dictionary)
 signal connection_lost
 signal pause_request_received(peer_id: int, requested_state: bool)
 signal pause_state_changed(is_paused: bool)
+signal ping_changed(milliseconds: int)
 
 const DEFAULT_PORT := 7777
 const MAX_CLIENTS := 1
@@ -33,6 +34,11 @@ var _pending_pause_state := true
 ## Peer id (1 = host) that asked for the pending pause change; 0 when none.
 var _pending_requester := 0
 var _match_paused := false
+var ping_ms := -1
+var last_rtt_ms := -1
+var _ping_average := -1.0
+var _ping_pending: Dictionary = {}
+var _ping_due_ms := 0
 
 
 func _ready() -> void:
@@ -44,6 +50,59 @@ func _process(_delta: float) -> void:
 		_connection_deadline = 0.0
 		if not connected and not is_host:
 			_fail_connection("Hết thời gian chờ kết nối (10 giây)")
+	var now := Time.get_ticks_msec()
+	if connected and now >= _ping_due_ms:
+		_probe_ping(now)
+
+
+func _probe_ping(now: int) -> void:
+	_ping_due_ms = now + int(GameBalance.get_number("lan_ping_interval_s") * 1000.0)
+	var remote := _client_peer_id if is_host else 1
+	if peer == null or not multiplayer.get_peers().has(remote):
+		return
+	var timeout_ms := int(GameBalance.get_number("lan_ping_timeout_s") * 1000.0)
+	for stamp: int in _ping_pending.keys():
+		if now - stamp > timeout_ms:
+			_ping_pending.erase(stamp)
+	_ping_pending[now] = true
+	ping_probe.rpc_id(remote, now)
+
+
+func _is_ping_peer(sender: int) -> bool:
+	return connected and sender > 0 and sender == (_client_peer_id if is_host else 1)
+
+
+@rpc("any_peer", "call_remote", "unreliable", 2)
+func ping_probe(stamp: int) -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if _is_ping_peer(sender) and stamp >= 0:
+		ping_reply.rpc_id(sender, stamp)
+
+
+@rpc("any_peer", "call_remote", "unreliable", 2)
+func ping_reply(stamp: int) -> void:
+	if not _is_ping_peer(multiplayer.get_remote_sender_id()) or not _ping_pending.has(stamp):
+		return
+	_ping_pending.erase(stamp)
+	var elapsed := Time.get_ticks_msec() - stamp
+	if elapsed > GameBalance.get_number("lan_ping_timeout_s") * 1000.0:
+		return
+	last_rtt_ms = elapsed
+	_ping_average = float(elapsed) if _ping_average < 0.0 else lerpf(_ping_average, elapsed, GameBalance.get_number("lan_ping_smoothing_alpha"))
+	var displayed := roundi(_ping_average)
+	if displayed != ping_ms:
+		ping_ms = displayed
+		ping_changed.emit(ping_ms)
+
+
+func _reset_ping() -> void:
+	_ping_due_ms = 0
+	_ping_pending.clear()
+	_ping_average = -1.0
+	last_rtt_ms = -1
+	if ping_ms != -1:
+		ping_ms = -1
+		ping_changed.emit(ping_ms)
 
 
 func _physics_process(_delta: float) -> void:
@@ -92,6 +151,7 @@ func join(address: String, port: int = DEFAULT_PORT) -> Error:
 
 
 func leave() -> void:
+	_reset_ping()
 	_connection_deadline = 0.0
 	if peer != null:
 		peer.close()
@@ -200,6 +260,7 @@ func _configure_peer_timeout(peer_id: int) -> void:
 func _on_peer_disconnected(peer_id: int) -> void:
 	if not is_host or peer_id != _client_peer_id:
 		return
+	_reset_ping()
 	last_input_seq.erase(peer_id)
 	last_action_seq.erase(peer_id)
 	_client_peer_id = 0
@@ -245,6 +306,7 @@ func set_pause_state(is_paused: bool) -> void:
 
 
 func _fail_connection(message: String) -> void:
+	_reset_ping()
 	_connection_deadline = 0.0
 	connected = false
 	status_changed.emit(message)

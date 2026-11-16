@@ -78,20 +78,19 @@ func check_navigation() -> void:
 	if menu.solo_page != null:
 		cancel(true)
 	menu._show_settings()
-	var actions: Container = menu.menu_settings_actions
-	var opener := actions.find_child("GraphicsButton", true, false) as Button
-	opener.pressed.emit()
+	var screen: SettingsScreen = menu.menu_settings_layer
+	var opener := menu.menu_layout.get_node("SettingsButton") as Button
+	screen.tabs[3].pressed.emit()
 	await settle()
-	var page: Control = actions.get_node("GraphicsPage")
-	check(opener.focus_mode == Control.FOCUS_NONE, "graphics modal excludes covered settings from focus")
+	check(opener.focus_mode == Control.FOCUS_NONE, "settings modal excludes covered menu from focus")
 	var focused := root.gui_get_focus_owner()
 	for step in 15:
 		focused = focused.find_next_valid_focus()
-		check(page.is_ancestor_of(focused), "Tab stays inside graphics modal (%d)" % step)
+		check(screen.is_ancestor_of(focused) and focused.is_visible_in_tree(), "Tab stays inside settings modal (%d)" % step)
 	cancel()
 	await settle()
-	check(menu.menu_settings_layer.visible and actions.get_node_or_null("GraphicsPage") == null, "Esc closes graphics before main settings")
-	check(root.gui_get_focus_owner() == opener, "closing graphics restores opener focus")
+	check(not screen.visible and menu.menu_layout.visible, "Esc closes settings from the graphics tab")
+	check(root.gui_get_focus_owner() == opener, "closing settings restores opener focus")
 	menu.free()
 	await settle()
 	menu = load("res://scenes/main_menu.tscn").instantiate()

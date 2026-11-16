@@ -17,13 +17,16 @@ static func attach(button: BaseButton) -> void:
 		if state.tween != null:
 			state.tween.kill()
 		var target := 1.0
-		if not button.disabled:
+		if not button.disabled and not button.get_meta("menu_item", false):
 			if state.down:
 				target = GameBalance.get_number("ui_motion_press_scale")
 			elif state.hovered or state.focused:
 				target = GameBalance.get_number("ui_motion_hover_scale")
 		state.tween = button.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		state.tween.tween_property(button, "scale", Vector2.ONE * target, GameBalance.get_number("ui_motion_button_s")).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		if button.get_meta("menu_item", false):
+			var slide := GameBalance.get_number("ui_menu_focus_slide") if state.hovered or state.focused else 0.0
+			state.tween.parallel().tween_property(button, "position:x", slide, GameBalance.get_number("ui_motion_button_s")).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	button.mouse_entered.connect(update.bind("hovered", true))
 	button.mouse_exited.connect(update.bind("hovered", false))
 	button.focus_entered.connect(update.bind("focused", true))
@@ -38,6 +41,8 @@ static func attach(button: BaseButton) -> void:
 			if state.tween != null:
 				state.tween.kill()
 			button.scale = Vector2.ONE
+			if button.get_meta("menu_item", false):
+				button.position.x = 0.0
 	)
 
 

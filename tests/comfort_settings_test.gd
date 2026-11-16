@@ -238,36 +238,39 @@ func _check_page(arena: MatchController) -> void:
 	arena.phase = &"PLAYING"
 	arena.request_pause_from_menu()
 	arena.hud.show_settings()
-	var actions: VBoxContainer = arena.hud.pause_actions
-	var opener := actions.find_child("ComfortButton", true, false) as Button
-	check(actions.find_child("CameraShake", true, false) == null, "main settings no longer contain Rung camera")
-	opener.pressed.emit()
-	var page := actions.get_node("ComfortPage") as Control
+	var screen: SettingsScreen = arena.hud.settings_screen
+	var opener := screen.opener
+	check(not screen.pages[4].is_visible_in_tree() and screen.pages[0].is_visible_in_tree(), "audio tab does not expose the effects rows")
+	screen.tabs[4].pressed.emit()
+	var page := screen.pages[4]
 	await process_frame
 	await process_frame
-	var panel := page.find_children("*", "PanelContainer", true, false)[0] as Control
-	check(page.top_level and root.get_visible_rect().encloses(panel.get_global_rect()) and panel.get_global_rect().get_center().distance_to(root.get_visible_rect().get_center()) < 1.0, "Hiệu ứng is a centred top-level panel fitting 1280x720")
+	var panel := screen.panel
+	check(root.get_visible_rect().encloses(panel.get_global_rect()) and panel.get_global_rect().get_center().distance_to(root.get_visible_rect().get_center()) < 1.0, "Hiệu ứng uses the centred shared panel fitting 1280x720")
 	var controls: Array[Control] = []
-	for name in ["CameraShake", "CameraPunch", "ImpactFlash", "Hitstop", "AutoPause", "Rumble", "Replay", "HudTextSize", "ComfortDone"]:
-		controls.append(page.find_child(name, true, false) as Control)
-	var focus: Control = controls[0]
+	for key in ["CameraShake", "CameraPunch", "ImpactFlash", "Hitstop", "AutoPause", "Rumble", "Replay", "HudTextSize"]:
+		controls.append(page.find_child(key, true, false) as Control)
+	var focus: Control = page.get_child(0)
 	for index in controls.size():
-		check(focus == controls[index], "Hiệu ứng keyboard/gamepad focus follows row order %d" % index)
+		check(focus == page.get_child(index), "Hiệu ứng keyboard/gamepad focus follows row order %d" % index)
 		focus = focus.find_next_valid_focus()
-	check(focus == controls[0], "Hiệu ứng traps focus inside all its controls")
+	check(focus == screen.reset_button and focus.find_next_valid_focus() == screen.done, "Hiệu ứng reaches the shared footer after its rows")
+	for step in 7:
+		focus = focus.find_next_valid_focus()
+	check(focus == page.get_child(0), "Hiệu ứng traps focus inside rows, footer and tab rail")
 	var notes := page.find_children("*", "Label", true, false).map(func(label: Label): return label.text)
 	check(notes.has("Chỉ áp dụng khi đấu Solo"), "hitstop row explains its Solo-only scope")
 	(controls[1] as CheckButton).button_pressed = false
-	(controls[2] as OptionButton).select(1)
-	(controls[2] as OptionButton).item_selected.emit(1)
+	(controls[2] as SettingsSelector).select(1)
+	(controls[2] as SettingsSelector).item_selected.emit(1)
 	(controls[3] as CheckButton).button_pressed = false
 	(controls[4] as CheckButton).button_pressed = false
 	check(arena.paused and not SessionState.camera_punch_enabled and SessionState.impact_flash == 1 and not SessionState.hitstop_enabled and not SessionState.auto_pause_enabled, "pause comfort controls apply live to SessionState")
 	arena._input(_escape())
-	check(actions.get_node_or_null("ComfortPage") == null and opener.has_focus() and arena.hud.showing_settings and arena.paused, "Esc closes only Hiệu ứng and returns focus to its opener")
+	check(not screen.visible and opener.has_focus() and not arena.hud.showing_settings and arena.paused, "Esc closes Hiệu ứng with settings and returns to its pause opener")
 	opener.pressed.emit()
-	var done := actions.find_child("ComfortDone", true, false) as Button
-	done.pressed.emit()
+	screen.select_tab(4)
+	screen.done.pressed.emit()
 	check(opener.has_focus() and opener.focus_mode == Control.FOCUS_ALL, "XONG restores the opener's focus and navigation")
 	arena.resume_from_menu()
 	SessionState.camera_punch_enabled = true
@@ -280,8 +283,8 @@ func _check_menu_page() -> void:
 	var menu: Control = load("res://scenes/main_menu.tscn").instantiate()
 	root.add_child(menu)
 	menu._show_settings()
-	var opener := menu.menu_settings_actions.find_child("ComfortButton", true, false) as Button
-	opener.pressed.emit()
+	var opener := menu.menu_layout.get_node("SettingsButton") as Button
+	menu.menu_settings_layer.tabs[4].pressed.emit()
 	menu._unhandled_input(_escape())
-	check(menu.menu_settings_actions.get_node_or_null("ComfortPage") == null and menu.menu_settings_layer.visible and opener.has_focus(), "menu Esc closes Hiệu ứng while retaining Cài đặt")
+	check(not menu.menu_settings_layer.visible and menu.menu_layout.visible and opener.has_focus(), "menu Esc closes Hiệu ứng with settings and restores the menu opener")
 	menu.free()

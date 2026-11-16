@@ -19,6 +19,7 @@ var lead := Lead.NONE
 var handler_path: Array[Vector3] = []
 ## Loser's planar speed this tick, which paces the handler's walk clip.
 var loser_speed := 0.0
+var settled := false
 
 enum Lead { NONE, APPROACH, LEAD }
 ## Remaining points of the loser's path, ending outside the gate.
@@ -33,6 +34,7 @@ func start() -> void:
 	if running:
 		return
 	time = 0.0
+	settled = false
 	waypoints.clear()
 	lead = Lead.NONE
 	if controller.winner_slot != 1 and controller.winner_slot != 2:
@@ -86,6 +88,7 @@ func skip(event: InputEvent) -> bool:
 	if is_instance_valid(loser):
 		loser.hide()
 	_dismiss_handler()
+	_settle_actors()
 	return true
 
 
@@ -120,7 +123,19 @@ func process(delta: float) -> void:
 		loser.hide()
 		loser.freeze()
 		_dismiss_handler()
+		_settle_actors()
 	_turn_winner(delta)
+
+
+## Flush the existing animator's filtered walk before the overlay can become visible.
+func _settle_actors() -> void:
+	if settled:
+		return
+	settled = true
+	for actor: Buffalo in [winner, loser]:
+		if is_instance_valid(actor):
+			actor.visual.reset_motion()
+			actor.visual.update_pose(GameBalance.get_number("result_settle_max_s"))
 
 
 ## Path from `from` out through the gate on its side of the arena, detouring around `obstacle`.

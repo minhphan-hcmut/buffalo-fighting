@@ -19,10 +19,10 @@ func _ready() -> void:
 	add_child(list)
 	for card: Dictionary in cards:
 		var entry := Button.new()
+		entry.theme_type_variation = &"QuietButton"
 		entry.name = card.id
 		entry.custom_minimum_size.y = GameBalance.get_number("ui_notebook_row_height")
 		entry.add_theme_font_size_override("font_size", GameBalance.get_int("ui_culture_card_title_font_size"))
-		UiMotion.attach(entry)
 		entry.pressed.connect(show_card.bind(entries.size()))
 		entry.focus_entered.connect(show_card.bind(entries.size()))
 		entries.append(entry)

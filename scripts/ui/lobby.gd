@@ -33,6 +33,7 @@ func _ready() -> void:
 	title.text = "SỚI GIAO HỮU · LAN"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", ControlsDiagram.GOLD)
 	content.add_child(title)
 
 	var intro := Label.new()
@@ -42,6 +43,7 @@ func _ready() -> void:
 	content.add_child(intro)
 
 	host_button = Button.new()
+	host_button.theme_type_variation = &"PrimaryButton"
 	UiMotion.attach(host_button)
 	host_button.text = "TẠO PHÒNG"
 	host_button.custom_minimum_size.y = 48
@@ -83,6 +85,7 @@ func _ready() -> void:
 	content.add_child(status_label)
 
 	var back := Button.new()
+	back.theme_type_variation = &"QuietButton"
 	UiMotion.attach(back)
 	back.text = "QUAY LẠI"
 	back.pressed.connect(_back)

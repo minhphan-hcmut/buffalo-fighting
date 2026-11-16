@@ -10,7 +10,7 @@ const MOVES := [
 	{"id": &"dash", "name": "Hổ lao", "keys": "Space", "text": "Lao nhanh về phía trước, đẩy lùi đối thủ.", "cost": "dash_cost"},
 	{"id": &"guard", "name": "Ghìm", "keys": "Giữ chuột phải", "text": "Đỡ phía trước, giảm khí thế mất và lực đẩy; không bị choáng.", "cost": "guard_stamina_per_s"},
 	{"id": &"parry", "name": "Gạt sừng", "keys": "G → Chuột trái", "text": "Gạt đúng lúc, rồi húc ngay để phản đòn.", "cost": "parry_stamina_cost"},
-	{"id": &"clash", "name": "Khóa sừng", "keys": "W A S D · Đẩy   /   Trái · Móc   /   Phải · Nhả", "text": "Hai đòn chạm sừng tạo khóa; nhả đúng lúc đối thủ đang móc.", "cost": "lock_stamina_per_s"},
+	{"id": &"clash", "name": "Khóa sừng", "keys": "WASD Đẩy tới · Trái Móc · Phải Nhả", "text": "Hai đòn đối đầu tạo khóa. Đẩy về đối thủ; nhả khi họ móc, nhả sai lúc mất khí thế.", "cost": "lock_stamina_per_s"},
 	{"id": &"flank", "name": "Đánh sườn / lưng", "keys": "Chuột trái", "text": "Húc vào hông hoặc sau lưng khiến đối thủ mất khí thế nhiều hơn.", "cost": "horn_cost"},
 ]
 
@@ -21,12 +21,20 @@ var world: Node3D
 var red: Buffalo
 var blue: Buffalo
 var callout: Label3D
-var impact: Node3D
-var spark_material: StandardMaterial3D
+var vfx: MatchVFX
+var player: Buffalo:
+	get: return red
+var opponent: Buffalo:
+	get: return blue
+var paused := false
+var phase: StringName = &"PLAYING"
+var finished := false
+var active_clash: Dictionary = {}
+var sampled_time := -1.0
+var fired_events: Dictionary = {}
 var contact_attacker: Buffalo
 var contact_victim: Buffalo
 var contact_flank := false
-var impact_age := 0.0
 var move_buttons: Array[Button] = []
 var keys: HBoxContainer
 var description: Label
@@ -45,6 +53,7 @@ func _ready() -> void:
 	var group := ButtonGroup.new()
 	for index in MOVES.size():
 		var button := Button.new()
+		button.theme_type_variation = &"QuietButton"
 		button.text = MOVES[index].name
 		button.toggle_mode = true
 		button.button_group = group
@@ -124,25 +133,15 @@ func _build_stage() -> void:
 	callout.no_depth_test = true
 	world.add_child(callout)
 
-	impact = Node3D.new()
-	impact.name = "ContactSparks"
-	world.add_child(impact)
-	spark_material = StandardMaterial3D.new()
-	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	spark_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	spark_material.no_depth_test = true
-	var spark := BoxMesh.new()
-	spark.size = Vector3(GameBalance.get_number("demo_spark_thickness"), GameBalance.get_number("demo_spark_thickness"), GameBalance.get_number("demo_spark_length"))
-	spark.material = spark_material
-	for index in GameBalance.get_int("demo_spark_count"):
-		var ray := MeshInstance3D.new()
-		ray.mesh = spark
-		ray.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var angle := TAU * index / GameBalance.get_int("demo_spark_count")
-		var direction := Vector3(cos(angle), sin(angle), sin(angle)).normalized()
-		ray.position = direction * GameBalance.get_number("demo_spark_radius")
-		ray.basis = Basis.looking_at(direction)
-		impact.add_child(ray)
+	vfx = MatchVFX.new()
+	vfx.name = "DemoVFX"
+	vfx.controller = self
+	world.add_child(vfx)
+
+
+func presentation_pinned(_actor: Buffalo) -> bool:
+	return false
+
 
 
 ## Select a named move, restarting its timeline while retaining the same scene.
@@ -167,6 +166,9 @@ func select_move(id: StringName) -> void:
 			&"clash":
 				cost.text += "/giây đẩy · %d mỗi lần móc" % GameBalance.get_int("horn_cost")
 	elapsed = 0.0
+	sampled_time = -1.0
+	fired_events.clear()
+	vfx.reset()
 	sample_time(elapsed)
 	for actor in [red, blue]:
 		(actor.visual as BuffaloAnimator).reset_motion()
@@ -185,6 +187,8 @@ func _move_input(event: InputEvent, index: int) -> void:
 
 ## Suspend the viewport, timeline and animators together when the tab is hidden.
 func set_active(active: bool) -> void:
+	paused = not active
+	vfx.set_paused(paused)
 	set_process(active)
 	set_physics_process(active)
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if active else SubViewport.UPDATE_DISABLED
@@ -206,13 +210,16 @@ func _process(_delta: float) -> void:
 
 ## Sample the selected presentation timeline; also used by deterministic QA captures.
 func sample_time(time: float) -> void:
+	if time < sampled_time:
+		vfx.reset()
+		fired_events.clear()
+	sampled_time = time
 	var reset := GameBalance.get_number("demo_reset_at_s")
 	var loop := GameBalance.get_number("demo_loop_s")
 	var returning := smoothstep(reset, loop, time)
 	contact_attacker = null
 	contact_victim = null
 	callout.text = ""
-	impact.visible = false
 	_approach(minf(time, reset))
 	call("_sample_%s" % selected_move, minf(time, reset))
 	_align_contact()
@@ -224,7 +231,45 @@ func sample_time(time: float) -> void:
 		blue.state = Buffalo.State.NORMAL
 		contact_attacker = null
 		callout.text = ""
-		impact.visible = false
+
+	_timeline_events(time)
+
+
+func _timeline_events(time: float) -> void:
+	var windup := GameBalance.get_number("demo_windup_at_s")
+	var hit := GameBalance.get_number("demo_hit_at_s")
+	var counter := GameBalance.get_number("demo_counter_at_s")
+	active_clash = {"demo": true} if selected_move == &"clash" and time >= hit and time < GameBalance.get_number("demo_clash_release_at_s") else {}
+	match selected_move:
+		&"horn", &"flank":
+			_event_at(time, windup, &"HORN_START", 1, 2)
+			_event_at(time, hit, &"HORN_HIT", 1, 2)
+			if selected_move == &"flank":
+				_event_at(time, hit, &"FLANK_HIT", 1, 2)
+		&"dash":
+			_event_at(time, windup, &"DASH_START", 1, 2)
+			_event_at(time, hit, &"DASH_HIT", 1, 2)
+		&"guard":
+			_event_at(time, windup, &"HORN_START", 2, 1)
+			_event_at(time, hit, &"GUARD_HIT", 2, 1)
+		&"parry":
+			_event_at(time, windup - GameBalance.get_number("demo_parry_attack_lead_s"), &"HORN_START", 2, 1)
+			_event_at(time, hit, &"PARRY_SUCCESS", 1, 2)
+			_event_at(time, counter, &"COUNTER_START", 1, 2)
+			_event_at(time, counter, &"COUNTER_HIT", 1, 2)
+		&"clash":
+			_event_at(time, windup, &"HORN_START", 1, 2)
+			_event_at(time, windup, &"HORN_START", 2, 1)
+			_event_at(time, hit, &"CLASH_START", 1, 2)
+			_event_at(time, counter, &"CLASH_HOOK", 2, 1)
+
+
+func _event_at(time: float, at: float, event: StringName, source: int, target: int) -> void:
+	var id := "%s:%d" % [event, source]
+	if time >= at and not fired_events.has(id):
+		fired_events[id] = true
+		# Emphasize the tutorial's flank bonus while preserving the match's existing strength.
+		vfx.on_combat_event(event, source, target, selected_move == &"flank")
 
 
 func _approach(time: float) -> void:
@@ -290,7 +335,6 @@ func _sample_clash(time: float) -> void:
 	contact_attacker = red
 	contact_victim = blue
 	contact_flank = false
-	impact_age = fposmod(time - hit, GameBalance.get_number("demo_spark_interval_s"))
 	callout.text = "ĐẨY" if time < GameBalance.get_number("demo_counter_at_s") else "MÓC → NHẢ"
 	var release := GameBalance.get_number("demo_clash_release_at_s")
 	if time >= release:
@@ -327,7 +371,6 @@ func _hit(attacker: Buffalo, victim: Buffalo, age: float, word: String, strength
 	contact_attacker = attacker
 	contact_victim = victim
 	contact_flank = flank
-	impact_age = age
 	callout.text = word
 
 
@@ -342,11 +385,6 @@ func _align_contact() -> void:
 	contact_attacker.position += Vector3(to.x - at.x, 0.0, to.z - at.z)
 	var contact := contact_attacker.visual.to_global(head).lerp(to, 0.5)
 	callout.position = contact + Vector3.UP * GameBalance.get_number("demo_callout_height")
-	impact.position = contact
-	var progress := clampf(impact_age / GameBalance.get_number("demo_spark_duration_s"), 0.0, 1.0)
-	impact.visible = progress < 1.0
-	impact.scale = Vector3.ONE * (1.0 + progress)
-	spark_material.albedo_color = Color(ControlsDiagram.GOLD, 1.0 - progress)
 
 
 func _pose(actor: Buffalo, state: Buffalo.State, time: float, duration: float, yaw: float) -> void:

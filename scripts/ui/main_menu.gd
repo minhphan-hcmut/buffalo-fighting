@@ -16,8 +16,7 @@ var result_panel: PanelContainer
 var result_stage: Control
 var displayed_result := ""
 var result_tween: Tween
-var menu_settings_layer: Control
-var menu_settings_actions: VBoxContainer
+var menu_settings_layer: SettingsScreen
 var solo_page: Control
 static var return_to_free_play := false
 static var return_to_training := false
@@ -71,25 +70,28 @@ func _build_main_menu() -> void:
 	menu_layout = VBoxContainer.new()
 	menu_layout.anchor_top = 0.5
 	menu_layout.anchor_bottom = 0.5
-	menu_layout.offset_left = 88.0
-	menu_layout.offset_right = 88.0 + 440.0
-	menu_layout.offset_top = -250.0
-	menu_layout.offset_bottom = 250.0
+	menu_layout.offset_left = GameBalance.get_number("ui_menu_left")
+	menu_layout.offset_right = menu_layout.offset_left + GameBalance.get_number("ui_menu_width")
+	menu_layout.offset_top = -GameBalance.get_number("ui_menu_half_height")
+	menu_layout.offset_bottom = GameBalance.get_number("ui_menu_half_height")
 	menu_layout.alignment = BoxContainer.ALIGNMENT_CENTER
-	menu_layout.add_theme_constant_override("separation", 18)
+	menu_layout.add_theme_constant_override("separation", GameBalance.get_int("ui_menu_gap"))
 	add_child(menu_layout)
 	var title := _make_label("CHỌI TRÂU", 72, Color("#E8BC65"))
 	title.add_theme_color_override("font_outline_color", Color("#241D18"))
 	title.add_theme_constant_override("outline_size", 10)
 	menu_layout.add_child(title)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var subtitle := _make_label("ĐẤU TRƯỜNG LỄ HỘI", 24, Color("#F2E6CF"))
 	menu_layout.add_child(subtitle)
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
-	var solo := _button("SOLO")
+	var solo := _button("SOLO · MÙA HỘI")
+	solo.theme_type_variation = &"MenuPrimary"
 	solo.name = "SoloButton"
 	solo.pressed.connect(_show_solo_chooser)
 	menu_layout.add_child(solo)
-	var lan := _button("LAN · HOST / JOIN")
+	var lan := _button("LAN")
 	lan.pressed.connect(_start_lan)
 	menu_layout.add_child(lan)
 	var howto := _button("CÁCH CHƠI")
@@ -103,7 +105,15 @@ func _build_main_menu() -> void:
 	var quit := _button("THOÁT")
 	quit.pressed.connect(func(): get_tree().quit())
 	menu_layout.add_child(quit)
-	menu_layout.add_child(_make_label("Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết", 18, Color("#D9C9A8")))
+	for item in [solo, lan, howto, settings, quit]:
+		item.theme_type_variation = &"MenuPrimary" if item == solo else &"MenuSecondary"
+		item.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item.set_meta("menu_item", true)
+	quit.theme_type_variation = &"QuietButton"
+	var footer := _make_label("Mùa hội: Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết", GameBalance.get_int("ui_menu_footer_size"), SettingsControls.MUTED)
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	menu_layout.add_child(footer)
 	solo.grab_focus()
 
 
@@ -147,44 +157,12 @@ func _make_left_shade() -> TextureRect:
 
 
 func _show_settings() -> void:
-	if is_instance_valid(menu_settings_layer):
-		menu_settings_layer.visible = true
-		menu_layout.hide()
-		menu_settings_actions.get_child(0).get_child(1).grab_focus()
-		return
+	if not is_instance_valid(menu_settings_layer):
+		menu_settings_layer = SettingsScreen.new()
+		menu_settings_layer.closed.connect(func(): menu_layout.show())
+		add_child(menu_settings_layer)
 	menu_layout.hide()
-	menu_settings_layer = Control.new()
-	menu_settings_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(menu_settings_layer)
-	var shade := ColorRect.new()
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color("#17262EE8")
-	menu_settings_layer.add_child(shade)
-	var panel := PanelContainer.new()
-	menu_settings_layer.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_left = -GameBalance.get_number("ui_settings_panel_width") * 0.5
-	panel.offset_right = GameBalance.get_number("ui_settings_panel_width") * 0.5
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 12)
-	panel.add_child(content)
-	var title := _make_label("CÀI ĐẶT", 30, Color("#E8BC65"))
-	content.add_child(title)
-	var detail := _make_label("Cài đặt được lưu tự động.", 15, Color("#F2E6CF"))
-	content.add_child(detail)
-	menu_settings_actions = VBoxContainer.new()
-	menu_settings_actions.add_theme_constant_override("separation", 8)
-	content.add_child(menu_settings_actions)
-	SettingsControls.populate(menu_settings_actions)
-	var close := _button("QUAY LẠI")
-	close.pressed.connect(func():
-		menu_settings_layer.hide()
-		menu_layout.show()
-		menu_layout.get_node("SettingsButton").grab_focus()
-	)
-	menu_settings_actions.add_child(close)
-	menu_settings_actions.get_child(0).get_child(1).grab_focus()
+	menu_settings_layer.open(menu_layout.get_node("SettingsButton"))
 
 
 func _show_how_to_play() -> void:
@@ -203,10 +181,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("ui_cancel"):
 		return
 	if is_instance_valid(menu_settings_layer) and menu_settings_layer.visible:
-		if SettingsControls.close_comfort(menu_settings_actions) or SettingsControls.close_graphics(menu_settings_actions):
-			get_viewport().set_input_as_handled()
-			return
-		menu_settings_actions.get_child(-1).pressed.emit()
+		menu_settings_layer.close()
 	elif is_instance_valid(solo_page):
 		(solo_page.find_child("SoloBack", true, false) as Button).pressed.emit()
 	else:
@@ -225,10 +200,11 @@ func _make_label(text: String, font_size: int, color: Color) -> Label:
 	return label
 
 
-func _button(text: String) -> Button:
+func _button(text: String, tier: StringName = &"SecondaryButton") -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(360, 54)
+	button.theme_type_variation = tier
+	button.custom_minimum_size = Vector2(GameBalance.get_number("ui_action_width"), GameBalance.get_number("ui_action_height"))
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.focus_mode = Control.FOCUS_ALL
 	UiMotion.attach(button)
@@ -280,7 +256,7 @@ func _solo_page(title: String) -> VBoxContainer:
 
 
 func _solo_back(rows: VBoxContainer, callback: Callable) -> void:
-	var back := _button("QUAY LẠI")
+	var back := _button("QUAY LẠI", &"QuietButton")
 	back.name = "SoloBack"
 	back.pressed.connect(callback)
 	rows.add_child(back)
@@ -289,7 +265,8 @@ func _solo_back(rows: VBoxContainer, callback: Callable) -> void:
 
 func _show_solo_chooser() -> void:
 	var rows := _solo_page("SOLO")
-	var season := _button("MÙA HỘI")
+	(rows.get_parent() as PanelContainer).custom_minimum_size.x = 0.0
+	var season := _button("MÙA HỘI", &"PrimaryButton")
 	season.name = "SeasonButton"
 	season.pressed.connect(_start_solo)
 	rows.add_child(season)
@@ -314,6 +291,8 @@ func _show_free_play() -> void:
 	for level: StringName in SessionState.SOLO_LEVELS:
 		var data: Dictionary = levels[level]
 		var button := _button("%s · %s\n%s · %s" % [data.title.to_upper(), levels.difficulty_labels[data.ai_profile], data.opponent_number, data.opponent_giap])
+		if level == SessionState.SOLO_LEVELS[0]:
+			button.theme_type_variation = &"PrimaryButton"
 		button.name = String(level)
 		button.custom_minimum_size = Vector2(640, GameBalance.get_number("ui_free_play_row_height"))
 		button.add_theme_font_size_override("font_size", 20)
@@ -339,23 +318,72 @@ func _show_training() -> void:
 		SessionState.training_unlimited_stamina = enabled
 		SessionState.save_settings()
 	)
+	var training_rows: Array[Button] = []
 	for drill: Dictionary in DataFile.load_json("res://data/training.json").drills:
 		var keys: Array[String] = []
 		for move: Dictionary in MoveDemo.MOVES:
 			if drill.moves.has(String(move.id)):
 				keys.append(move.keys)
-		var button := _button("%s\n%s\n%s" % [drill.name, drill.goal, " · ".join(keys)])
+		var button := Button.new()
+		button.text = drill.name
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.name = drill.id
 		button.custom_minimum_size = Vector2(GameBalance.get_number("training_menu_row_width"), GameBalance.get_number("training_menu_row_height"))
-		button.add_theme_font_size_override("font_size", GameBalance.get_int("training_menu_font_size"))
+		button.add_theme_font_size_override("font_size", GameBalance.get_int("training_menu_name_size"))
+		button.focus_entered.connect(_select_training_row.bind(button, training_rows))
+		training_rows.append(button)
+		var key_row := HBoxContainer.new()
+		key_row.name = "Keys"
+		key_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		key_row.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		key_row.offset_left = GameBalance.get_number("training_menu_name_width")
+		key_row.offset_right = -GameBalance.get_number("settings_gap")
+		key_row.offset_top = GameBalance.get_number("training_menu_key_top")
+		key_row.alignment = BoxContainer.ALIGNMENT_END
+		button.add_child(key_row)
+		for text in keys:
+			var cap := ControlsDiagram.keycap(text, false)
+			cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cap.custom_minimum_size.y = GameBalance.get_number("training_menu_key_height")
+			var cap_style := cap.get_theme_stylebox("panel") as StyleBoxFlat
+			cap_style.content_margin_top = GameBalance.get_number("training_menu_key_padding")
+			cap_style.content_margin_bottom = cap_style.content_margin_top
+			var cap_text := cap.get_child(0) as Label
+			cap_text.add_theme_font_size_override("font_size", GameBalance.get_int("training_menu_key_size"))
+			cap_text.add_theme_color_override("font_color", SettingsControls.MUTED)
+			key_row.add_child(cap)
+		var caption := Label.new()
+		caption.name = "Description"
+		caption.text = drill.goal
+		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		caption.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		caption.offset_left = GameBalance.get_number("settings_gap")
+		caption.offset_right = -GameBalance.get_number("settings_gap")
+		caption.offset_top = -GameBalance.get_number("training_menu_caption_space")
+		caption.offset_bottom = -GameBalance.get_number("training_menu_caption_bottom")
+		caption.add_theme_font_size_override("font_size", GameBalance.get_int("training_menu_caption_size"))
+		caption.add_theme_color_override("font_color", SettingsControls.MUTED)
+		button.add_child(caption)
 		button.pressed.connect(func():
 			SessionState.begin_training(StringName(drill.id))
 			_close_solo_page()
 			_enter_arena()
 		)
 		rows.add_child(button)
+	_select_training_row(training_rows[0], training_rows)
 	rows.add_child(unlimited)
 	_solo_back(rows, _show_solo_chooser)
+
+
+func _select_training_row(selected: Button, rows: Array[Button]) -> void:
+	for button in rows:
+		button.theme_type_variation = &"PrimaryRow" if button == selected else &"QuietButton"
+		button.add_theme_color_override("font_color", ControlsDiagram.GOLD if button == selected else ControlsDiagram.PAPER)
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			var style := SettingsControls.row_style(button == selected or state in ["hover", "pressed", "focus"])
+			style.content_margin_top = GameBalance.get_number("training_menu_name_top")
+			style.content_margin_bottom = GameBalance.get_number("training_menu_caption_space")
+			button.add_theme_stylebox_override(state, style)
 
 
 ## Plays the Phần Lễ screens in `rites` one after another, then calls `done`.
@@ -430,6 +458,9 @@ func _build_session_overlay() -> void:
 	add_child(_make_left_shade())
 	var panel := PanelContainer.new()
 	result_panel = panel
+	var panel_style := panel.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	panel_style.set_content_margin_all(GameBalance.get_number("ui_result_padding"))
+	panel.add_theme_stylebox_override("panel", panel_style)
 	panel.visibility_changed.connect(_fade_culture_card.call_deferred)
 	# Move a plain parent so wrapped labels never change the panel's minimum size mid-tween.
 	result_stage = Control.new()
@@ -448,8 +479,10 @@ func _build_session_overlay() -> void:
 	content.add_theme_constant_override("separation", 20)
 	panel.add_child(content)
 	result_title = _make_label("", 40, Color("#E8BC65"))
+	result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	content.add_child(result_title)
 	result_detail = _make_label("", 24, Color("#F2E6CF"))
+	result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	content.add_child(result_detail)
 	result_actions = VBoxContainer.new()
 	result_actions.add_theme_constant_override("separation", 12)
@@ -503,7 +536,7 @@ func _show_result(result_key: String) -> void:
 		result_panel.offset_top = -GameBalance.get_number("stats_result_half_height")
 		result_panel.offset_bottom = GameBalance.get_number("stats_result_half_height")
 
-	var retry := _button("CHƠI LẠI" if SessionState.free_play else "CHƠI LẠI TRẬN NÀY")
+	var retry := _button("CHƠI LẠI" if SessionState.free_play else "CHƠI LẠI TRẬN NÀY", &"PrimaryButton")
 	retry.pressed.connect(_retry_match)
 	result_actions.add_child(retry)
 	if SessionState.free_play:
@@ -511,13 +544,23 @@ func _show_result(result_key: String) -> void:
 		change.pressed.connect(_change_free_play_match)
 		result_actions.add_child(change)
 	elif won and not final_win:
-		var next := _button("TRẬN TIẾP THEO · %s" % _round_name(SessionState.level_id))
+		retry.theme_type_variation = &"SecondaryButton"
+		var next := _button("TRẬN TIẾP THEO · %s" % _round_name(SessionState.level_id), &"PrimaryButton")
 		next.pressed.connect(_start_next_match)
 		result_actions.add_child(next)
 		result_actions.move_child(next, 0)
-	var menu := _button("VỀ MENU")
+	var menu := _button("VỀ MENU", &"QuietButton")
 	menu.pressed.connect(_return_to_menu)
 	result_actions.add_child(menu)
+	result_actions.add_theme_constant_override("separation", GameBalance.get_int("ui_result_action_gap"))
+	for button: Button in result_actions.get_children():
+		button.custom_minimum_size.y = GameBalance.get_number("ui_result_action_height")
+		button.add_theme_font_size_override("font_size", GameBalance.get_int("ui_result_action_size"))
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var style := button.get_theme_stylebox(state).duplicate() as StyleBoxFlat
+			style.content_margin_top = GameBalance.get_number("ui_result_action_padding")
+			style.content_margin_bottom = style.content_margin_top
+			button.add_theme_stylebox_override(state, style)
 	HudText.apply(result_panel)
 	if final_win:
 		_show_closing_ceremony(retry)
@@ -542,8 +585,8 @@ func _show_culture_card(final_win: bool) -> void:
 	result_panel.offset_top = -290.0 if has_card else -230.0
 	result_panel.offset_bottom = 290.0 if has_card else 230.0
 	content.add_theme_constant_override("separation", 12 if has_card else 20)
-	HudText.set_size(result_title, "font_size", GameBalance.get_int("ui_culture_card_result_title_font_size") if has_card else 40)
-	HudText.set_size(result_detail, "font_size", GameBalance.get_int("ui_culture_card_result_detail_font_size") if has_card else 24)
+	HudText.set_size(result_title, "font_size", GameBalance.get_int("ui_result_title_size"))
+	HudText.set_size(result_detail, "font_size", GameBalance.get_int("ui_result_reason_size"))
 	if not has_card:
 		return
 	SessionState.culture_cards_seen.append(StringName(card.id))

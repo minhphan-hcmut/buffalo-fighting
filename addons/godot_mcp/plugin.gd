@@ -14,6 +14,10 @@ var auto_dismiss_dialogs: bool = false
 
 
 func _enter_tree() -> void:
+	# Headless editor runs (export, import, CI) must not inject the bridges: they would
+	# ship in the exported game and the save would rewrite project.godot.
+	if DisplayServer.get_name() == "headless":
+		return
 	_inject_autoloads()
 	_command_router = preload("res://addons/godot_mcp/command_router.gd").new()
 	_command_router.name = "MCPCommandRouter"

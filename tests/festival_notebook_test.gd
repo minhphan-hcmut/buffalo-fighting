@@ -28,6 +28,7 @@ func run() -> void:
 	menu._show_how_to_play()
 	var howto := menu.get_node("HowToPlay") as HowToPlay
 	howto.tabs[3].grab_focus()
+	howto.tabs[3].pressed.emit()
 	await process_frame
 	await process_frame
 	var notebook := howto.notebook
@@ -105,6 +106,7 @@ func run() -> void:
 	check(menu.get_node_or_null("HowToPlay") == null and menu.menu_layout.get_node("HowToPlayButton").has_focus(), "gamepad B closes Notebook and restores menu focus")
 	menu._show_how_to_play()
 	(menu.get_node("HowToPlay") as HowToPlay).tabs[3].grab_focus()
+	(menu.get_node("HowToPlay") as HowToPlay).tabs[3].pressed.emit()
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
 	escape.pressed = true

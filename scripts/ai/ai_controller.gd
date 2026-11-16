@@ -25,6 +25,8 @@ var observed_attack := -1
 var parry_delay := -1.0
 var counter_decided := false
 var wants_counter := false
+## Drill pause after a stun ends, so a parried drill attacker visibly recovers before attacking again.
+var drill_rest := 0.0
 
 
 func _ready() -> void:
@@ -41,6 +43,7 @@ func build_input(delta: float) -> InputFrame:
 		return frame
 	state_time += delta
 	decision_time -= delta
+	drill_rest -= delta
 	var offset := target.global_position - actor.global_position
 	offset.y = 0.0
 	var distance := offset.length()
@@ -88,6 +91,11 @@ func _drill_input(frame: InputFrame, distance: float, toward: Vector3) -> InputF
 	frame.clash_action = &""
 	var drill: String = profile_data.drill
 	if drill == "DUMMY":
+		return frame
+	if actor.state == Buffalo.State.STUNNED:
+		drill_rest = float(profile_data.get("post_stun_rest_s", 0.0))
+		return frame
+	if drill_rest > 0.0:
 		return frame
 	if actor.state == Buffalo.State.CLASH:
 		if drill == "PUSH":

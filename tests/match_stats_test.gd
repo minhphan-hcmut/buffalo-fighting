@@ -68,8 +68,8 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	var block := overlay.find_child("MatchStats", true, false) as GridContainer
-	check(block != null and block.columns == 2 and block.get_child_count() == 7, "Solo result contains compact two-column stats block")
-	check(block.get_child(0).text == "Trúng đòn: 2" and block.get_child(5).text == "Thắng khóa sừng: 1 / 2" and block.get_child(6).text == "Bị trúng đòn: 2", "result displays collected hit/lock/opponent counts")
+	check(block != null and block.columns == 2 and block.get_child_count() == 14, "Solo result contains compact two-column stats block")
+	check(block.get_child(0).text == "Trúng đòn" and block.get_child(1).text == "2" and block.get_child(10).text == "Thắng khóa sừng" and block.get_child(11).text == "1 / 2" and block.get_child(13).text == "2", "result displays collected hit/lock/opponent counts")
 	check(root.get_visible_rect().encloses(overlay.result_panel.get_global_rect()), "Solo result and existing buttons fit 1280x720")
 	check(overlay.result_actions.get_child(0).text.begins_with("TRẬN TIẾP THEO"), "stats preserve next-round button focus order")
 	SessionState.hud_text_large = true
@@ -97,7 +97,7 @@ func run() -> void:
 	feed(match_node, 1)
 	match_node._finish(1, &"TIME")
 	overlay._show_result("stats-free")
-	check(overlay.find_child("MatchStats", true, false).get_child(0).text == "Trúng đòn: 2", "free-play result uses its own match stats")
+	check(overlay.find_child("MatchStats", true, false).get_child(1).text == "2", "free-play result uses its own match stats")
 	check(overlay.result_actions.get_child(0).text == "CHƠI LẠI", "free-play button order stays unchanged")
 	SessionState.hud_text_large = true
 	for winner in [1, 2]:
@@ -117,7 +117,7 @@ func run() -> void:
 	feed(match_node, 2)
 	check(match_node.hud.stats.counts == expected, "LAN slot 2 has the same local perspective and lock wins")
 	match_node.hud._show_lan_result()
-	check(match_node.hud.stats_panel.get_child(0).text == "Trúng đòn: 2", "LAN result panel displays local stats")
+	check(match_node.hud.stats_panel.get_child(1).text == "2", "LAN result panel displays local stats")
 	await process_frame
 	await process_frame
 	check(root.get_visible_rect().encloses(match_node.hud.pause_panel.get_global_rect()), "LAN result stats and menu button fit 1280x720")

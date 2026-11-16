@@ -52,6 +52,7 @@ run_pair() { # host script, client script, name
 run_pair tests/network_host_harness.gd tests/network_client_harness.gd network_pair
 run_pair tests/lan_match_host.gd tests/lan_match_client.gd lan_match
 run_pair tests/lan_rematch_pair.gd tests/lan_rematch_pair.gd lan_rematch --host --client
+run_pair tests/lan_ping_pair.gd tests/lan_ping_pair.gd lan_ping --host --client
 run_pair tests/combat_readability_lan_test.gd tests/combat_readability_lan_test.gd combat_readability_lan --host --client
 
 echo

@@ -88,8 +88,8 @@
     "counter_chance": 0.65
   },
   "DRILL_DUMMY": {"drill": "DUMMY"},
-  "DRILL_DASH": {"drill": "DASH", "dash_min_range": 5.4, "dash_max_range": 6.0, "faces_dot": 0.9},
-  "DRILL_HORN": {"drill": "HORN", "approach_gap": 0.4, "faces_dot": 0.9},
+  "DRILL_DASH": {"drill": "DASH", "post_stun_rest_s": 0.8, "dash_min_range": 5.4, "dash_max_range": 6.0, "faces_dot": 0.9},
+  "DRILL_HORN": {"drill": "HORN", "post_stun_rest_s": 0.8, "approach_gap": 0.4, "faces_dot": 0.9},
   "DRILL_HOOK": {"drill": "HOOK", "approach_gap": 0.4, "faces_dot": 0.9, "hook_interval_s": 0.7},
   "DRILL_PUSH": {"drill": "PUSH", "approach_gap": 0.4, "faces_dot": 0.9},
   "HARD": {

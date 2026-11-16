@@ -5,7 +5,7 @@ extends Control
 enum Kind { WIN, STAMINA, TARGET }
 const TITLES := ["THẮNG THẾ NÀO", "GIỮ SỨC", "ĐÁNH CHỖ NÀO"]
 const CAPTIONS := [
-	"Hết giờ: khí thế cao hơn thắng\nBằng nhau: bốc thăm · Khí thế không hồi",
+	"Hết giờ: khí thế cao hơn thắng\nBằng nhau/cùng hết: bốc thăm\nKhí thế không hồi",
 	"Đòn và ghìm tốn sức\nNghỉ thì hồi · Hết sức: không ghìm",
 	"Dồn sát rào: mạnh hơn\nGạt sừng đúng lúc → phản đòn"
 ]
