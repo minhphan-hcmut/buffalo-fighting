@@ -1,6 +1,8 @@
 # Chọi trâu: Đấu trường lễ hội
 
-Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu, thấp qua vai phải (nghiêng 22 độ). Mở `project.godot` bằng Godot 4.x để chạy.
+Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu, thấp qua vai phải (nghiêng 22 độ). Mở `project.godot` bằng Godot 4.7 (bản Standard) để chạy.
+
+**Chạy game lần đầu (người hoặc AI agent): xem [`HUONG_DAN_CHAY.md`](HUONG_DAN_CHAY.md).**
 
 ## Điều khiển
 
@@ -8,6 +10,7 @@ Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là 
 - Chuột: xoay camera quanh trâu; thân trâu quay theo camera với giới hạn tốc độ.
 - Chuột trái: HORN; trong CLASH dùng để móc.
 - `Space`: DASH.
+- `G`: PARRY (gạt sừng).
 - Giữ chuột phải: GUARD; trong CLASH nhấn xuống để nhả khóa.
 - `Esc`: tạm dừng và thả chuột (LAN: gửi yêu cầu tạm dừng cho đối phương); click chuột trái để khóa chuột lại.
 
