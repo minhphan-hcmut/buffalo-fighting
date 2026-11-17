@@ -1,21 +1,5 @@
 # Changelog GDD
 
-## Ghi chú triển khai — 17/11/2026 (refactor, không phải phê duyệt GDD mới)
-
-- Tách presenter tutorial/training/pause/settings/kết quả LAN khỏi HUD; tách mode/result
-  views và SoloFlow khỏi façade menu. SessionState duy nhất; static arena prefetch và
-  SoloSessionOverlay giữ contract/lifecycle. Hai public HUD intents đóng settings/về menu
-  thay controller chạm private HUD; không thay combat, tick order, transport hay balance.
-- Bổ sung regression event/state/lifecycle; sửa **test harness** LAN để chỉ nhận fresh input
-  sau accepted resume, phân loại consent theo actual request; fixture training chạy manual
-  ticks trong physics frame. Đây không phải sửa gameplay/mạng production hay giảm assertions.
-- Full suite hiện audit 80/80; shutdown diagnostics còn. Render 720p/1080p có staged results,
-  không phải đã đánh thắng mùa. 100 trận AI-v-AI chính chưa biện minh tuning; không đổi số liệu.
-- Cập nhật kiến trúc, hướng dẫn chạy, acceptance matrix và demo checklist. Live LAN R1,
-  human playtest, target performance, templates/export/Windows sạch và provenance còn gates mở.
-- **GDD v0.7 vẫn canonical**; không sửa v0.7 hoặc draft untracked v0.8 trong đợt tích hợp docs
-  này, không tuyên bố v0.8/nội dung thẻ đã được duyệt mới. Main còn review/tích hợp/quyết định release.
-
 ## v0.7.2 — 13/11/2026
 
 - Bảng 17: làm 3 màn Phần Lễ SHOULD (rước nước trước L01, các giáp đưa trâu vào hội trước L02, trống khai hội và múa cờ trên sới trước L03). Mỗi màn hiện một lần mỗi mùa hội, bỏ qua bằng một phím. Chữ ở `data/ceremony.json`, cảnh ở `scripts/core/ceremony_diorama.gd`.

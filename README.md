@@ -1,6 +1,6 @@
 # Chọi trâu: Đấu trường lễ hội
 
-Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu, thấp qua vai phải (nghiêng 22 độ). Mở `project.godot` bằng Godot 4.7.2 (bản Standard, phiên bản đã kiểm chứng) để chạy.
+Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là game 3D low-poly với gameplay 2.5D trên mặt phẳng XZ, camera bám sau trâu, thấp qua vai phải (nghiêng 22 độ). Mở `project.godot` bằng Godot 4.7 (bản Standard) để chạy.
 
 **Chạy game lần đầu (người hoặc AI agent): xem [`HUONG_DAN_CHAY.md`](HUONG_DAN_CHAY.md).**
 
@@ -14,7 +14,7 @@ Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là 
 - Giữ chuột phải: GUARD; trong CLASH nhấn xuống để nhả khóa.
 - `Esc`: tạm dừng và thả chuột (LAN: gửi yêu cầu tạm dừng cho đối phương); click chuột trái để khóa chuột lại.
 
-Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng FLEE, TIME hoặc LOT. Mùa Solo có năm profile AI theo L01–L05: EASY, EASY_PLUS, NORMAL, NORMAL_PLUS, HARD; các profile DRILL dành riêng Sân tập. Cấu hình bùn theo level. Mỗi level đọc chỉ số từ `data/balance.json`, `data/levels.json` và `data/ai_profiles.json`.
+Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng FLEE, TIME hoặc LOT. Solo có ba profile AI và cấu hình bùn theo level. Mỗi level đọc chỉ số từ `data/balance.json`, `data/levels.json` và `data/ai_profiles.json`.
 
 ## Cấu trúc
 
@@ -23,9 +23,7 @@ Chi tiết từng file và luồng một trận: [`docs/ARCHITECTURE.md`](docs/A
 - `scenes/`: menu, lobby, arena và trâu.
 - `scripts/core/`: mô phỏng trận đấu (trâu, combat, khóa sừng, sân, input, mạng) và lớp trình bày
   (chuyển động trâu, hiệu ứng, âm thanh, camera, đoạn kết, dựng sân và Phần Lễ).
-- `scripts/ai/`: FSM AI. `scripts/network/`: ENet Host/Join. `scripts/ui/`: façade menu/HUD,
-  presenter tutorial/training/pause/kết quả LAN, `solo_mode_view`/`solo_result_view` và `solo_flow`,
-  lobby, Phần Lễ. SessionState là nguồn tiến trình duy nhất; xem ownership/API trong kiến trúc.
+- `scripts/ai/`: FSM AI. `scripts/network/`: ENet Host/Join. `scripts/ui/`: menu, lobby, HUD, Phần Lễ.
 - `data/`: `balance.json` (luật chơi), `presentation.json` (hình, tiếng, HUD), `levels.json`,
   `ai_profiles.json`, `ceremony.json`, `audio.json`.
 - `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
@@ -63,39 +61,18 @@ sân dùng albedo/normal/roughness 2K, không dùng displacement hình học.
 
 Chạy `project.godot`, chọn SOLO hoặc LAN từ menu. Host LAN dùng port 7777; client nhập IPv4 của host.
 
-Các bài kiểm tra headless (import project, chạy mọi `tests/*_test.gd` và **năm** cặp LAN hai tiến trình, in bảng PASS/FAIL, thoát 1 nếu có lỗi). POSIX shell, từ root repo:
+Các bài kiểm tra headless (import project, chạy mọi `tests/*_test.gd` và hai cặp test LAN hai tiến trình, in bảng PASS/FAIL, thoát 1 nếu có lỗi):
 
 ```sh
-# Đổi thành executable Godot Standard của máy bạn; runner cũng nhận GODOT.
-export GODOT="${GODOT:-godot}"
-"$GODOT" --version
 bash tools/run_tests.sh
-"$GODOT" --headless --path . --script res://tests/combat_test.gd
 ```
 
-Log mặc định `.godot/test-logs/`; cách chạy XDG cô lập và ví dụ absolute path cục bộ ở
-[Hướng dẫn chạy](HUONG_DAN_CHAY.md). Không dùng progress thật để kiểm tra hỏng file/reset.
+Chạy lẻ một test: `godot --headless --path . --script res://tests/combat_test.gd`. Log từng test nằm ở `.godot/test-logs/`.
 
 Xuất bản Windows (cần cài export templates Godot 4.7.2 qua *Editor → Manage Export Templates*):
 
 ```sh
-mkdir -p build/windows
-"$GODOT" --headless --path . --export-debug "Windows Desktop" build/windows/buffalo-fighting.exe
+godot --headless --path . --export-debug "Windows Desktop" build/windows/buffalo-fighting.exe
 ```
 
-Đây là lệnh hướng dẫn, **chưa phải bằng chứng đã export**: audit 17/11/2026 thiếu templates
-4.7.2.stable nên không export thử; cần templates tương thích, kiểm nội dung gói và chạy `.exe`
-trên Windows sạch không editor/source trước nghiệm thu. Credits/provenance asset hiện tại còn
-thiếu HERO, rào tre, sparse_grass; không coi các mô tả nguồn trong repo là xác nhận quyền phân phối.
-
-LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect.
-R1 dual-window hiện còn mở: đã tới lobby/arena rồi tiến rất chậm trên llvmpipe, **không phải**
-kết luận kết nối thất bại trước lobby. Full suite hiện được audit **80/80**, vẫn có shutdown diagnostics;
-ảnh staged 720p/1080p và 100 trận AI-v-AI không thay live gameplay, target FPS hay human playtest.
-Xem [ma trận nghiệm thu](production/qa/refactor-acceptance.md) và
-[checklist demo](docs/REFRACTOR_DEMO_CHECKLIST.md); chưa tuyên bố toàn task/release hoàn tất.
-GDD chuẩn vẫn [v0.7](docs/GDD_Choi_Trau_v0.7.md), v0.8 là draft chưa thay canonical.
-
-Asset HERO gốc là mesh chưa rig; `buffalo_animator.gd` dựng skeleton chân/skin mềm **chỉ hình ảnh**
-lúc runtime, dùng IK hai đoạn giữ móng trên đất; không phải bước chân bằng blend shape runtime.
-Nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/presentation.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Trên LAN, snapshot gửi kèm tiến độ đòn và client nội suy giữa hai snapshot; nghi lễ hiện có cảnh 3D và âm thanh/decor đã triển khai, nhưng chất lượng live gameplay, hiệu năng máy mục tiêu và bản đóng gói vẫn cần nghiệm thu riêng.
+LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A), có bước chân chéo và nhấc móng cho model HERO bằng blend shape runtime, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/presentation.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Trên LAN, snapshot gửi kèm tiến độ đòn và client nội suy giữa hai snapshot; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
