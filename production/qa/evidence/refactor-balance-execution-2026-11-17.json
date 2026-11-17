@@ -1,0 +1,215 @@
+{
+  "temporary_root": "/tmp/ltrgame-task4-balance-acc9t20x",
+  "isolated_environment": {
+    "XDG_DATA_HOME": "/tmp/ltrgame-task4-balance-acc9t20x/data",
+    "XDG_CONFIG_HOME": "/tmp/ltrgame-task4-balance-acc9t20x/config",
+    "XDG_CACHE_HOME": "/tmp/ltrgame-task4-balance-acc9t20x/cache"
+  },
+  "runs": [
+    {
+      "label": "smoke",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tests/balance_sim_smoke_test.gd"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.3684357790007198,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/smoke.log"
+    },
+    {
+      "label": "pilot",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--level=L01",
+        "--pair=NORMAL,HARD",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-pilot-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.66855421100081,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/pilot.log"
+    },
+    {
+      "label": "aborted-matrix",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-matrix-2026-11-17.json"
+      ],
+      "exit": -9,
+      "wall_seconds": 180,
+      "limit_seconds": 180,
+      "status": "Python TimeoutExpired; subprocess.run killed and waited; caller exit 1",
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/matrix.log"
+    },
+    {
+      "label": "easy",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,EASY",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-easy-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 8.190212077999604,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/easy.log"
+    },
+    {
+      "label": "easy_plus",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,EASY_PLUS",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-easy_plus-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 6.386983794998741,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/easy_plus.log"
+    },
+    {
+      "label": "normal",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,NORMAL",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-normal-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 12.85697993499889,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/normal.log"
+    },
+    {
+      "label": "normal_plus",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,NORMAL_PLUS",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-normal_plus-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 7.69136094500027,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/normal_plus.log"
+    },
+    {
+      "label": "hard",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,HARD",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-hard-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 6.585649807999289,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/hard.log"
+    },
+    {
+      "label": "hard-repeat",
+      "argv": [
+        "/home/konits/projects/Godot/Godot_v4.7.2-stable_linux.x86_64",
+        "--headless",
+        "--path",
+        "/home/konits/projects/ltrgame/buffalo-fighting",
+        "--script",
+        "res://tools/balance_sim.gd",
+        "--",
+        "--matches=4",
+        "--seed=20261117",
+        "--pair=NORMAL,HARD",
+        "--swap-sides",
+        "--output=res://production/qa/evidence/refactor-balance-hard-repeat-2026-11-17.json"
+      ],
+      "exit": 0,
+      "wall_seconds": 6.084558353999455,
+      "limit_seconds": 60,
+      "log": "/tmp/ltrgame-task4-balance-acc9t20x/hard-repeat.log"
+    }
+  ],
+  "hard_repeat_identical_except_elapsed_s": true,
+  "machine": {
+    "platform": "Linux-7.3.3-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           48 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  16\nOn-line CPU(s) list:                     0-15\nVendor ID:                               AuthenticAMD\nModel name:                              AMD Ryzen 7 8845H w/ Radeon 780M Graphics\nCPU family:                              25\nModel:                                   117\nThread(s) per core:                      2\nCore(s) per socket:                      8\nSocket(s):                               1\nStepping:                                2\nFrequency boost:                         enabled\nCPU(s) scaling MHz:                      36%\nCPU max MHz:                             5137.2891\nCPU min MHz:                             1600.0000\nBogoMIPS:                                7586.16\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpuid_fault cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid overflow_recov succor smca fsrm flush_l1d\nVirtualization:                          AMD-V\nL1d cache:                               256 KiB (8 instances)\nL1i cache:                               256 KiB (8 instances)\nL2 cache:                                8 MiB (8 instances)\nL3 cache:                                16 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-15\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Mitigation; Safe RET\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; STIBP always-on; PBRSB-eIBRS Not affected; BHI Not affected\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Mitigation; Clear CPU buffers\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Mitigation; IBPB before exit to userspace\n"
+  },
+  "logs": {
+    "hard-repeat.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/HARD n=4 wins=[0, 4] seconds=0.556\nBALANCE L02 NORMAL/HARD n=4 wins=[0, 4] seconds=1.152\nBALANCE L03 NORMAL/HARD n=4 wins=[0, 4] seconds=1.738\nBALANCE L04 NORMAL/HARD n=4 wins=[0, 4] seconds=4.357\nBALANCE L05 NORMAL/HARD n=4 wins=[0, 4] seconds=4.934\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "hard.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/HARD n=4 wins=[0, 4] seconds=0.584\nBALANCE L02 NORMAL/HARD n=4 wins=[0, 4] seconds=1.199\nBALANCE L03 NORMAL/HARD n=4 wins=[0, 4] seconds=2.377\nBALANCE L04 NORMAL/HARD n=4 wins=[0, 4] seconds=3.85\nBALANCE L05 NORMAL/HARD n=4 wins=[0, 4] seconds=5.375\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "normal_plus.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/NORMAL_PLUS n=4 wins=[2, 2] seconds=0.735\nBALANCE L02 NORMAL/NORMAL_PLUS n=4 wins=[1, 3] seconds=1.459\nBALANCE L03 NORMAL/NORMAL_PLUS n=4 wins=[3, 1] seconds=3.697\nBALANCE L04 NORMAL/NORMAL_PLUS n=4 wins=[1, 3] seconds=5.615\nBALANCE L05 NORMAL/NORMAL_PLUS n=4 wins=[3, 1] seconds=6.547\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "normal.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/NORMAL n=4 wins=[3, 1] seconds=1.554\nBALANCE L02 NORMAL/NORMAL n=4 wins=[2, 2] seconds=5.372\nBALANCE L03 NORMAL/NORMAL n=4 wins=[2, 2] seconds=6.714\nBALANCE L04 NORMAL/NORMAL n=4 wins=[2, 2] seconds=8.054\nBALANCE L05 NORMAL/NORMAL n=4 wins=[1, 3] seconds=11.744\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "easy_plus.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/EASY_PLUS n=4 wins=[4, 0] seconds=0.586\nBALANCE L02 NORMAL/EASY_PLUS n=4 wins=[2, 2] seconds=1.147\nBALANCE L03 NORMAL/EASY_PLUS n=4 wins=[1, 3] seconds=3.446\nBALANCE L04 NORMAL/EASY_PLUS n=4 wins=[3, 1] seconds=4.633\nBALANCE L05 NORMAL/EASY_PLUS n=4 wins=[4, 0] seconds=5.236\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "easy.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/EASY n=4 wins=[4, 0] seconds=0.886\nBALANCE L02 NORMAL/EASY n=4 wins=[4, 0] seconds=1.946\nBALANCE L03 NORMAL/EASY n=4 wins=[4, 0] seconds=3.038\nBALANCE L04 NORMAL/EASY n=4 wins=[4, 0] seconds=5.059\nBALANCE L05 NORMAL/EASY n=4 wins=[4, 0] seconds=5.947\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n",
+    "matrix.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 DRILL_DASH/DRILL_DASH n=4 wins=[3, 1] seconds=1.745\nBALANCE L01 DRILL_DASH/DRILL_DUMMY n=4 wins=[4, 0] seconds=2.011\nBALANCE L01 DRILL_DASH/DRILL_HOOK n=4 wins=[0, 4] seconds=2.368\nBALANCE L01 DRILL_DASH/DRILL_HORN n=4 wins=[0, 4] seconds=3.203\nBALANCE L01 DRILL_DASH/DRILL_PUSH n=4 wins=[0, 4] seconds=5.71\nBALANCE L01 DRILL_DASH/EASY n=4 wins=[4, 0] seconds=6.123\nBALANCE L01 DRILL_DASH/EASY_PLUS n=4 wins=[0, 4] seconds=6.473\nBALANCE L01 DRILL_DASH/HARD n=4 wins=[0, 4] seconds=6.889\nBALANCE L01 DRILL_DASH/NORMAL n=4 wins=[2, 2] seconds=9.474\nBALANCE L01 DRILL_DASH/NORMAL_PLUS n=4 wins=[2, 2] seconds=10.341\nBALANCE L01 DRILL_DUMMY/DRILL_DASH n=4 wins=[0, 4] seconds=10.62\nBALANCE L01 DRILL_DUMMY/DRILL_DUMMY n=4 wins=[1, 3] seconds=12.477\nBALANCE L01 DRILL_DUMMY/DRILL_HOOK n=4 wins=[0, 4] seconds=13.252\nBALANCE L01 DRILL_DUMMY/DRILL_HORN n=4 wins=[0, 4] seconds=14.022\nBALANCE L01 DRILL_DUMMY/DRILL_PUSH n=4 wins=[0, 4] seconds=14.738\nBALANCE L01 DRILL_DUMMY/EASY n=4 wins=[0, 4] seconds=15.698\nBALANCE L01 DRILL_DUMMY/EASY_PLUS n=4 wins=[0, 4] seconds=15.937\nBALANCE L01 DRILL_DUMMY/HARD n=4 wins=[0, 4] seconds=16.196\nBALANCE L01 DRILL_DUMMY/NORMAL n=4 wins=[0, 4] seconds=16.465\nBALANCE L01 DRILL_DUMMY/NORMAL_PLUS n=4 wins=[0, 4] seconds=16.744\nBALANCE L01 DRILL_HOOK/DRILL_DASH n=4 wins=[4, 0] seconds=17.144\nBALANCE L01 DRILL_HOOK/DRILL_DUMMY n=4 wins=[4, 0] seconds=17.322\nBALANCE L01 DRILL_HOOK/DRILL_HOOK n=4 wins=[3, 1] seconds=21.686\nBALANCE L01 DRILL_HOOK/DRILL_HORN n=4 wins=[0, 4] seconds=23.685\nBALANCE L01 DRILL_HOOK/DRILL_PUSH n=4 wins=[0, 4] seconds=27.832\nBALANCE L01 DRILL_HOOK/EASY n=4 wins=[4, 0] seconds=28.206\nBALANCE L01 DRILL_HOOK/EASY_PLUS n=4 wins=[0, 4] seconds=28.627\nBALANCE L01 DRILL_HOOK/HARD n=4 wins=[0, 4] seconds=29.044\nBALANCE L01 DRILL_HOOK/NORMAL n=4 wins=[0, 4] seconds=29.524\nBALANCE L01 DRILL_HOOK/NORMAL_PLUS n=4 wins=[0, 4] seconds=29.958\nBALANCE L01 DRILL_HORN/DRILL_DASH n=4 wins=[4, 0] seconds=31.235\nBALANCE L01 DRILL_HORN/DRILL_DUMMY n=4 wins=[4, 0] seconds=31.719\nBALANCE L01 DRILL_HORN/DRILL_HOOK n=4 wins=[4, 0] seconds=34.813\nBALANCE L01 DRILL_HORN/DRILL_HORN n=4 wins=[3, 1] seconds=39.174\nBALANCE L01 DRILL_HORN/DRILL_PUSH n=4 wins=[0, 4] seconds=39.58\nBALANCE L01 DRILL_HORN/EASY n=4 wins=[0, 4] seconds=39.891\nBALANCE L01 DRILL_HORN/EASY_PLUS n=4 wins=[0, 4] seconds=40.245\nBALANCE L01 DRILL_HORN/HARD n=4 wins=[0, 4] seconds=40.558\nBALANCE L01 DRILL_HORN/NORMAL n=4 wins=[0, 4] seconds=40.962\nBALANCE L01 DRILL_HORN/NORMAL_PLUS n=4 wins=[0, 4] seconds=41.394\nBALANCE L01 DRILL_PUSH/DRILL_DASH n=4 wins=[4, 0] seconds=41.908\nBALANCE L01 DRILL_PUSH/DRILL_DUMMY n=4 wins=[4, 0] seconds=42.675\nBALANCE L01 DRILL_PUSH/DRILL_HOOK n=4 wins=[4, 0] seconds=46.171\nBALANCE L01 DRILL_PUSH/DRILL_HORN n=4 wins=[4, 0] seconds=46.566\nBALANCE L01 DRILL_PUSH/DRILL_PUSH n=4 wins=[1, 3] seconds=50.841\nBALANCE L01 DRILL_PUSH/EASY n=4 wins=[4, 0] seconds=51.125\nBALANCE L01 DRILL_PUSH/EASY_PLUS n=4 wins=[1, 3] seconds=51.651\nBALANCE L01 DRILL_PUSH/HARD n=4 wins=[0, 4] seconds=52.224\nBALANCE L01 DRILL_PUSH/NORMAL n=4 wins=[0, 4] seconds=52.748\nBALANCE L01 DRILL_PUSH/NORMAL_PLUS n=4 wins=[0, 4] seconds=55.012\nBALANCE L01 EASY/DRILL_DASH n=4 wins=[0, 4] seconds=55.961\nBALANCE L01 EASY/DRILL_DUMMY n=4 wins=[4, 0] seconds=56.258\nBALANCE L01 EASY/DRILL_HOOK n=4 wins=[0, 4] seconds=56.619\nBALANCE L01 EASY/DRILL_HORN n=4 wins=[4, 0] seconds=56.938\nBALANCE L01 EASY/DRILL_PUSH n=4 wins=[0, 4] seconds=57.224\nBALANCE L01 EASY/EASY n=4 wins=[2, 2] seconds=58.086\nBALANCE L01 EASY/EASY_PLUS n=4 wins=[3, 1] seconds=60.6\nBALANCE L01 EASY/HARD n=4 wins=[0, 4] seconds=61.824\nBALANCE L01 EASY/NORMAL n=4 wins=[0, 4] seconds=62.705\nBALANCE L01 EASY/NORMAL_PLUS n=4 wins=[0, 4] seconds=63.079\nBALANCE L01 EASY_PLUS/DRILL_DASH n=4 wins=[4, 0] seconds=63.383\nBALANCE L01 EASY_PLUS/DRILL_DUMMY n=4 wins=[4, 0] seconds=63.611\nBALANCE L01 EASY_PLUS/DRILL_HOOK n=4 wins=[4, 0] seconds=64.036\nBALANCE L01 EASY_PLUS/DRILL_HORN n=4 wins=[4, 0] seconds=64.35\nBALANCE L01 EASY_PLUS/DRILL_PUSH n=4 wins=[3, 1] seconds=66.435\nBALANCE L01 EASY_PLUS/EASY n=4 wins=[0, 4] seconds=68.444\nBALANCE L01 EASY_PLUS/EASY_PLUS n=4 wins=[3, 1] seconds=69.065\nBALANCE L01 EASY_PLUS/HARD n=4 wins=[0, 4] seconds=70.763\nBALANCE L01 EASY_PLUS/NORMAL n=4 wins=[0, 4] seconds=72.651\nBALANCE L01 EASY_PLUS/NORMAL_PLUS n=4 wins=[0, 4] seconds=73.105\nBALANCE L01 HARD/DRILL_DASH n=4 wins=[4, 0] seconds=73.395\nBALANCE L01 HARD/DRILL_DUMMY n=4 wins=[4, 0] seconds=73.638\nBALANCE L01 HARD/DRILL_HOOK n=4 wins=[4, 0] seconds=74.082\nBALANCE L01 HARD/DRILL_HORN n=4 wins=[4, 0] seconds=74.456\nBALANCE L01 HARD/DRILL_PUSH n=4 wins=[4, 0] seconds=74.973\nBALANCE L01 HARD/EASY n=4 wins=[4, 0] seconds=75.973\nBALANCE L01 HARD/EASY_PLUS n=4 wins=[4, 0] seconds=77.969\nBALANCE L01 HARD/HARD n=4 wins=[3, 1] seconds=78.588\nBALANCE L01 HARD/NORMAL n=4 wins=[4, 0] seconds=79.154\nBALANCE L01 HARD/NORMAL_PLUS n=4 wins=[4, 0] seconds=79.692\nBALANCE L01 NORMAL/DRILL_DASH n=4 wins=[2, 2] seconds=80.23\nBALANCE L01 NORMAL/DRILL_DUMMY n=4 wins=[4, 0] seconds=81.57\nBALANCE L01 NORMAL/DRILL_HOOK n=4 wins=[4, 0] seconds=83.355\nBALANCE L01 NORMAL/DRILL_HORN n=4 wins=[4, 0] seconds=83.795\nBALANCE L01 NORMAL/DRILL_PUSH n=4 wins=[4, 0] seconds=84.354\nBALANCE L01 NORMAL/EASY n=4 wins=[4, 0] seconds=85.241\nBALANCE L01 NORMAL/EASY_PLUS n=4 wins=[4, 0] seconds=85.795\nBALANCE L01 NORMAL/HARD n=4 wins=[0, 4] seconds=87.54\nBALANCE L01 NORMAL/NORMAL n=4 wins=[2, 2] seconds=90.284\nBALANCE L01 NORMAL/NORMAL_PLUS n=4 wins=[2, 2] seconds=90.978\nBALANCE L01 NORMAL_PLUS/DRILL_DASH n=4 wins=[0, 4] seconds=91.677\nBALANCE L01 NORMAL_PLUS/DRILL_DUMMY n=4 wins=[4, 0] seconds=92.338\nBALANCE L01 NORMAL_PLUS/DRILL_HOOK n=4 wins=[4, 0] seconds=94.849\nBALANCE L01 NORMAL_PLUS/DRILL_HORN n=4 wins=[4, 0] seconds=95.297\nBALANCE L01 NORMAL_PLUS/DRILL_PUSH n=4 wins=[4, 0] seconds=95.775\nBALANCE L01 NORMAL_PLUS/EASY n=4 wins=[4, 0] seconds=96.097\nBALANCE L01 NORMAL_PLUS/EASY_PLUS n=4 wins=[4, 0] seconds=96.559\nBALANCE L01 NORMAL_PLUS/HARD n=4 wins=[0, 4] seconds=97.11\nBALANCE L01 NORMAL_PLUS/NORMAL n=4 wins=[2, 2] seconds=98.458\nBALANCE L01 NORMAL_PLUS/NORMAL_PLUS n=4 wins=[1, 3] seconds=101.325\nBALANCE L02 DRILL_DASH/DRILL_DASH n=4 wins=[0, 4] seconds=104.281\nBALANCE L02 DRILL_DASH/DRILL_DUMMY n=4 wins=[4, 0] seconds=105.753\nBALANCE L02 DRILL_DASH/DRILL_HOOK n=4 wins=[0, 4] seconds=106.128\nBALANCE L02 DRILL_DASH/DRILL_HORN n=4 wins=[0, 4] seconds=106.544\nBALANCE L02 DRILL_DASH/DRILL_PUSH n=4 wins=[0, 4] seconds=107.073\nBALANCE L02 DRILL_DASH/EASY n=4 wins=[4, 0] seconds=107.43\nBALANCE L02 DRILL_DASH/EASY_PLUS n=4 wins=[0, 4] seconds=108.385\nBALANCE L02 DRILL_DASH/HARD n=4 wins=[0, 4] seconds=109.196\nBALANCE L02 DRILL_DASH/NORMAL n=4 wins=[3, 1] seconds=110.623\nBALANCE L02 DRILL_DASH/NORMAL_PLUS n=4 wins=[3, 1] seconds=111.62\nBALANCE L02 DRILL_DUMMY/DRILL_DASH n=4 wins=[0, 4] seconds=111.907\nBALANCE L02 DRILL_DUMMY/DRILL_DUMMY n=4 wins=[3, 1] seconds=114.912\nBALANCE L02 DRILL_DUMMY/DRILL_HOOK n=4 wins=[0, 4] seconds=115.562\nBALANCE L02 DRILL_DUMMY/DRILL_HORN n=4 wins=[0, 4] seconds=116.507\nBALANCE L02 DRILL_DUMMY/DRILL_PUSH n=4 wins=[0, 4] seconds=116.688\nBALANCE L02 DRILL_DUMMY/EASY n=4 wins=[0, 4] seconds=116.987\nBALANCE L02 DRILL_DUMMY/EASY_PLUS n=4 wins=[0, 4] seconds=117.228\nBALANCE L02 DRILL_DUMMY/HARD n=4 wins=[0, 4] seconds=117.477\nBALANCE L02 DRILL_DUMMY/NORMAL n=4 wins=[0, 4] seconds=117.738\nBALANCE L02 DRILL_DUMMY/NORMAL_PLUS n=4 wins=[0, 4] seconds=118.006\nBALANCE L02 DRILL_HOOK/DRILL_DASH n=4 wins=[4, 0] seconds=118.386\nBALANCE L02 DRILL_HOOK/DRILL_DUMMY n=4 wins=[4, 0] seconds=118.558\nBALANCE L02 DRILL_HOOK/DRILL_HOOK n=4 wins=[1, 3] seconds=121.224\nBALANCE L02 DRILL_HOOK/DRILL_HORN n=4 wins=[0, 4] seconds=124.379\nBALANCE L02 DRILL_HOOK/DRILL_PUSH n=4 wins=[0, 4] seconds=128.559\nBALANCE L02 DRILL_HOOK/EASY n=4 wins=[4, 0] seconds=128.941\nBALANCE L02 DRILL_HOOK/EASY_PLUS n=4 wins=[0, 4] seconds=129.359\nBALANCE L02 DRILL_HOOK/HARD n=4 wins=[0, 4] seconds=129.788\nBALANCE L02 DRILL_HOOK/NORMAL n=4 wins=[0, 4] seconds=130.255\nBALANCE L02 DRILL_HOOK/NORMAL_PLUS n=4 wins=[1, 3] seconds=130.762\nBALANCE L02 DRILL_HORN/DRILL_DASH n=4 wins=[4, 0] seconds=131.794\nBALANCE L02 DRILL_HORN/DRILL_DUMMY n=4 wins=[4, 0] seconds=132.567\nBALANCE L02 DRILL_HORN/DRILL_HOOK n=4 wins=[4, 0] seconds=135.695\nBALANCE L02 DRILL_HORN/DRILL_HORN n=4 wins=[2, 2] seconds=140.037\nBALANCE L02 DRILL_HORN/DRILL_PUSH n=4 wins=[0, 4] seconds=140.469\nBALANCE L02 DRILL_HORN/EASY n=4 wins=[0, 4] seconds=140.829\nBALANCE L02 DRILL_HORN/EASY_PLUS n=4 wins=[0, 4] seconds=141.232\nBALANCE L02 DRILL_HORN/HARD n=4 wins=[0, 4] seconds=141.625\nBALANCE L02 DRILL_HORN/NORMAL n=4 wins=[0, 4] seconds=142.115\nBALANCE L02 DRILL_HORN/NORMAL_PLUS n=4 wins=[0, 4] seconds=142.665\nBALANCE L02 DRILL_PUSH/DRILL_DASH n=4 wins=[4, 0] seconds=143.222\nBALANCE L02 DRILL_PUSH/DRILL_DUMMY n=4 wins=[4, 0] seconds=143.407\nBALANCE L02 DRILL_PUSH/DRILL_HOOK n=4 wins=[4, 0] seconds=147.586\nBALANCE L02 DRILL_PUSH/DRILL_HORN n=4 wins=[4, 0] seconds=148.014\nBALANCE L02 DRILL_PUSH/DRILL_PUSH n=4 wins=[3, 1] seconds=150.041\nBALANCE L02 DRILL_PUSH/EASY n=4 wins=[4, 0] seconds=150.353\nBALANCE L02 DRILL_PUSH/EASY_PLUS n=4 wins=[1, 3] seconds=150.877\nBALANCE L02 DRILL_PUSH/HARD n=4 wins=[0, 4] seconds=151.536\nBALANCE L02 DRILL_PUSH/NORMAL n=4 wins=[0, 4] seconds=153.424\nBALANCE L02 DRILL_PUSH/NORMAL_PLUS n=4 wins=[1, 3] seconds=155.154\nBALANCE L02 EASY/DRILL_DASH n=4 wins=[0, 4] seconds=155.551\nBALANCE L02 EASY/DRILL_DUMMY n=4 wins=[4, 0] seconds=155.874\nBALANCE L02 EASY/DRILL_HOOK n=4 wins=[0, 4] seconds=156.273\nBALANCE L02 EASY/DRILL_HORN n=4 wins=[4, 0] seconds=156.641\nBALANCE L02 EASY/DRILL_PUSH n=4 wins=[0, 4] seconds=156.958\nBALANCE L02 EASY/EASY n=4 wins=[1, 3] seconds=159.05\nBALANCE L02 EASY/EASY_PLUS n=4 wins=[2, 2] seconds=161.263\nBALANCE L02 EASY/HARD n=4 wins=[0, 4] seconds=161.72\nBALANCE L02 EASY/NORMAL n=4 wins=[1, 3] seconds=162.671\nBALANCE L02 EASY/NORMAL_PLUS n=4 wins=[0, 4] seconds=163.063\nBALANCE L02 EASY_PLUS/DRILL_DASH n=4 wins=[4, 0] seconds=163.384\nBALANCE L02 EASY_PLUS/DRILL_DUMMY n=4 wins=[4, 0] seconds=164.569\nBALANCE L02 EASY_PLUS/DRILL_HOOK n=4 wins=[4, 0] seconds=166.515\nBALANCE L02 EASY_PLUS/DRILL_HORN n=4 wins=[4, 0] seconds=166.989\nBALANCE L02 EASY_PLUS/DRILL_PUSH n=4 wins=[3, 1] seconds=167.588\nBALANCE L02 EASY_PLUS/EASY n=4 wins=[1, 3] seconds=168.619\nBALANCE L02 EASY_PLUS/EASY_PLUS n=4 wins=[0, 4] seconds=169.262\nBALANCE L02 EASY_PLUS/HARD n=4 wins=[0, 4] seconds=171.553\nBALANCE L02 EASY_PLUS/NORMAL n=4 wins=[0, 4] seconds=172.473\nBALANCE L02 EASY_PLUS/NORMAL_PLUS n=4 wins=[0, 4] seconds=173.096\nBALANCE L02 HARD/DRILL_DASH n=4 wins=[4, 0] seconds=173.396\nBALANCE L02 HARD/DRILL_DUMMY n=4 wins=[4, 0] seconds=173.665\nBALANCE L02 HARD/DRILL_HOOK n=4 wins=[4, 0] seconds=174.257\nBALANCE L02 HARD/DRILL_HORN n=4 wins=[4, 0] seconds=175.857\nBALANCE L02 HARD/DRILL_PUSH n=4 wins=[4, 0] seconds=177.522\nBALANCE L02 HARD/EASY n=4 wins=[4, 0] seconds=178.009\nBALANCE L02 HARD/EASY_PLUS n=4 wins=[4, 0] seconds=178.455\n",
+    "pilot.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE L01 NORMAL/HARD n=4 wins=[0, 4] seconds=0.545\n",
+    "smoke.log": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nBALANCE SMOKE: deterministic=true complete=true combat=true metrics=true\nWARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n   at: cleanup (core/object/object.cpp:2536)\nERROR: 1 resources still in use at exit (run with --verbose for details).\n   at: clear (core/io/resource.cpp:822)\n"
+  },
+  "export_audit": {
+    "engine_version": "4.7.2.stable.official.ed1daf0bf",
+    "template_directory": "/home/konits/.local/share/godot/export_templates",
+    "template_entries": [],
+    "export_attempted": false,
+    "reason": "No compatible 4.7.2.stable windows_debug_x86_64.exe or windows_release_x86_64.exe templates installed; no custom_template configured."
+  }
+}

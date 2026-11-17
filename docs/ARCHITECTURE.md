@@ -14,9 +14,9 @@ GDD `docs/GDD_Choi_Trau_v0.7.md`; quy ước code, test, commit ở `AGENTS.md`.
    host chạy nó; client nhận snapshot và hiển thị lại.
 4. **Mọi con số chỉnh được nằm trong `data/`**, đọc qua `GameBalance`. Không ghi số
    trực tiếp trong script.
-5. **Mọi thứ nhìn thấy đều dựng bằng code** từ khối có sẵn của Godot (`LowPoly`,
-   `ArenaBuilder`, `ArenaDressing`, `CeremonyDiorama`). Chỉ có model trâu, vân đất của sân và
-   âm thanh là asset nhập vào.
+5. **Cảnh được ghép bằng code và asset nhập vào** (`LowPoly`, `ArenaBuilder`,
+   `ArenaDressing`, `CeremonyDiorama`): trâu HERO, dân làng, cây, rào tre, vật liệu đất/cỏ,
+   sprite VFX và âm thanh. Không đồng nhất dựng cảnh thủ tục với tự tạo toàn bộ asset.
 
 ## Một trận chạy như thế nào
 
@@ -124,6 +124,62 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 Trang Hiệu ứng còn có **Rung tay cầm** (mặc định bật) và **Cỡ chữ HUD** (Thường/Lớn, mặc định Thường), lưu/kiểm tra kiểu boolean trong SessionState. Bốn tiện ích thống kê/rung/cỡ chữ/F12 là bổ sung được duyệt ngoài GDD v0.7; chỉ trình bày, không thay mô phỏng hay payload LAN. Tuning `stats_*`, `rumble_*`, `hud_*`, `screenshot_*` nằm trong `presentation.json`. Test: `match_stats_test.gd`, `rumble_hud_screenshot_test.gd`.
 
+## Ownership sau extraction HUD/menu (17/11/2026)
+
+Các mô tả HUD/menu ở bản đồ trên là trách nhiệm **tổng thể của façade**, không phải toàn bộ
+implementation còn ở một file. Không thay combat, physics, tick order, transport hay balance.
+
+| File | Owner và giao diện thực tế |
+|---|---|
+| `scripts/ui/hud.gd` | CanvasLayer façade: root Control vẫn child 0; resource/timer/banner/CLASH/ping, throttle + accumulated delta, text-scale/dirty-write counters. Tạo **một** `MatchStats` collector; properties/wrappers tương thích delegate, không copy state presenter. |
+| `scripts/ui/hud_tutorial.gd` | Node `TutorialPresenter`: `setup(controller, label, text_update)`, `enabled`, `queue_hint`, `on_combat_event`, `update(delta) -> bool`; sở hữu queue/seen/current/time/front-hit và controls clock. Rich text vẫn ghi qua HUD để giữ dirty counters. |
+| `scripts/ui/hud_training.gd` | Node `TrainingPresenter`: `setup(controller, root, label_update)`, `count`, `success`, `on_combat_event`, `update`; sở hữu counters/popup/dirty flags và TrainingPanel trực tiếp dưới HUD root. Chỉ quan sát combat, không sửa mô phỏng. |
+| `scripts/ui/match_pause_view.gd` | Node `PauseView`: một shell pause/settings dùng chung kết quả LAN; `setup(root, callbacks)` nhận resume/restart/leave/change_training/answer/sensitivity. Sở hữu modal, actions, focus; `ensure_shell` dựng lại shell đã free. |
+| `scripts/ui/lan_result_view.gd` | Node `LanResultView`: `setup(shell, rematch, leave)`, `show_result(text, stats, has_lan, status)`, `update_rematch(status)`; cùng shell, chỉ giữ references nút/note, không tạo collector/mạng/progress mới. |
+| `scripts/ui/main_menu.gd` | Façade menu/settings/howto/LAN, static loader, flags trở về training/free play và `/root/SoloSessionOverlay` (`session_overlay` meta). Overlay giữ identity qua arena, ẩn HUD khi Solo result ready và không replay. |
+| `scripts/ui/solo_mode_view.gd` | Control `SoloModeView`: `setup(season, free_play, training, unlimited, back)`, `show_chooser/show_free_play/show_training/close`; sở hữu SoloPage, rows/toggles/focus, chỉ phát selection intents. |
+| `scripts/ui/solo_result_view.gd` | Control `SoloResultView`: `setup(retry, next, menu, change, closing, result_data, select_card)`; sở hữu result/card nodes và tweens, `displayed_result` guard; phát `card_visible(card_id)`, không ghi notebook trực tiếp. Stats display lấy collector `arena.hud.stats`. |
+| `scripts/ui/solo_flow.gd` | Node `SoloFlow`: `start_season/select_free_play/select_training/retry/next_match/return_to_menu`, rites/closing và card commands. Dùng **SessionState duy nhất** cho mode/progress; không mirror mùa hay kết quả lâu dài. CeremonyView là child façade, flow giữ sequencing. |
+
+### Public controller/HUD contract và ranh giới còn lại
+
+- Controller public intents hiện có: `request_pause_from_menu()`, `resume_from_menu()`;
+  Solo thay pause cục bộ, LAN gửi yêu cầu cần peer đồng ý. Signals `combat_event` và
+  `match_ended` là đường quan sát; `announcer_active()/announcer_text()` cấp lời dẫn.
+- HUD public `close_settings_if_open() -> bool`: true chỉ khi đóng modal đang mở, **không
+  resume/đổi consent**; controller Esc dùng bool để consume input. `return_to_menu() -> void`
+  rời ENet nếu LAN, cập nhật SessionState và chuyển scene; `_return_to_menu()` chỉ là alias cũ.
+- HUD giữ `show_pause()`, `show_pause_wait(bool)`, `show_pause_confirmation(peer_id, bool)`,
+  `hide_pause()`, `show_settings()`, `show_result(winner_slot, reason)`,
+  `update_lan_rematch(disconnected=false)` cho controller/network callers.
+- Đây **không phải** DTO/read-only API toàn controller: HUD vẫn đọc state/controller.lan,
+  gọi `controller._level_config()` và bridge sensitivity tới CameraRig; chưa có public
+  `level_config()` mới. Hai call sites controller đã bỏ private HUD/settings access, không
+  suy rộng thành đã xóa mọi dependency nội bộ.
+
+### Lifecycle, prefetch và thẻ văn hóa
+
+- Tutorial/training disconnect combat signal, xóa callback/controller references khi exit;
+  training giải phóng panel riêng. Training → tutorial → stats giữ thứ tự subscription.
+- Pause shell exit đóng SettingsScreen để trả focus, xóa result references qua
+  `actions_cleared`; LAN result không giữ references trận cũ khi reload/rematch. UI tweens
+  gắn node; SoloResultView kill result/card tweens khi exit, `scene_changed` reset dùng
+  node-bound method. Mode page là child thật, teardown không mutate parent.
+- Static `_arena_scene`, `_prefetch_arena()`, `_finish_prefetch()` và instance method
+  `_go_to_arena()` vẫn trên **façade main_menu**, không đưa cache/loader vào flow. Callback process_frame static
+  thu threaded request rồi tự disconnect kể cả menu đã free/chuyển LAN, không coroutine
+  giữ menu sống. Nếu chưa xong, `_go_to_arena()` lấy request đang chạy hoặc load fallback.
+- **`SoloFlow.result_data()` là command có side effect, không phải getter để polling.** Nó
+  gọi `select_card(final_win)`, chọn/reserve thẻ bằng append `SessionState.culture_cards_seen`.
+  Cả hai không tự idempotent theo result key; actual view guard `displayed_result` mới bảo vệ
+  đường render. Façade `_show_culture_card()` cũng là lệnh chọn mới, không đọc lại thẻ hiện tại.
+- Reservation trong mùa khác notebook award: `card_visible` chỉ phát khi card/panel
+  visible-in-tree (meta `awarded` chặn lặp), flow mới gọi `CultureCards.mark_shown`.
+  Chung kết reserve trước nhưng chỉ award sau closing reveal. Retry/free play/training
+  không được diễn giải thành tăng mùa; training không có result/card.
+- Lifecycle regressions không chứng minh toàn app leak-free: shutdown ObjectDB/resources
+  diagnostics còn tồn tại. Evidence và gates chưa đạt: [refactor acceptance](../production/qa/refactor-acceptance.md).
+
 ## Dữ liệu trong `data/`
 
 | File | Chứa gì | Đổi file này thì |
@@ -160,7 +216,10 @@ hoặc 2 (xanh).
 - **Thêm một đòn mới:** trạng thái trong `buffalo.gd`, tính trúng trong `combat_resolver.gd`,
   phím trong `input_frame.gd` + `match_input.gd` + `match_network.gd` (gửi qua LAN), AI trong
   `ai_controller.gd`, rồi thêm số vào `data/balance.json` và test trong `tests/`.
-- **Đổi giao diện trận:** `hud.gd` và `assets/ui/festival_theme.tres`.
+- **Đổi giao diện trận:** façade `hud.gd`, các presenter tutorial/training/pause/LAN result
+  ở bảng ownership bên trên và `assets/ui/festival_theme.tres`.
+- **Đổi lựa chọn/luồng/kết quả Solo:** `solo_mode_view.gd` / `solo_flow.gd` /
+  `solo_result_view.gd`; `main_menu.gd` giữ façade và static prefetch.
 - **Đổi cảnh sân hay Phần Lễ:** `arena_builder.gd` (phần có va chạm), `arena_dressing.gd`
   (cảnh trang trí), `ceremony_diorama.gd`; người và đồ vật dựng bằng `LowPoly`.
 - **Đổi góc camera:** các key `camera_*` trong `data/presentation.json`; code ở `follow_camera.gd`.
@@ -178,7 +237,8 @@ Thay đổi người chơi nhìn thấy được thì chụp ảnh lưu ở `pro
   thanh tab khi mở. Kiểm tra bằng `settings_screen_test.gd`; ảnh cửa sổ qua `settings_window_harness.gd`.
 - Sảnh LAN có focus Tạo phòng lúc vào, Quay lại khi chờ; Esc/B rời sảnh và đóng ENet.
 - Trận LAN kết thúc hoặc mất kết nối có bảng kết quả với Về menu, Esc/B cũng về menu
-  khi kết quả đã sẵn sàng. Pause LAN không có Chơi lại vì chưa có giao thức tái đấu hai máy.
+  khi kết quả đã sẵn sàng. Pause LAN không có Chơi lại; tái đấu có giao thức đồng thuận
+  riêng ở bảng kết quả (không phải restart từ pause).
 - Sân tập đặt đếm ngược/Vào trận bên dưới bảng tên bài, cùng vùng thông báo khóa sừng.
 - Kiểm thử hồi quy đợt rà soát: `tests/review_regressions_test.gd`, `lan_snapshot_test.gd`.
   Hai harness có cửa sổ `review_window_harness.gd` và `review_lan_window_harness.gd` dùng

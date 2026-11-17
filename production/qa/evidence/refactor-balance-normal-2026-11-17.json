@@ -1,0 +1,959 @@
+{
+	"balance_sha256": "7d44bd4dab4d446b708d7f6886395b1a88bd464d1c2c57a644af12968fd05d5b",
+	"base_seed": 20261117,
+	"elapsed_s": 11.744,
+	"engine": "4.7.2-stable (official)",
+	"matches_per_pair": 4,
+	"overrides": {},
+	"profiles": [
+		"DRILL_DASH",
+		"DRILL_DUMMY",
+		"DRILL_HOOK",
+		"DRILL_HORN",
+		"DRILL_PUSH",
+		"EASY",
+		"EASY_PLUS",
+		"HARD",
+		"NORMAL",
+		"NORMAL_PLUS"
+	],
+	"rows": [
+		{
+			"annotations": [
+				{
+					"back": 0.0,
+					"counter": 0.0,
+					"flank": 0.0
+				},
+				{
+					"back": 0.0,
+					"counter": 0.0,
+					"flank": 0.0
+				}
+			],
+			"damage": [
+				{
+					"clash": 6.0,
+					"dash": 0.0,
+					"horn": 386.0
+				},
+				{
+					"clash": 17.0,
+					"dash": 0.0,
+					"horn": 338.0
+				}
+			],
+			"empty_seconds": [
+				0.0,
+				0.0
+			],
+			"first_seed": 20261469,
+			"length": {
+				"mean": 61.9458333333333,
+				"median": 61.175,
+				"p90": 67.4
+			},
+			"level": "L01",
+			"matches": 4,
+			"moves": [
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 103,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.5,
+						"hits": 2,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 103,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.56140350877193,
+						"hits": 32,
+						"opportunities": 57,
+						"uses": 57
+					},
+					"hook": {
+						"hit_rate": 0.428571428571429,
+						"hits": 3,
+						"opportunities": 7,
+						"uses": 7
+					},
+					"horn": {
+						"hit_rate": 0.436893203883495,
+						"hits": 45,
+						"opportunities": 103,
+						"uses": 103
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 3,
+						"opportunities": 3,
+						"uses": 3
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				},
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 96,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.5,
+						"hits": 2,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 96,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.666666666666667,
+						"hits": 42,
+						"opportunities": 63,
+						"uses": 63
+					},
+					"hook": {
+						"hit_rate": 0.833333333333333,
+						"hits": 10,
+						"opportunities": 12,
+						"uses": 12
+					},
+					"horn": {
+						"hit_rate": 0.364583333333333,
+						"hits": 35,
+						"opportunities": 96,
+						"uses": 96
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 5,
+						"opportunities": 5,
+						"uses": 5
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				}
+			],
+			"physical_side_wins": [
+				3,
+				1
+			],
+			"pinned_seconds": [
+				31.9833333333336,
+				19.75
+			],
+			"profiles": [
+				"NORMAL",
+				"NORMAL"
+			],
+			"reasons": {
+				"FLEE": 4,
+				"LOT": 0,
+				"TIME": 0
+			},
+			"win_ci95": [
+				[
+					0.300641842582402,
+					0.954412739190299
+				],
+				[
+					0.0455872608097005,
+					0.699358157417598
+				]
+			],
+			"win_rates": [
+				0.75,
+				0.25
+			],
+			"wins": [
+				3,
+				1
+			]
+		},
+		{
+			"annotations": [
+				{
+					"back": 0.0,
+					"counter": 0.0,
+					"flank": 0.0
+				},
+				{
+					"back": 0.0,
+					"counter": 23.0,
+					"flank": 0.0
+				}
+			],
+			"damage": [
+				{
+					"clash": 9.0,
+					"dash": 0.0,
+					"horn": 333.0
+				},
+				{
+					"clash": 19.0,
+					"dash": 0.0,
+					"horn": 336.0
+				}
+			],
+			"empty_seconds": [
+				0.0,
+				0.0
+			],
+			"first_seed": 20261869,
+			"length": {
+				"mean": 57.3875,
+				"median": 58.325,
+				"p90": 64.9
+			},
+			"level": "L02",
+			"matches": 4,
+			"moves": [
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 91,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.25,
+						"hits": 1,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 91,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.581818181818182,
+						"hits": 32,
+						"opportunities": 55,
+						"uses": 55
+					},
+					"hook": {
+						"hit_rate": 0.888888888888889,
+						"hits": 8,
+						"opportunities": 9,
+						"uses": 9
+					},
+					"horn": {
+						"hit_rate": 0.406593406593407,
+						"hits": 37,
+						"opportunities": 91,
+						"uses": 91
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 4,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				},
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 93,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.75,
+						"hits": 3,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 93,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.673469387755102,
+						"hits": 33,
+						"opportunities": 49,
+						"uses": 49
+					},
+					"hook": {
+						"hit_rate": 0.6,
+						"hits": 3,
+						"opportunities": 5,
+						"uses": 5
+					},
+					"horn": {
+						"hit_rate": 0.387096774193548,
+						"hits": 36,
+						"opportunities": 93,
+						"uses": 93
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 6,
+						"opportunities": 6,
+						"uses": 6
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				}
+			],
+			"physical_side_wins": [
+				4,
+				0
+			],
+			"pinned_seconds": [
+				17.5666666666666,
+				13.0
+			],
+			"profiles": [
+				"NORMAL",
+				"NORMAL"
+			],
+			"reasons": {
+				"FLEE": 4,
+				"LOT": 0,
+				"TIME": 0
+			},
+			"win_ci95": [
+				[
+					0.150038989152149,
+					0.849961010847851
+				],
+				[
+					0.150038989152149,
+					0.849961010847851
+				]
+			],
+			"win_rates": [
+				0.5,
+				0.5
+			],
+			"wins": [
+				2,
+				2
+			]
+		},
+		{
+			"annotations": [
+				{
+					"back": 0.0,
+					"counter": 6.0,
+					"flank": 0.0
+				},
+				{
+					"back": 0.0,
+					"counter": 23.0,
+					"flank": 0.0
+				}
+			],
+			"damage": [
+				{
+					"clash": 20.0,
+					"dash": 0.0,
+					"horn": 318.0
+				},
+				{
+					"clash": 9.0,
+					"dash": 0.0,
+					"horn": 355.0
+				}
+			],
+			"empty_seconds": [
+				0.0,
+				0.0
+			],
+			"first_seed": 20262269,
+			"length": {
+				"mean": 51.9875,
+				"median": 49.1916666666667,
+				"p90": 62.8166666666667
+			},
+			"level": "L03",
+			"matches": 4,
+			"moves": [
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 80,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.5,
+						"hits": 2,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 80,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.666666666666667,
+						"hits": 36,
+						"opportunities": 54,
+						"uses": 54
+					},
+					"hook": {
+						"hit_rate": 0.555555555555556,
+						"hits": 5,
+						"opportunities": 9,
+						"uses": 9
+					},
+					"horn": {
+						"hit_rate": 0.425,
+						"hits": 34,
+						"opportunities": 80,
+						"uses": 80
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 5,
+						"opportunities": 5,
+						"uses": 5
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				},
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 85,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.5,
+						"hits": 2,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 85,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.652173913043478,
+						"hits": 30,
+						"opportunities": 46,
+						"uses": 46
+					},
+					"hook": {
+						"hit_rate": 0.375,
+						"hits": 3,
+						"opportunities": 8,
+						"uses": 8
+					},
+					"horn": {
+						"hit_rate": 0.470588235294118,
+						"hits": 40,
+						"opportunities": 85,
+						"uses": 85
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 3,
+						"opportunities": 3,
+						"uses": 3
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				}
+			],
+			"physical_side_wins": [
+				0,
+				4
+			],
+			"pinned_seconds": [
+				19.5666666666667,
+				33.1500000000004
+			],
+			"profiles": [
+				"NORMAL",
+				"NORMAL"
+			],
+			"reasons": {
+				"FLEE": 4,
+				"LOT": 0,
+				"TIME": 0
+			},
+			"win_ci95": [
+				[
+					0.150038989152149,
+					0.849961010847851
+				],
+				[
+					0.150038989152149,
+					0.849961010847851
+				]
+			],
+			"win_rates": [
+				0.5,
+				0.5
+			],
+			"wins": [
+				2,
+				2
+			]
+		},
+		{
+			"annotations": [
+				{
+					"back": 0.0,
+					"counter": 69.0,
+					"flank": 0.0
+				},
+				{
+					"back": 0.0,
+					"counter": 23.0,
+					"flank": 0.0
+				}
+			],
+			"damage": [
+				{
+					"clash": 20.0,
+					"dash": 0.0,
+					"horn": 350.0
+				},
+				{
+					"clash": 0.0,
+					"dash": 0.0,
+					"horn": 300.0
+				}
+			],
+			"empty_seconds": [
+				0.0,
+				0.0
+			],
+			"first_seed": 20262669,
+			"length": {
+				"mean": 52.3625,
+				"median": 57.1916666666667,
+				"p90": 62.8333333333333
+			},
+			"level": "L04",
+			"matches": 4,
+			"moves": [
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 83,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.8,
+						"hits": 4,
+						"opportunities": 5,
+						"uses": 5
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 83,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.6,
+						"hits": 21,
+						"opportunities": 35,
+						"uses": 35
+					},
+					"hook": {
+						"hit_rate": 1.0,
+						"hits": 9,
+						"opportunities": 9,
+						"uses": 9
+					},
+					"horn": {
+						"hit_rate": 0.409638554216867,
+						"hits": 34,
+						"opportunities": 83,
+						"uses": 83
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 7,
+						"opportunities": 7,
+						"uses": 7
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				},
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 85,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 5,
+						"uses": 5
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 85,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.743589743589744,
+						"hits": 29,
+						"opportunities": 39,
+						"uses": 39
+					},
+					"hook": {
+						"hit_rate": 0.714285714285714,
+						"hits": 5,
+						"opportunities": 7,
+						"uses": 7
+					},
+					"horn": {
+						"hit_rate": 0.329411764705882,
+						"hits": 28,
+						"opportunities": 85,
+						"uses": 85
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 7,
+						"opportunities": 7,
+						"uses": 7
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				}
+			],
+			"physical_side_wins": [
+				4,
+				0
+			],
+			"pinned_seconds": [
+				15.5,
+				15.7166666666668
+			],
+			"profiles": [
+				"NORMAL",
+				"NORMAL"
+			],
+			"reasons": {
+				"FLEE": 4,
+				"LOT": 0,
+				"TIME": 0
+			},
+			"win_ci95": [
+				[
+					0.150038989152149,
+					0.849961010847851
+				],
+				[
+					0.150038989152149,
+					0.849961010847851
+				]
+			],
+			"win_rates": [
+				0.5,
+				0.5
+			],
+			"wins": [
+				2,
+				2
+			]
+		},
+		{
+			"annotations": [
+				{
+					"back": 0.0,
+					"counter": 22.0,
+					"flank": 0.0
+				},
+				{
+					"back": 0.0,
+					"counter": 46.0,
+					"flank": 0.0
+				}
+			],
+			"damage": [
+				{
+					"clash": 15.0,
+					"dash": 0.0,
+					"horn": 312.0
+				},
+				{
+					"clash": 3.0,
+					"dash": 0.0,
+					"horn": 375.0
+				}
+			],
+			"empty_seconds": [
+				0.0,
+				0.0
+			],
+			"first_seed": 20263069,
+			"length": {
+				"mean": 49.2958333333333,
+				"median": 49.9,
+				"p90": 54.95
+			},
+			"level": "L05",
+			"matches": 4,
+			"moves": [
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 77,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.75,
+						"hits": 3,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 77,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.755555555555556,
+						"hits": 34,
+						"opportunities": 45,
+						"uses": 45
+					},
+					"hook": {
+						"hit_rate": 0.583333333333333,
+						"hits": 7,
+						"opportunities": 12,
+						"uses": 12
+					},
+					"horn": {
+						"hit_rate": 0.467532467532468,
+						"hits": 36,
+						"opportunities": 77,
+						"uses": 77
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 4,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				},
+				{
+					"back": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 79,
+						"uses": 0
+					},
+					"clash": {
+						"hit_rate": 0.25,
+						"hits": 1,
+						"opportunities": 4,
+						"uses": 4
+					},
+					"dash": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					},
+					"flank": {
+						"hit_rate": 0.0,
+						"hits": 0,
+						"opportunities": 79,
+						"uses": 0
+					},
+					"guard": {
+						"hit_rate": 0.755555555555556,
+						"hits": 34,
+						"opportunities": 45,
+						"uses": 45
+					},
+					"hook": {
+						"hit_rate": 0.583333333333333,
+						"hits": 7,
+						"opportunities": 12,
+						"uses": 12
+					},
+					"horn": {
+						"hit_rate": 0.493670886075949,
+						"hits": 39,
+						"opportunities": 79,
+						"uses": 79
+					},
+					"parry": {
+						"hit_rate": 1.0,
+						"hits": 3,
+						"opportunities": 3,
+						"uses": 3
+					},
+					"release": {
+						"hit_rate": null,
+						"hits": 0,
+						"opportunities": 0,
+						"uses": 0
+					}
+				}
+			],
+			"physical_side_wins": [
+				1,
+				3
+			],
+			"pinned_seconds": [
+				17.15,
+				9.91666666666665
+			],
+			"profiles": [
+				"NORMAL",
+				"NORMAL"
+			],
+			"reasons": {
+				"FLEE": 4,
+				"LOT": 0,
+				"TIME": 0
+			},
+			"win_ci95": [
+				[
+					0.0455872608097005,
+					0.699358157417598
+				],
+				[
+					0.300641842582402,
+					0.954412739190299
+				]
+			],
+			"win_rates": [
+				0.25,
+				0.75
+			],
+			"wins": [
+				1,
+				3
+			]
+		}
+	],
+	"swap_sides": true,
+	"tick_hz": 60
+}
