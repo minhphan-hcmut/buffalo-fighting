@@ -27,10 +27,10 @@ func run() -> void:
 		var arena := load("res://scenes/arena.tscn").instantiate() as MatchController
 		root.add_child(arena)
 		current_scene = arena
-		for i in 5:
-			await process_frame
+		# Own simulation ticks from the moment the arena enters the tree.
 		arena.set_physics_process(false)
 		while arena.phase != &"PLAYING":
+			await physics_frame
 			arena._physics_process(DT)
 		var opponent := arena.opponent
 		var profile: Dictionary = profiles["DRILL_" + String(drill).to_upper()]
@@ -39,6 +39,7 @@ func run() -> void:
 		# Stun the drill attacker the moment it commits to an attack, i.e. when it is in range.
 		var attacking := false
 		for i in 60 * 10:
+			await physics_frame
 			arena._physics_process(DT)
 			if opponent.state in [Buffalo.State.HORN_STARTUP, Buffalo.State.DASH_ACTIVE]:
 				attacking = true
@@ -48,16 +49,19 @@ func run() -> void:
 		opponent.horn_cooldown = 0.0
 		opponent.dash_cooldown = 0.0
 		while opponent.state == Buffalo.State.STUNNED:
+			await physics_frame
 			arena._physics_process(DT)
 		var attacked_early := false
 		var elapsed := 0.0
 		while elapsed < rest - 2.0 * DT:
+			await physics_frame
 			arena._physics_process(DT)
 			elapsed += DT
 			attacked_early = attacked_early or opponent.state in [Buffalo.State.HORN_STARTUP, Buffalo.State.HORN_ACTIVE, Buffalo.State.DASH_ACTIVE]
 		check(not attacked_early, "%s drill does not attack within %.2f s after a stun" % [drill, rest])
 		var attacked_later := false
 		for i in 60 * 6:
+			await physics_frame
 			arena._physics_process(DT)
 			attacked_later = attacked_later or opponent.state in [Buffalo.State.HORN_STARTUP, Buffalo.State.DASH_ACTIVE]
 			if attacked_later:

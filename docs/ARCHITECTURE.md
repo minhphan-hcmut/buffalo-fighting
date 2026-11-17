@@ -124,6 +124,29 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 
 Trang Hiệu ứng còn có **Rung tay cầm** (mặc định bật) và **Cỡ chữ HUD** (Thường/Lớn, mặc định Thường), lưu/kiểm tra kiểu boolean trong SessionState. Bốn tiện ích thống kê/rung/cỡ chữ/F12 là bổ sung được duyệt ngoài GDD v0.7; chỉ trình bày, không thay mô phỏng hay payload LAN. Tuning `stats_*`, `rumble_*`, `hud_*`, `screenshot_*` nằm trong `presentation.json`. Test: `match_stats_test.gd`, `rumble_hud_screenshot_test.gd`.
 
+## Các module HUD và Solo
+
+HUD/menu giữ giao diện gọi hiện có và ghép các module sở hữu state/UI riêng:
+
+| File trong `scripts/ui/` | Trách nhiệm |
+|---|---|
+| `hud_tutorial.gd` | Hàng đợi hướng dẫn, thời gian và phản hồi combat. |
+| `hud_training.gd` | Panel sân tập, bộ đếm và popup; không đổi gameplay. |
+| `match_pause_view.gd` | Shell pause/settings, actions và focus. |
+| `lan_result_view.gd` | Kết quả/tái đấu LAN, dùng chung shell pause và collector stats của HUD. |
+| `solo_mode_view.gd` | Chọn mùa hội, đấu tự do và sân tập. |
+| `solo_result_view.gd` | Kết quả, thẻ văn hóa và tweens; chặn dựng lại bằng `displayed_result`. |
+| `solo_flow.gd` | Điều phối Solo/nghi lễ; `SessionState` vẫn là nguồn tiến trình duy nhất. |
+
+Controller gọi `hud.close_settings_if_open()` và `hud.return_to_menu()` thay vì
+truy cập settings nội bộ. Đóng settings không tự resume. Các presenter giải phóng
+signals/tweens cùng scene; HUD vẫn giữ resource bars, CLASH, throttle và dirty counters.
+Static prefetch và `SoloSessionOverlay` vẫn ở `main_menu.gd`.
+
+**Lưu ý:** `SoloFlow.result_data()`/`select_card()` là lệnh chọn và giữ thẻ cho kết quả,
+không phải getter thuần túy để polling. Notebook chỉ ghi nhận khi thẻ thực sự hiển thị.
+Test lifecycle: `hud_presenters_test.gd`, `match_overlay_lifecycle_test.gd`, `solo_flow_test.gd`.
+
 ## Dữ liệu trong `data/`
 
 | File | Chứa gì | Đổi file này thì |

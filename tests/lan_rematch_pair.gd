@@ -87,6 +87,8 @@ func run() -> void:
 	check(manager.connected and manager.peer.get_instance_id() == connection_id and manager.multiplayer.get_unique_id() == peer_id, "ENet connection and peer identity survive reload")
 	check(arena.local_slot == (1 if host_side else 2), "rematch retains the same player slots")
 	check(arena.hud.stats.counts.values().all(func(value: int): return value == 0), "rematch resets every stat counter")
+	check(not arena.hud.lan_result_shown and arena.hud.rematch_button == null and arena.hud.rematch_note == null and arena.hud.stats_panel == null, "rematch clears result presenter references")
+	check(not arena.hud.pause_overlay.visible and not arena.hud.showing_settings and not arena.hud.pause_overlay.has_node("ResultShade"), "rematch starts with a clean hidden shared shell")
 	check(arena.player.spirit == GameBalance.get_number("spirit_max") and arena.opponent.spirit == GameBalance.get_number("spirit_max"), "rematch starts with fresh resources")
 	while arena.phase != &"PLAYING":
 		await physics_frame
@@ -105,12 +107,12 @@ func run() -> void:
 		check(arena.hud.rematch_button.disabled and arena.hud.rematch_note.text.contains("rời trận"), "decline leaves peer with disconnect message and no rematch action")
 		check(arena.winner_slot == 1 and arena.end_reason == &"FLEE", "disconnect preserves the locked result")
 		await shot("declined-client")
-		arena.hud._return_to_menu()
+		arena.hud.return_to_menu()
 	else:
 		while not arena.lan.remote_wants_rematch:
 			await process_frame
 		check(arena.hud.rematch_button.text == "ĐỒNG Ý", "client can also request a rematch")
-		arena.hud._return_to_menu()
+		arena.hud.return_to_menu()
 	await scene_changed
 	check(not manager.connected and current_scene.scene_file_path == "res://scenes/main_menu.tscn", "both players can decline/leave to menu")
 	await create_timer(0.5).timeout
