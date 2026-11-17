@@ -140,13 +140,12 @@ func _input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		get_viewport().set_input_as_handled()
 		if mode == &"LAN" and result_ready:
-			hud._return_to_menu()
+			hud.return_to_menu()
 		return
 	if phase != &"PLAYING" and not (mode == &"SOLO" and phase == &"COUNTDOWN"):
 		return
 	# Closing settings preserves the current Solo/LAN pause state and opener.
-	if is_instance_valid(hud) and hud.showing_settings:
-		hud.settings_screen.close()
+	if is_instance_valid(hud) and hud.close_settings_if_open():
 		get_viewport().set_input_as_handled()
 		return
 

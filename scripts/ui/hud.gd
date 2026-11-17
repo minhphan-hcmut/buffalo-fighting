@@ -19,7 +19,13 @@ var center_label: Label
 var previous_phase: StringName = &""
 var center_punch_time := 0.0
 var fight_banner_time := INF
-var controls_hint_time := 0.0
+const TutorialPresenter := preload("res://scripts/ui/hud_tutorial.gd")
+const TrainingPresenter := preload("res://scripts/ui/hud_training.gd")
+var tutorial_presenter := TutorialPresenter.new()
+var training_presenter := TrainingPresenter.new()
+var controls_hint_time: float:
+	get: return tutorial_presenter.controls_hint_time
+	set(value): tutorial_presenter.controls_hint_time = value
 var announcer_label: Label
 var result_label: Label
 var clash_panel: Control
@@ -32,41 +38,81 @@ var tutorial_label: RichTextLabel
 ## Player panels and timer; faded out once the result is decided so the outro shot is clean.
 var top_bar: HBoxContainer
 var result_fade_time := 0.0
-const CONTROLS := "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · G Gạt sừng · Esc Tạm dừng"
+const CONTROLS := TutorialPresenter.CONTROLS
 const CLASH_KEYS := "WASD Đẩy tới · Trái Móc · Phải Nhả"
-const TUTORIAL := {
-	1: "WASD để đi, chuột để nhìn",
-	2: "Chuột trái để húc khi sừng hướng về đối thủ",
-	3: "Space để hổ lao",
-	4: "Giữ chuột phải để ghìm đòn phía trước",
-	5: "Đẩy về đối thủ · chuột trái móc · chuột phải nhả",
-	6: "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn"
-}
-var tutorial_seen: Array[int] = []
-var tutorial_queue: Array[int] = []
-var tutorial_current := 0
-var tutorial_time := 0.0
-var tutorial_front_hit := false
-var pause_overlay: Control
-var pause_panel: PanelContainer
-var pause_title: Label
-var pause_detail: Label
-var pause_actions: VBoxContainer
-## True while the pause overlay shows the settings page (Esc then goes back to the pause menu).
-var showing_settings := false
-var settings_screen: SettingsScreen
-var lan_result_shown := false
-var rematch_button: Button
-var rematch_note: Label
+const TUTORIAL := TutorialPresenter.TUTORIAL
+var tutorial_seen: Array[int]:
+	get: return tutorial_presenter.tutorial_seen
+	set(value): tutorial_presenter.tutorial_seen = value
+var tutorial_queue: Array[int]:
+	get: return tutorial_presenter.tutorial_queue
+	set(value): tutorial_presenter.tutorial_queue = value
+var tutorial_current: int:
+	get: return tutorial_presenter.tutorial_current
+	set(value): tutorial_presenter.tutorial_current = value
+var tutorial_time: float:
+	get: return tutorial_presenter.tutorial_time
+	set(value): tutorial_presenter.tutorial_time = value
+var tutorial_front_hit: bool:
+	get: return tutorial_presenter.tutorial_front_hit
+	set(value): tutorial_presenter.tutorial_front_hit = value
+const PauseView := preload("res://scripts/ui/match_pause_view.gd")
+const LanResultView := preload("res://scripts/ui/lan_result_view.gd")
+var pause_view := PauseView.new()
+var lan_result_view := LanResultView.new()
+var pause_overlay: Control:
+	get: return pause_view.pause_overlay
+	set(value): pause_view.pause_overlay = value
+var pause_panel: PanelContainer:
+	get: return pause_view.pause_panel
+	set(value): pause_view.pause_panel = value
+var pause_title: Label:
+	get: return pause_view.pause_title
+	set(value): pause_view.pause_title = value
+var pause_detail: Label:
+	get: return pause_view.pause_detail
+	set(value): pause_view.pause_detail = value
+var pause_actions: VBoxContainer:
+	get: return pause_view.pause_actions
+	set(value): pause_view.pause_actions = value
+var showing_settings: bool:
+	get: return pause_view.showing_settings
+	set(value): pause_view.showing_settings = value
+var settings_screen: SettingsScreen:
+	get: return pause_view.settings_screen
+	set(value): pause_view.settings_screen = value
+var lan_result_shown: bool:
+	get: return lan_result_view.lan_result_shown
+	set(value): lan_result_view.lan_result_shown = value
+var rematch_button: Button:
+	get: return lan_result_view.rematch_button
+	set(value): lan_result_view.rematch_button = value
+var rematch_note: Label:
+	get: return lan_result_view.rematch_note
+	set(value): lan_result_view.rematch_note = value
 var refresh_elapsed := 0.0
-var training_panel: PanelContainer
-var training_counter: Label
-var training_popup: Label
-var training_counts: Dictionary = {}
-var training_popup_time := 0.0
-var training_released := false
+var training_panel: PanelContainer:
+	get: return training_presenter.training_panel
+	set(value): training_presenter.training_panel = value
+var training_counter: Label:
+	get: return training_presenter.training_counter
+	set(value): training_presenter.training_counter = value
+var training_popup: Label:
+	get: return training_presenter.training_popup
+	set(value): training_presenter.training_popup = value
+var training_counts: Dictionary:
+	get: return training_presenter.training_counts
+	set(value): training_presenter.training_counts = value
+var training_popup_time: float:
+	get: return training_presenter.training_popup_time
+	set(value): training_presenter.training_popup_time = value
+var training_released: bool:
+	get: return training_presenter.training_released
+	set(value): training_presenter.training_released = value
 var stats: MatchStats
-var stats_panel: GridContainer
+var stats_panel: GridContainer:
+	get: return pause_view.stats_panel
+	set(value): pause_view.stats_panel = value
 var text_scale := -1.0
 var normal_banner_position: Vector2
 var normal_text_layout: Dictionary
@@ -77,7 +123,9 @@ var timer_second := -1
 var tutorial_plain := ""
 var controls_formatted := ""
 var hint_visible := false
-var training_counter_dirty := false
+var training_counter_dirty: bool:
+	get: return training_presenter.training_counter_dirty
+	set(value): training_presenter.training_counter_dirty = value
 var clash_clock := -1.0
 var hook_mask := -1
 var hook_large := false
@@ -271,12 +319,16 @@ func _ready() -> void:
 	result_label.add_theme_color_override("font_color", Color("#F2E6CF"))
 	result_label.add_theme_stylebox_override("normal", _panel_style())
 	root.add_child(result_label)
-	if not controller.training.is_empty():
-		_build_training_panel(root)
+	# Add owners after root so get_child(0) and all existing UI paths stay stable.
+	training_presenter.name = "TrainingPresenter"
+	add_child(training_presenter)
+	_build_training_panel(root)
 	# The in-match HUD is display-only: let clicks through so CameraRig can capture the mouse.
 	_ignore_mouse(root)
 	_build_pause_overlay(root)
-	controller.combat_event.connect(_tutorial_event)
+	tutorial_presenter.name = "TutorialPresenter"
+	add_child(tutorial_presenter)
+	tutorial_presenter.setup(controller, tutorial_label, _set_tutorial_text)
 	if controller.training.is_empty():
 		stats = MatchStats.new(controller.local_slot)
 		controller.combat_event.connect(stats.on_combat_event)
@@ -297,332 +349,101 @@ func _ignore_mouse(control: Control) -> void:
 
 
 func _build_training_panel(root: Control) -> void:
-	for key: String in controller.training.counters:
-		training_counts[key] = 0
-	training_panel = PanelContainer.new()
-	training_panel.name = "TrainingPanel"
-	var width := GameBalance.get_number("training_panel_width")
-	training_panel.position = Vector2((get_viewport().get_visible_rect().size.x - width) * 0.5, GameBalance.get_number("training_panel_top"))
-	training_panel.custom_minimum_size.x = width
-	root.add_child(training_panel)
-	var rows := VBoxContainer.new()
-	training_panel.add_child(rows)
-	var title := Label.new()
-	title.text = controller.training.name
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", GameBalance.get_int("training_title_font_size"))
-	title.add_theme_color_override("font_color", Color("#E8BC65"))
-	rows.add_child(title)
-	training_counter = Label.new()
-	training_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	training_counter.add_theme_font_size_override("font_size", GameBalance.get_int("training_counter_font_size"))
-	rows.add_child(training_counter)
-	training_popup = Label.new()
-	training_popup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	training_popup.add_theme_font_size_override("font_size", GameBalance.get_int("training_popup_font_size"))
-	training_popup.add_theme_color_override("font_color", Color("#E8BC65"))
-	training_popup.visible = false
-	rows.add_child(training_popup)
-	training_counter.text = String(controller.training.counter_text).format(training_counts)
-	clash_panel.position.y = GameBalance.get_number("training_clash_top")
-	center_label.position.y = GameBalance.get_number("training_clash_top")
-	controller.combat_event.connect(_training_event)
+	training_presenter.setup(controller, root, _label)
+	if not controller.training.is_empty():
+		clash_panel.position.y = GameBalance.get_number("training_clash_top")
+		center_label.position.y = GameBalance.get_number("training_clash_top")
 
 
 func _training_count(key: String) -> void:
-	if training_counts.has(key):
-		training_counts[key] += 1
-		training_counter_dirty = true
+	training_presenter.count(key)
 
 
 func _training_success(text: String) -> void:
-	_label(training_popup, text)
-	training_popup_time = GameBalance.get_number("training_popup_s")
+	training_presenter.success(text)
 
 
-func _training_event(event: StringName, source: int, target: int, _value: float) -> void:
-	if source == 2 and String(event) == controller.training.get("attack_event", ""):
-		_training_count("attacks")
-	if source == 1:
-		if event in [&"HORN_HIT", &"DASH_HIT"]:
-			_training_count("hits")
-		elif event in [&"FLANK_HIT", &"BACK_HIT"]:
-			_training_count("flanks")
-		elif event == &"PARRY_SUCCESS":
-			_training_count("parried")
-			_training_success("GẠT ĐƯỢC!")
-		elif event == &"COUNTER_HIT":
-			_training_count("counters")
-			_training_success("PHẢN ĐÒN!")
-		elif event == &"RELEASE_START":
-			training_released = true
-	if event == &"CLASH_START":
-		_training_count("locks")
-		training_released = false
-	elif event == &"CLASH_HOOK" and source == 2:
-		_training_count("hooks")
-	elif event == &"CLASH_LOSS" and target == 2:
-		_training_count("wins")
-		if training_released:
-			_training_count("releases")
-			_training_success("NHẢ ĐÚNG LÚC!")
-	elif event in [&"CLASH_WHIFF", &"CLASH_RELEASE", &"CLASH_BREAK", &"CLASH_TIME"]:
-		training_released = false
-	elif event == &"TRAINING_REFILL" and training_popup_time <= 0.0:
-		_training_success("Hồi khí thế")
-	if training_counter_dirty:
-		_label(training_counter, String(controller.training.counter_text).format(training_counts))
-		training_counter_dirty = false
+func _training_event(event: StringName, source: int, target: int, value: float) -> void:
+	training_presenter.on_combat_event(event, source, target, value)
 
 
 func _build_pause_overlay(root: Control) -> void:
-	pause_overlay = Control.new()
-	pause_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	pause_overlay.visible = false
-	root.add_child(pause_overlay)
-	var shade := ColorRect.new()
-	shade.name = "PauseShade"
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color("#17262EE8")
-	pause_overlay.add_child(shade)
-	pause_panel = PanelContainer.new()
-	pause_overlay.add_child(pause_panel)
-	_place_pause_panel(Vector2(520, 0))
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 14)
-	pause_panel.add_child(content)
-	pause_title = Label.new()
-	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_title.add_theme_font_size_override("font_size", 30)
-	pause_title.add_theme_color_override("font_color", ControlsDiagram.GOLD)
-	content.add_child(pause_title)
-	pause_detail = Label.new()
-	pause_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(pause_detail)
-	pause_actions = VBoxContainer.new()
-	pause_actions.add_theme_constant_override("separation", 10)
-	content.add_child(pause_actions)
+	pause_view.name = "PauseView"
+	add_child(pause_view)
+	pause_view.setup(root, {
+		"resume": controller.resume_from_menu, "restart": _restart_match,
+		"leave": return_to_menu, "change_training": _change_training,
+		"answer": _answer_pause, "sensitivity": _set_mouse_sensitivity,
+	})
+	lan_result_view.name = "LanResultView"
+	add_child(lan_result_view)
+	lan_result_view.setup(pause_view, _request_rematch, return_to_menu)
 
 
-## Centres the pause panel at `panel_size`. Uses anchor offsets, not `position`: once the panel is
-## in the tree, `position` is relative to the overlay's top-left corner, not to the centre anchor.
-## A height of 0 lets the panel shrink to its content; growing both ways keeps it centred.
 func _place_pause_panel(panel_size: Vector2) -> void:
-	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
-	pause_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	pause_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	pause_panel.offset_left = -panel_size.x * 0.5
-	pause_panel.offset_top = -panel_size.y * 0.5
-	pause_panel.offset_right = panel_size.x * 0.5
-	pause_panel.offset_bottom = panel_size.y * 0.5
+	pause_view.place_panel(panel_size)
 
 
 func _clear_pause_actions() -> void:
-	rematch_button = null
-	rematch_note = null
-	if is_instance_valid(stats_panel):
-		stats_panel.get_parent().remove_child(stats_panel)
-		stats_panel.queue_free()
-	for child in pause_actions.get_children():
-		pause_actions.remove_child(child)
-		child.queue_free()
+	pause_view.clear_actions()
 
 
 func _pause_button(text: String, callback: Callable, container: Container = null, tier: StringName = &"SecondaryButton") -> Button:
-	var button := Button.new()
-	button.theme_type_variation = tier
-	button.text = text
-	button.custom_minimum_size.y = GameBalance.get_number("ui_action_height")
-	button.focus_mode = Control.FOCUS_ALL
-	UiMotion.attach(button)
-	button.pressed.connect(callback)
-	(container if container != null else pause_actions).add_child(button)
-	HudText.apply(button)
-	return button
+	return pause_view.button(text, callback, container, tier)
 
 
 func show_pause() -> void:
-	if is_instance_valid(settings_screen):
-		settings_screen.close()
-	showing_settings = false
-	pause_overlay.visible = true
-	_place_pause_panel(Vector2(520, 0))
-	pause_title.text = "TẠM DỪNG" if controller.mode == &"SOLO" else "TRẬN LAN ĐANG TẠM DỪNG"
-	pause_detail.text = "Trận solo đã dừng." if controller.mode == &"SOLO" else "Hai người chơi đã đồng ý tạm dừng."
-	_clear_pause_actions()
-	if controller.mode == &"LAN":
-		_pause_button("GỬI YÊU CẦU TIẾP TỤC", controller.resume_from_menu, null, &"PrimaryButton")
-	else:
-		_pause_button("TIẾP TỤC", controller.resume_from_menu, null, &"PrimaryButton")
-	if not controller.training.is_empty():
-		_pause_button("ĐỔI BÀI TẬP", _change_training)
-	_pause_button("CÀI ĐẶT", show_settings)
-	if controller.mode == &"SOLO" and controller.training.is_empty():
-		_pause_button("CHƠI LẠI", _restart_match)
-	_pause_button("VỀ MENU", _return_to_menu, null, &"QuietButton")
-	HudText.apply(pause_title)
-	HudText.apply(pause_detail)
-	pause_actions.get_child(0).grab_focus()
+	pause_view.show_pause(controller.mode, not controller.training.is_empty())
 
 
 func show_pause_wait(requested_pause: bool) -> void:
-	if is_instance_valid(settings_screen):
-		settings_screen.close()
-	pause_overlay.visible = true
-	_place_pause_panel(Vector2(520, 0))
-	pause_title.text = "ĐANG CHỜ XÁC NHẬN"
-	pause_detail.text = (
-		"Yêu cầu tạm dừng đã gửi tới đối phương."
-		if requested_pause
-		else "Yêu cầu tiếp tục trận đã gửi tới đối phương."
-	)
-	_clear_pause_actions()
-	_pause_button("CÀI ĐẶT", show_settings, null, &"PrimaryButton")
-	_pause_button("RỜI TRẬN", _return_to_menu, null, &"QuietButton")
-	HudText.apply(pause_title)
-	HudText.apply(pause_detail)
-	pause_actions.get_child(0).grab_focus()
+	pause_view.show_wait(requested_pause)
 
 
 func show_pause_confirmation(peer_id: int, requested_pause: bool) -> void:
-	if is_instance_valid(settings_screen):
-		settings_screen.close()
-	pause_overlay.visible = true
-	_place_pause_panel(Vector2(520, 0))
-	pause_title.text = "YÊU CẦU TỪ NGƯỜI CHƠI %d" % peer_id
-	pause_detail.text = (
-		"Đối phương muốn tạm dừng trận."
-		if requested_pause
-		else "Đối phương muốn tiếp tục trận."
-	)
-	_clear_pause_actions()
-	_pause_button("CHẤP NHẬN", func(): controller.network.answer_pause(true), null, &"PrimaryButton")
-	_pause_button("TỪ CHỐI", func(): controller.network.answer_pause(false))
-	HudText.apply(pause_title)
-	HudText.apply(pause_detail)
-	pause_actions.get_child(0).grab_focus()
+	pause_view.show_confirmation(peer_id, requested_pause)
+
+
+func _answer_pause(accepted: bool) -> void:
+	controller.network.answer_pause(accepted)
+
+
+func _request_rematch() -> void:
+	if controller.lan != null:
+		controller.lan.request_rematch()
+
+
+func _rematch_status(disconnected: bool = false) -> Dictionary:
+	var lan: MatchNetwork = controller.lan
+	if lan == null:
+		return {}
+	return {
+		"disconnected": disconnected or lan.peer_left,
+		"can_rematch": lan.can_rematch(),
+		"local_ready": lan.local_wants_rematch,
+		"remote_ready": lan.remote_wants_rematch,
+	}
 
 
 func _show_lan_result() -> void:
-	if is_instance_valid(settings_screen):
-		settings_screen.close()
-	lan_result_shown = true
-	showing_settings = false
-	pause_overlay.show()
-	_place_pause_panel(Vector2(GameBalance.get_number("stats_result_width"), 0))
-	pause_panel.anchor_left = 0.0
-	pause_panel.anchor_right = 0.0
-	pause_panel.offset_left = GameBalance.get_number("lan_result_panel_left")
-	pause_panel.offset_right = pause_panel.offset_left + GameBalance.get_number("stats_result_width")
-	pause_overlay.get_node("PauseShade").hide()
-	if not pause_overlay.has_node("ResultShade"):
-		var gradient := Gradient.new()
-		gradient.offsets = PackedFloat32Array([0.0, GameBalance.get_number("lan_result_shade_mid"), GameBalance.get_number("lan_result_shade_end")])
-		gradient.colors = PackedColorArray([Color("#17120EE6"), Color("#17120EB0"), Color("#17120E00")])
-		var texture := GradientTexture2D.new()
-		texture.gradient = gradient
-		texture.width = GameBalance.get_int("lan_result_shade_texture_width")
-		texture.height = GameBalance.get_int("lan_result_shade_texture_height")
-		var shade := TextureRect.new()
-		shade.name = "ResultShade"
-		shade.texture = texture
-		shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pause_overlay.add_child(shade)
-		pause_overlay.move_child(shade, 0)
-	pause_title.text = "KẾT QUẢ TRẬN LAN"
-	HudText.set_size(pause_title, "font_size", GameBalance.get_int("ui_result_title_size"))
-	HudText.set_size(pause_detail, "font_size", GameBalance.get_int("ui_result_reason_size"))
-	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	pause_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	pause_detail.text = result_label.text
-	_clear_pause_actions()
-	if stats != null:
-		stats_panel = stats.create_block()
-		var content := pause_actions.get_parent()
-		content.add_child(stats_panel)
-		content.move_child(stats_panel, pause_actions.get_index())
-		HudText.apply(stats_panel)
-	if controller.lan != null:
-		rematch_note = Label.new()
-		rematch_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rematch_note.add_theme_font_size_override("font_size", GameBalance.get_int("stats_font_size"))
-		pause_actions.add_child(rematch_note)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", GameBalance.get_int("stats_column_gap"))
-		pause_actions.add_child(row)
-		rematch_button = _pause_button("ĐẤU LẠI", controller.lan.request_rematch, row, &"PrimaryButton")
-		rematch_button.name = "RematchButton"
-		rematch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var menu := _pause_button("VỀ MENU", _return_to_menu, row, &"QuietButton")
-		menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		update_lan_rematch()
-		(rematch_button if not rematch_button.disabled else menu).grab_focus()
-	else:
-		_pause_button("VỀ MENU", _return_to_menu, null, &"PrimaryButton").grab_focus()
-	for button: Button in pause_actions.find_children("*", "Button", true, false):
-		button.custom_minimum_size.y = GameBalance.get_number("ui_result_action_height")
-		HudText.set_size(button, "font_size", GameBalance.get_int("ui_result_action_size"))
-	HudText.apply(pause_title)
-	HudText.apply(pause_detail)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	lan_result_view.show_result(result_label.text, stats, controller.lan != null, _rematch_status())
 
 
 func update_lan_rematch(disconnected: bool = false) -> void:
-	if not is_instance_valid(rematch_button) or controller.lan == null:
-		return
-	var lan: MatchNetwork = controller.lan
-	disconnected = disconnected or lan.peer_left
-	rematch_button.disabled = disconnected or not lan.can_rematch() or lan.local_wants_rematch
-	rematch_button.theme_type_variation = &"SecondaryButton" if rematch_button.disabled else &"PrimaryButton"
-	(rematch_button.get_parent().get_child(-1) as Button).theme_type_variation = &"PrimaryButton" if rematch_button.disabled else &"QuietButton"
-	if disconnected:
-		rematch_note.text = "Đối phương đã rời trận."
-	elif lan.local_wants_rematch:
-		rematch_note.text = "Đã gửi yêu cầu. Đang chờ đối phương…"
-	elif lan.remote_wants_rematch:
-		rematch_note.text = "Đối phương muốn đấu lại"
-	else:
-		rematch_note.text = ""
-	rematch_button.text = "ĐẤU LẠI" if disconnected else ("ĐANG CHỜ" if lan.local_wants_rematch else ("ĐỒNG Ý" if lan.remote_wants_rematch else "ĐẤU LẠI"))
-	rematch_note.visible = not rematch_note.text.is_empty()
-	HudText.apply(rematch_note)
-	if rematch_button.disabled and rematch_button.has_focus():
-		(rematch_button.get_parent().get_child(-1) as Button).grab_focus()
+	lan_result_view.update_rematch(_rematch_status(disconnected))
 
 
 func hide_pause() -> void:
-	if is_instance_valid(settings_screen):
-		settings_screen.close()
-	showing_settings = false
-	if is_instance_valid(pause_overlay):
-		pause_overlay.visible = false
+	pause_view.hide_pause()
 
 
 func show_settings() -> void:
-	if showing_settings:
-		return
-	var opener: Control
-	for button in pause_actions.get_children():
-		if button is Button and button.text == "CÀI ĐẶT":
-			opener = button
-	if not is_instance_valid(settings_screen):
-		settings_screen = SettingsScreen.new()
-		settings_screen.on_sensitivity = _set_mouse_sensitivity
-		settings_screen.closed.connect(func():
-			showing_settings = false
-			HudText.apply(pause_actions)
-			pause_overlay.get_node("PauseShade").show()
-			pause_panel.show()
-		)
-		pause_overlay.add_child(settings_screen)
-	showing_settings = true
-	pause_overlay.show()
-	pause_overlay.get_node("PauseShade").hide()
-	pause_panel.hide()
-	settings_screen.open(opener)
+	pause_view.show_settings()
+
+
+## Returns true only when this input closed the modal; pause/consent stays unchanged.
+func close_settings_if_open() -> bool:
+	return pause_view.close_settings_if_open()
 
 
 ## Applies a new sensitivity to the live camera (SessionState is updated by SettingsControls).
@@ -636,7 +457,12 @@ func _restart_match() -> void:
 	get_tree().reload_current_scene()
 
 
+## Compatibility alias for existing callers; controller uses the public intent.
 func _return_to_menu() -> void:
+	return_to_menu()
+
+
+func return_to_menu() -> void:
 	if controller.mode == &"LAN":
 		controller.network.leave()
 	SessionState.return_to_menu()
@@ -831,14 +657,7 @@ func _process(delta: float) -> void:
 	_update_result_fade(delta)
 	_update_clash()
 	_visible(center_label, not clash_panel.visible)
-	if not controller.training.is_empty():
-		training_popup_time = maxf(0.0, training_popup_time - (0.0 if controller.paused else delta))
-		if training_popup_time <= 0.0:
-			_label(training_popup, "")
-		# The popup line takes space only while it shows, so the panel stays two lines tall.
-		if training_popup.visible != (training_popup.text != ""):
-			training_popup.visible = training_popup.text != ""
-			training_panel.reset_size()
+	training_presenter.update(delta)
 	_visible(tutorial_label, hint_visible and not clash_panel.visible)
 
 
@@ -950,67 +769,19 @@ func _set_tutorial_text(plain: String) -> void:
 
 
 func _tutorial_enabled() -> bool:
-	return controller.training.is_empty() and controller.mode == &"SOLO" and controller.level_id == &"L01"
+	return tutorial_presenter.enabled()
 
 
 func _queue_tutorial(id: int) -> void:
-	if not tutorial_seen.has(id) and not tutorial_queue.has(id):
-		tutorial_queue.append(id)
-		tutorial_queue.sort()
+	tutorial_presenter.queue_hint(id)
 
 
-func _tutorial_event(event: StringName, source: int, target: int, _value: float) -> void:
-	if not _tutorial_enabled():
-		return
-	if event == &"CLASH_START":
-		_queue_tutorial(5)
-	if target != controller.local_slot or event not in [&"HORN_HIT", &"DASH_HIT", &"CLASH_LOSS"]:
-		return
-	_queue_tutorial(4)
-	if event == &"HORN_HIT":
-		var attacker := controller.player if source == 1 else controller.opponent
-		var victim := controller.player if target == 1 else controller.opponent
-		var toward := (attacker.global_position - victim.global_position).normalized()
-		if victim.forward().dot(toward) >= cos(GameBalance.get_angle("flank_min_deg")):
-			tutorial_front_hit = true
+func _tutorial_event(event: StringName, source: int, target: int, value: float) -> void:
+	tutorial_presenter.on_combat_event(event, source, target, value)
 
 
 func _update_tutorial(delta: float) -> void:
-	hint_visible = true
-	var alpha := 1.0
-	if not controller.paused:
-		controls_hint_time += delta
-	HudText.set_size(tutorial_label, "normal_font_size", GameBalance.get_int("ui_controls_font_size"))
-	if not _tutorial_enabled():
-		_set_tutorial_text(CONTROLS)
-		var duration := GameBalance.get_number("ui_controls_hint_s")
-		var fade := GameBalance.get_number("ui_controls_hint_fade_s")
-		hint_visible = controls_hint_time < duration
-		if hint_visible and controls_hint_time > duration - fade:
-			alpha = (duration - controls_hint_time) / fade
-		_alpha(tutorial_label, alpha)
-		return
-	_queue_tutorial(1)
-	var distance := controller.player.global_position.distance_to(controller.opponent.global_position)
-	if distance <= GameBalance.get_number("tutorial_horn_range"):
-		_queue_tutorial(2)
-	elif distance <= GameBalance.get_number("tutorial_dash_range"):
-		_queue_tutorial(3)
-	if tutorial_front_hit and tutorial_seen.has(4):
-		_queue_tutorial(6)
-	if not controller.paused:
-		tutorial_time = maxf(0.0, tutorial_time - delta)
-	if tutorial_time <= 0.0:
-		tutorial_current = 0
-		if not tutorial_queue.is_empty():
-			tutorial_current = tutorial_queue.pop_front()
-			tutorial_seen.append(tutorial_current)
-			tutorial_time = GameBalance.get_number("tutorial_hint_s")
-	_set_tutorial_text(TUTORIAL[tutorial_current] if tutorial_current > 0 else CONTROLS)
-	var remaining := tutorial_time if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_s") - controls_hint_time
-	var fade := GameBalance.get_number("tutorial_hint_fade_s") if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_fade_s")
-	hint_visible = remaining > 0.0
-	_alpha(tutorial_label, clampf(remaining / fade, 0.0, 1.0))
+	hint_visible = tutorial_presenter.update(delta)
 
 
 ## Tug-of-war bar: the right half is always the local player's side.
