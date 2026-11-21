@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b1k02udc2lqn2"
-path="res://.godot/imported/buffalo_hero_Faction_Cloth_Weave_2K.png-ae3cb64fe7705c2fbdf102ebc906aa09.ctex"
+path.s3tc="res://.godot/imported/buffalo_hero_Faction_Cloth_Weave_2K.png-ae3cb64fe7705c2fbdf102ebc906aa09.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c9ece5e5be5a00ab50debe18112c9590"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/characters/buffalo_hero/buffalo_hero_Faction_Cloth_Weave_2K.png"
-dest_files=["res://.godot/imported/buffalo_hero_Faction_Cloth_Weave_2K.png-ae3cb64fe7705c2fbdf102ebc906aa09.ctex"]
+dest_files=["res://.godot/imported/buffalo_hero_Faction_Cloth_Weave_2K.png-ae3cb64fe7705c2fbdf102ebc906aa09.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
