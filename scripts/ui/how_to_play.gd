@@ -17,7 +17,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var shade := ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color("#17262EF5")
+	shade.color = Color("#17120EF0")
 	add_child(shade)
 	panel = PanelContainer.new()
 	panel.name = "Panel"

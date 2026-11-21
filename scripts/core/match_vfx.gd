@@ -46,6 +46,7 @@ var impact_groups: Dictionary = {}
 var warm_cover: CanvasLayer
 var warm_node: Node3D
 var warm_frames_left := 0
+var warm_lit := false
 
 
 func _ready() -> void:
@@ -57,6 +58,15 @@ func _ready() -> void:
 	lights = Node3D.new()
 	lights.name = "ImpactLights"
 	add_child(lights)
+	# The impact lights are a fixed pool parked over the sand at zero energy. On integrated
+	# GPUs the frame where a new omni light first reaches the scene costs ~25 ms, on every
+	# hit; a light that never leaves only changes energy and position.
+	for i in GameBalance.get_int("vfx_max_lights"):
+		var light := OmniLight3D.new()
+		light.omni_range = GameBalance.get_number("vfx_light_range")
+		light.shadow_enabled = false
+		lights.add_child(light)
+		park_light(light)
 	furrows = Node3D.new()
 	furrows.name = "Furrows"
 	add_child(furrows)
@@ -189,10 +199,11 @@ void fragment() {
 	warm_up.call_deferred()
 
 
-## Shader warm-up: under a dark cover for the arena's first frames (the scene fade already
-## hides them), fires one burst of every preset in front of the match camera and lights the
-## buffaloes with a near-black impact light, so the GPU compiles those shaders now instead
-## of stalling on the first hit or horn lock. Everything is freed after `vfx_warm_up_frames`.
+## Shader warm-up: under the loading card (LoadingCard) for the arena's first frames (the scene fade already
+## hides them), fires one burst of every preset in front of the match camera, draws a furrow
+## and every floating word, first unlit and then under a near-black impact light, so the GPU
+## compiles those shaders now instead of stalling on the first hit, "HỤT" or horn lock.
+## Everything is freed after `vfx_warm_up_frames` (split between the two passes).
 func warm_up() -> void:
 	if not is_inside_tree():
 		return
@@ -205,6 +216,8 @@ func warm_up() -> void:
 	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	cover.add_child(dark)
+	# Same card as the scene fade, so the fade lifts onto it rather than onto a dark frame.
+	cover.add_child(LoadingCard.build())
 	add_child(cover)
 	warm_frames_left = GameBalance.get_int("vfx_warm_up_settle_frames")
 	# A node-bound callback disconnects on destruction; an awaited coroutine can outlive us.
@@ -219,9 +232,18 @@ func _warm_up_frame() -> void:
 		return
 	if warm_node == null:
 		_begin_warm_up()
-		warm_frames_left = GameBalance.get_int("vfx_warm_up_frames")
+		warm_frames_left = GameBalance.get_int("vfx_warm_up_frames") / 2
 		if warm_frames_left > 0:
 			return
+	if not warm_lit:
+		# Second pass: the same bursts with an impact light in range. A lit scene uses other
+		# shader variants than an unlit one, and a real hit can come with or without a light.
+		warm_lit = true
+		_add_warm_light()
+		warm_frames_left = GameBalance.get_int("vfx_warm_up_frames") / 2
+		if warm_frames_left > 0:
+			return
+	_warm_labels(false)
 	warm_node.queue_free()
 	warm_cover.queue_free()
 	get_tree().process_frame.disconnect(_warm_up_frame)
@@ -251,19 +273,47 @@ func _begin_warm_up() -> void:
 			emitter.global_position = spot
 			emitter.restart()
 	bursts = saved
+	var furrow := _skid_mark()
+	warm.add_child(furrow)
+	furrow.global_position = spot
+	_warm_labels(true)
+
+
+func _add_warm_light() -> void:
 	var light := OmniLight3D.new()
 	light.light_energy = GameBalance.get_number("vfx_warm_up_light_energy")
 	light.omni_range = GameBalance.get_number("vfx_warm_up_light_range_m")
 	light.shadow_enabled = false
-	warm.add_child(light)
+	warm_node.add_child(light)
 	light.global_position = Vector3.UP * GameBalance.get_number("vfx_light_height")
+
+
+## Shows every floating combat word over both buffaloes while warming, so the Label3D
+## shader and the callout glyphs are ready before the first "HỤT" (a ~0.1 s stall on
+## integrated GPUs otherwise). The cover hides them.
+func _warm_labels(on: bool) -> void:
+	for actor in [controller.get("player"), controller.get("opponent")]:
+		if not actor is Node:
+			continue
+		var feedback := (actor as Node).get_node_or_null("CombatFeedback") as BuffaloFeedback
+		if feedback == null:
+			continue
+		if on:
+			feedback.label.text = " ".join(BuffaloFeedback.WORDS.values())
+			feedback.label_time = GameBalance.get_number("combat_label_s")
+			feedback.label.visible = true
+		else:
+			feedback.label_time = 0.0
+			feedback.label.visible = false
 
 
 ## Clear a presentation timeline without changing either actor's gameplay state.
 func reset() -> void:
-	for container in [bursts, lights, furrows]:
+	for container in [bursts, furrows]:
 		for child in container.get_children():
 			child.free()
+	for light in lights.get_children():
+		park_light(light)
 	for timers in [dash_times, skid_times, breath_times, dash_hooves, last_positions, impact_groups]:
 		timers.clear()
 	clock = 0.0
@@ -282,12 +332,12 @@ func _process(delta: float) -> void:
 	if controller.paused:
 		return
 	clock += delta
-	for light: OmniLight3D in lights.get_children():
+	for light: OmniLight3D in active_lights():
 		var remaining := maxf(0.0, float(light.get_meta("remaining")) - delta)
 		light.set_meta("remaining", remaining)
 		light.light_energy = float(light.get_meta("peak")) * remaining / GameBalance.get_number("vfx_light_s")
 		if remaining <= 0.0:
-			light.queue_free()
+			park_light(light)
 	for mark: MeshInstance3D in furrows.get_children():
 		var remaining := float(mark.get_meta("remaining")) - delta
 		mark.set_meta("remaining", remaining)
@@ -447,18 +497,33 @@ func _comfort_flash_scale() -> float:
 
 
 func _flash_light(at: Vector3, tint: Color, strength: float) -> OmniLight3D:
-	if lights.get_child_count() >= GameBalance.get_int("vfx_max_lights"):
+	var idle := lights.get_children().filter(func(light: Node) -> bool: return float(light.get_meta("remaining")) <= 0.0)
+	if idle.is_empty():
 		return null
-	var light := OmniLight3D.new()
+	var light: OmniLight3D = idle[0]
 	light.light_color = tint
 	light.light_energy = GameBalance.get_number("vfx_light_energy") * strength * _comfort_flash_scale()
-	light.omni_range = GameBalance.get_number("vfx_light_range")
-	light.shadow_enabled = false
 	light.set_meta("remaining", GameBalance.get_number("vfx_light_s"))
 	light.set_meta("peak", light.light_energy)
-	lights.add_child(light)
 	light.global_position = at + Vector3.UP * GameBalance.get_number("vfx_light_height")
 	return light
+
+
+## Impact lights that are currently flashing (the rest of the pool is parked dark).
+func active_lights() -> Array[OmniLight3D]:
+	var active: Array[OmniLight3D] = []
+	for light: OmniLight3D in lights.get_children():
+		if float(light.get_meta("remaining")) > 0.0:
+			active.append(light)
+	return active
+
+
+## Darkens a pool light and leaves it on the sand, still in the scene.
+func park_light(light: OmniLight3D) -> void:
+	light.light_energy = 0.0
+	light.set_meta("remaining", 0.0)
+	light.set_meta("peak", 0.0)
+	light.position = Vector3.UP * GameBalance.get_number("vfx_light_height")
 
 
 func _upgrade_impact(group: Dictionary, strength: float) -> void:
@@ -514,24 +579,31 @@ func _skid(actor: Buffalo, slide: Vector3) -> void:
 		if furrows.get_child_count() >= GameBalance.get_int("vfx_skid_max_marks"):
 			break
 		var at := hoof_position(actor, leg)
-		var mark := MeshInstance3D.new()
-		var quad := QuadMesh.new()
-		quad.orientation = PlaneMesh.FACE_Y
-		quad.size = Vector2(GameBalance.get_number("vfx_skid_width"), GameBalance.get_number("vfx_skid_length"))
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.albedo_color = Color(EARTH.darkened(GameBalance.get_number("vfx_skid_darken")), GameBalance.get_number("vfx_skid_alpha"))
-		quad.material = material
-		mark.mesh = quad
-		mark.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mark.set_meta("remaining", GameBalance.get_number("vfx_skid_s"))
+		var mark := _skid_mark()
+		var quad := mark.mesh as QuadMesh
 		furrows.add_child(mark)
 		mark.global_position = at - slide.normalized() * quad.size.y * 0.5
 		mark.global_position.y = GameBalance.get_number("vfx_skid_ground_height")
 		mark.rotation.y = atan2(slide.x, slide.z)
 		_burst(&"SkidDebris", at, EARTH, "skid_debris", 1.0, (slide.normalized() + Vector3.UP * GameBalance.get_number("vfx_debris_upward_bias")).normalized())
 	skid_times[actor.slot] = GameBalance.get_number("vfx_skid_interval_s")
+
+
+## One furrow quad with its own fading material (also drawn by the warm-up).
+func _skid_mark() -> MeshInstance3D:
+	var mark := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.orientation = PlaneMesh.FACE_Y
+	quad.size = Vector2(GameBalance.get_number("vfx_skid_width"), GameBalance.get_number("vfx_skid_length"))
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(EARTH.darkened(GameBalance.get_number("vfx_skid_darken")), GameBalance.get_number("vfx_skid_alpha"))
+	quad.material = material
+	mark.mesh = quad
+	mark.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mark.set_meta("remaining", GameBalance.get_number("vfx_skid_s"))
+	return mark
 
 
 # One-shot emitter; skipped once `vfx_max_emitters` are alive so effects stay cheap.

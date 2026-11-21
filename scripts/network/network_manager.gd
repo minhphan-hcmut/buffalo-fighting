@@ -119,34 +119,52 @@ func host(port: int = DEFAULT_PORT) -> Error:
 	var error := peer.create_server(port, MAX_CLIENTS, ENET_CHANNEL_COUNT)
 	if error != OK:
 		peer = null
-		status_changed.emit("Không thể mở phòng: %s" % error_string(error))
+		status_changed.emit(Language.t("Không thể mở phòng: %s") % error_string(error))
 		return error
 	multiplayer.multiplayer_peer = peer
 	is_host = true
 	connected = true
 	_wire_multiplayer()
-	status_changed.emit("Đang host LAN · port %d · chờ người chơi" % port)
+	var address := local_ipv4()
+	if address.is_empty():
+		status_changed.emit(Language.t("Đã tạo phòng · cổng %d · chờ người chơi") % port)
+	else:
+		status_changed.emit(Language.t("Đã tạo phòng · máy kia nhập %s (cổng %d) · chờ người chơi") % [address, port])
 	return OK
+
+
+## First private IPv4 of this machine (192.168.x, 10.x, 172.16–31.x), or "" when none.
+## Shown to the host so the other player knows what to type.
+static func local_ipv4() -> String:
+	for address in IP.get_local_addresses():
+		var parts := address.split(".")
+		if parts.size() != 4:
+			continue
+		var a := int(parts[0])
+		var b := int(parts[1])
+		if a == 192 and b == 168 or a == 10 or a == 172 and b >= 16 and b <= 31:
+			return address
+	return ""
 
 
 func join(address: String, port: int = DEFAULT_PORT) -> Error:
 	var clean_address := address.strip_edges()
 	if clean_address.is_empty():
-		status_changed.emit("Hãy nhập địa chỉ IPv4 của máy host")
+		status_changed.emit("Hãy nhập địa chỉ IPv4 của máy tạo phòng")
 		return ERR_INVALID_PARAMETER
 	leave()
 	peer = ENetMultiplayerPeer.new()
 	var error := peer.create_client(clean_address, port, ENET_CHANNEL_COUNT)
 	if error != OK:
 		peer = null
-		status_changed.emit("Không thể bắt đầu kết nối: %s" % error_string(error))
+		status_changed.emit(Language.t("Không thể bắt đầu kết nối: %s") % error_string(error))
 		return error
 	multiplayer.multiplayer_peer = peer
 	is_host = false
 	connected = false
 	_connection_deadline = Time.get_ticks_msec() + int(CONNECTION_TIMEOUT_SECONDS * 1000.0)
 	_wire_multiplayer()
-	status_changed.emit("Đang kết nối tới %s:%d (tối đa 10 giây)" % [clean_address, port])
+	status_changed.emit(Language.t("Đang kết nối tới %s:%d (tối đa 10 giây)") % [clean_address, port])
 	return OK
 
 
@@ -275,7 +293,7 @@ func _on_connection_failed() -> void:
 
 
 func _on_server_disconnected() -> void:
-	_fail_connection("Đã mất kết nối tới máy host")
+	_fail_connection("Đã mất kết nối tới máy tạo phòng")
 
 
 @rpc("any_peer", "call_remote", "reliable")

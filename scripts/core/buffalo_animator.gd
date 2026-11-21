@@ -1,7 +1,7 @@
 class_name BuffaloAnimator
 extends Node3D
 ## Visual-only procedural motion for the unrigged buffalo model (animation stage A).
-## Moves this node, a runtime HERO leg skeleton and legacy ear/tail pivots; the physics body is never touched,
+## Moves this node, a runtime HERO skeleton (legs, neck, hips) and legacy ear/tail pivots; the physics body is never touched,
 ## so gameplay, LAN and combat tests are unaffected. Motion is read from the body's actual
 ## displacement, which also works on a LAN client where velocity is not replicated.
 
@@ -39,6 +39,16 @@ const LEG_HOOF_FORWARD_SQUASH := 0.6
 # Vertices below x follow the leg fully; above y they belong to the torso.
 const LEG_ATTACH_Y := Vector2(0.58, 0.85)
 const LEG_KNEE_BLEND := 0.07
+# Neck: head, neck and horns turn about the base of the neck (measured from buffalo_hero.glb).
+# Body skin ramps from the torso (z > x) to the head (z < y); horns follow rigidly.
+const NECK_PIVOT := Vector3(0.0, 1.25, -0.55)
+const NECK_RAMP_Z := Vector2(-0.45, -0.8)
+const NECK_MIN_Y := Vector2(0.85, 1.05)
+# Hips: the rear half (with both hind legs) yaws about mid-body so the spine bends in a turn.
+const HIPS_PIVOT := Vector3(0.0, 1.1, 0.35)
+const HIPS_RAMP_Z := Vector2(0.05, 0.75)
+const NECK_BONE := 9
+const HIPS_BONE := 10
 
 var buffalo: Buffalo
 var controller: MatchController
@@ -89,6 +99,10 @@ var _action_visual_time := 0.0
 # Which side the next horn swing's slash VFX sweeps from (+1/-1); flips on every swing.
 # Presentation bookkeeping only: it does not change the pose.
 var _hook_side := -1.0
+## Secondary motion springs, (value, velocity) in radians: the head leads and the hips trail.
+var neck_yaw := Vector2.ZERO
+var neck_pitch := Vector2.ZERO
+var hips_yaw := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -126,6 +140,9 @@ func reset_motion() -> void:
 	forward_accel = 0.0
 	turn_rate = 0.0
 	clash_gait_weight = 0.0
+	neck_yaw = Vector2.ZERO
+	neck_pitch = Vector2.ZERO
+	hips_yaw = Vector2.ZERO
 	_action_visual_state = -1
 	_action_visual_time = 0.0
 
@@ -202,6 +219,7 @@ func update_pose(delta: float) -> void:
 	var shaped := rotation_basis * Basis.from_scale(Vector3(1.0, breath, 1.0))
 	var origin := PITCH_PIVOT - shaped * PITCH_PIVOT + pose_offset + Vector3(0.0, bob + hop, 0.0)
 	transform = Transform3D(shaped, origin)
+	_update_spine(delta, walk)
 	_ground_legs()
 	_update_ears(delta, result)
 	_update_tail(walk)
@@ -379,12 +397,22 @@ func _build_leg_shapes() -> void:
 		var joint: Vector4 = LEG_JOINTS[leg]
 		var upper := leg_skeleton.add_bone("Leg%d_Upper" % leg)
 		leg_skeleton.set_bone_parent(upper, 0)
-		leg_skeleton.set_bone_rest(upper, Transform3D(Basis(), Vector3(joint.x, joint.w, joint.z)))
+		leg_skeleton.set_bone_rest(upper, Transform3D(Basis(), Vector3(joint.x, joint.w, joint.z) - _leg_parent_origin(leg)))
 		var lower := leg_skeleton.add_bone("Leg%d_Lower" % leg)
 		leg_skeleton.set_bone_parent(lower, upper)
 		leg_skeleton.set_bone_rest(lower, Transform3D(Basis(), Vector3(0.0, joint.y - joint.w, 0.0)))
 		skin.add_bind(upper, Transform3D(Basis(), -Vector3(joint.x, joint.w, joint.z)))
 		skin.add_bind(lower, Transform3D(Basis(), -Vector3(joint.x, joint.y, joint.z)))
+	var neck := leg_skeleton.add_bone("Neck")
+	leg_skeleton.set_bone_parent(neck, 0)
+	leg_skeleton.set_bone_rest(neck, Transform3D(Basis(), NECK_PIVOT))
+	skin.add_bind(neck, Transform3D(Basis(), -NECK_PIVOT))
+	var hips := leg_skeleton.add_bone("Hips")
+	leg_skeleton.set_bone_parent(hips, 0)
+	leg_skeleton.set_bone_rest(hips, Transform3D(Basis(), HIPS_PIVOT))
+	skin.add_bind(hips, Transform3D(Basis(), -HIPS_PIVOT))
+	for leg in [2, 3]:
+		leg_skeleton.set_bone_parent(1 + leg * 2, hips)
 	leg_skeleton.reset_bone_poses()
 	var source := leg_mesh.mesh
 	var animated := ArrayMesh.new()
@@ -395,11 +423,17 @@ func _build_leg_shapes() -> void:
 		var weights := PackedFloat32Array()
 		bones.resize(vertices.size() * 4)
 		weights.resize(vertices.size() * 4)
+		var material := source.surface_get_material(surface)
+		var horn_surface := material != null and String(material.resource_name).containsn("horn")
 		for i in vertices.size():
 			var vertex := vertices[i]
 			var leg := _leg_for_vertex(vertex)
+			# The fourth influence is the neck or the hips (never both: their ramps do not overlap).
+			var spine := _spine_weight(vertex, horn_surface)
 			bones[i * 4] = 0
-			weights[i * 4] = 1.0
+			weights[i * 4] = 1.0 - absf(spine)
+			bones[i * 4 + 3] = NECK_BONE if spine > 0.0 else HIPS_BONE
+			weights[i * 4 + 3] = absf(spine)
 			if leg < 0:
 				continue
 			var joint: Vector4 = LEG_JOINTS[leg]
@@ -411,7 +445,8 @@ func _build_leg_shapes() -> void:
 			var attach := 1.0 - smoothstep(LEG_ATTACH_Y.x, LEG_ATTACH_Y.y, vertex.y)
 			var leg_weight := member * attach
 			var below_knee := 1.0 - smoothstep(joint.y - LEG_KNEE_BLEND, joint.y + LEG_KNEE_BLEND, vertex.y)
-			weights[i * 4] = 1.0 - leg_weight
+			weights[i * 4] = (1.0 - leg_weight) * (1.0 - absf(spine))
+			weights[i * 4 + 3] = (1.0 - leg_weight) * absf(spine)
 			bones[i * 4 + 1] = 1 + leg * 2
 			weights[i * 4 + 1] = leg_weight * (1.0 - below_knee)
 			bones[i * 4 + 2] = 2 + leg * 2
@@ -423,6 +458,93 @@ func _build_leg_shapes() -> void:
 	leg_mesh.mesh = animated
 	leg_mesh.skin = skin
 	leg_mesh.skeleton = leg_mesh.get_path_to(leg_skeleton)
+
+
+# Rear legs hang from the hips bone, front legs from the root.
+func _leg_parent_origin(leg: int) -> Vector3:
+	return HIPS_PIVOT if leg >= 2 else Vector3.ZERO
+
+
+# Positive: share of the neck bone; negative: share of the hips bone; 0: torso only.
+# Horns follow the head rigidly, tips included: they sweep back over the shoulders, and a
+# tip left on the torso would stretch the horn. The horn surface also holds the hooves (below y 0.8).
+func _spine_weight(vertex: Vector3, horn_surface: bool) -> float:
+	if horn_surface and vertex.y > 0.8:
+		return 1.0
+	var neck := (1.0 - smoothstep(NECK_RAMP_Z.y, NECK_RAMP_Z.x, vertex.z)) * smoothstep(NECK_MIN_Y.x, NECK_MIN_Y.y, vertex.y)
+	if neck > 0.0:
+		return neck
+	return -smoothstep(HIPS_RAMP_Z.x, HIPS_RAMP_Z.y, vertex.z)
+
+
+## Head and hips secondary motion. The neck leads: it turns toward the opponent and into a
+## turn, nods with the stride, lags behind a lunge and dips under braking. The hips trail a
+## turn so the spine bends. Both run on soft springs, so a stop settles instead of snapping.
+## Visual only, like the rest of the animator.
+func _update_spine(delta: float, walk: float) -> void:
+	if leg_skeleton == null:
+		return
+	var dt := minf(delta, 1.0 / 30.0)
+	var state := buffalo.state
+	var still := 1.0 - minf(walk, 1.0)
+	var look := 0.0
+	var rival := _rival()
+	if (state == Buffalo.State.NORMAL or state == Buffalo.State.GUARD) and rival != null and _result_for_self() == 0:
+		var local := buffalo.to_local(rival.global_position)
+		look = atan2(-local.x, -local.z)
+	var look_max := deg_to_rad(GameBalance.get_number("anim_neck_look_max_deg", 18.0))
+	var yaw_target := clampf(look, -look_max, look_max) * (0.5 + 0.5 * still)
+	yaw_target += turn_rate * GameBalance.get_number("anim_neck_turn_lead", 0.12)
+	var progress := clampf(buffalo.state_time / buffalo.state_duration, 0.0, 1.0) if buffalo.state_duration > 0.0 else 0.0
+	var pitch_target := deg_to_rad(
+		clampf(forward_accel * GameBalance.get_number("anim_neck_accel_pitch", 0.35), -6.0, 6.0)
+		- GameBalance.get_number("anim_neck_nod_deg", 2.0) * minf(walk, 1.0) * sin(gait_phase * TAU * 2.0 + 1.6)
+	)
+	var dip := deg_to_rad(GameBalance.get_number("anim_neck_horn_dip_deg", 8.0))
+	match state:
+		Buffalo.State.HORN_STARTUP:
+			pitch_target -= dip * smoothstep(0.0, 1.0, _action_progress("horn_startup_s"))
+		Buffalo.State.HORN_ACTIVE:
+			pitch_target += deg_to_rad(GameBalance.get_number("anim_neck_horn_toss_deg", 6.0)) * smoothstep(0.3, 1.0, _action_progress("horn_active_s"))
+		Buffalo.State.DASH_ACTIVE:
+			pitch_target -= dip * 0.6
+		Buffalo.State.GUARD:
+			pitch_target -= deg_to_rad(4.0)
+		Buffalo.State.STUNNED:
+			var fade := 1.0 - progress
+			pitch_target += deg_to_rad(8.0) * fade
+			yaw_target += deg_to_rad(GameBalance.get_number("anim_neck_stun_shake_deg", 7.0)) * fade * sin(time * 17.0)
+		Buffalo.State.CLASH:
+			# Horns stay locked: the clash pose already places both heads.
+			yaw_target = 0.0
+			pitch_target = 0.0
+		Buffalo.State.FLEE:
+			pitch_target -= deg_to_rad(10.0)
+	pitch_target += deg_to_rad(victory_weight * 7.0 - defeat_weight * 12.0)
+	yaw_target += victory_weight * deg_to_rad(8.0) * sin(time * TAU * 0.6)
+	var yaw_max := deg_to_rad(GameBalance.get_number("anim_neck_yaw_max_deg", 24.0))
+	var neck_hz := GameBalance.get_number("anim_neck_spring_hz", 2.6)
+	var neck_damping := GameBalance.get_number("anim_neck_damping", 0.5)
+	neck_yaw = _spring(neck_yaw, clampf(yaw_target, -yaw_max, yaw_max), neck_hz, neck_damping, dt)
+	neck_pitch = _spring(neck_pitch, pitch_target, neck_hz, neck_damping, dt)
+	var hips_max := deg_to_rad(GameBalance.get_number("anim_hips_max_deg", 7.0))
+	var hips_target := 0.0 if state == Buffalo.State.CLASH else clampf(turn_rate * GameBalance.get_number("anim_hips_turn_lag", 0.08), -hips_max, hips_max)
+	hips_yaw = _spring(hips_yaw, hips_target, GameBalance.get_number("anim_hips_spring_hz", 2.0), GameBalance.get_number("anim_hips_damping", 0.6), dt)
+	leg_skeleton.set_bone_pose_rotation(NECK_BONE, Quaternion.from_euler(Vector3(neck_pitch.x, neck_yaw.x, 0.0)))
+	leg_skeleton.set_bone_pose_rotation(HIPS_BONE, Quaternion(Vector3.UP, hips_yaw.x))
+
+
+# Damped spring step: (value, velocity) toward `target`; damping < 1 overshoots a little.
+static func _spring(state: Vector2, target: float, hz: float, damping: float, dt: float) -> Vector2:
+	var omega := TAU * hz
+	var velocity := state.y + (omega * omega * (target - state.x) - 2.0 * damping * omega * state.y) * dt
+	return Vector2(state.x + velocity * dt, velocity)
+
+
+func _rival() -> Buffalo:
+	if controller == null:
+		return null
+	return controller.opponent if buffalo == controller.player else controller.player
 
 
 # The leg whose column is closest to `vertex` in plan view, or -1 above the legs.
@@ -510,10 +632,14 @@ func _ground_legs() -> void:
 		var joint: Vector4 = LEG_JOINTS[leg]
 		var upper_length := joint.w - joint.y
 		var lower_length := joint.y
-		var shoulder := Vector3(joint.x, joint.w, joint.z)
+		# Rear legs hang from the hips: work in skeleton space, then hand the bone its local rotation.
+		var parent := Quaternion(Vector3.UP, hips_yaw.x) if leg >= 2 else Quaternion.IDENTITY
+		var origin := _leg_parent_origin(leg)
+		var shoulder := origin + parent * (Vector3(joint.x, joint.w, joint.z) - origin)
 		var upper_pose := leg_skeleton.get_bone_pose_rotation(1 + leg * 2)
 		var lower_pose := leg_skeleton.get_bone_pose_rotation(2 + leg * 2)
-		var hoof := shoulder + upper_pose * Vector3(0.0, -upper_length, 0.0) + upper_pose * lower_pose * Vector3(0.0, -lower_length, 0.0)
+		var upper_global := parent * upper_pose
+		var hoof := shoulder + upper_global * Vector3(0.0, -upper_length, 0.0) + upper_global * lower_pose * Vector3(0.0, -lower_length, 0.0)
 		var planted := to_buffalo * hoof
 		var sink := -planted.y
 		if sink <= 0.0:
@@ -538,7 +664,7 @@ func _ground_legs() -> void:
 		var solved_lower := Quaternion(Vector3.DOWN, solved_upper.inverse() * (shoulder + along * distance - knee).normalized())
 		# Ease in over the first few centimetres so a hoof grazing the ground never pops.
 		var weight := clampf(sink / blend, 0.0, 1.0)
-		leg_skeleton.set_bone_pose_rotation(1 + leg * 2, upper_pose.slerp(solved_upper, weight))
+		leg_skeleton.set_bone_pose_rotation(1 + leg * 2, upper_pose.slerp(parent.inverse() * solved_upper, weight))
 		leg_skeleton.set_bone_pose_rotation(2 + leg * 2, lower_pose.slerp(solved_lower, weight))
 
 
@@ -606,7 +732,15 @@ func _is_paused() -> bool:
 ## Read-only, for VFX: a point given in the visual's rest space (e.g. the horn tips), in the
 ## buffalo body's space after this frame's pose.
 func head_point(rest: Vector3) -> Vector3:
-	return buffalo.to_local(to_global(rest)) if buffalo != null and is_inside_tree() else transform * rest
+	if buffalo == null or not is_inside_tree():
+		return transform * rest
+	if leg_skeleton != null:
+		# The head turns on the neck bone: carry the rest point with it.
+		var to_skeleton := global_transform.affine_inverse() * leg_skeleton.global_transform
+		var local := to_skeleton.affine_inverse() * rest
+		local = NECK_PIVOT + leg_skeleton.get_bone_pose_rotation(NECK_BONE) * (local - NECK_PIVOT)
+		rest = to_skeleton * local
+	return buffalo.to_local(to_global(rest))
 
 
 ## Read-only, for VFX: where the hoof of `leg` is this frame, in the buffalo body's space.

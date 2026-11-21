@@ -65,13 +65,15 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 | `match_network.gd` | Nối `MatchController` với LAN: gửi/nhận input, snapshot, sự kiện; giữ kết quả trước snapshot trễ/rời trận. Tái đấu chỉ từ kết quả: mỗi bên đồng ý, host phát REMATCH_START tin cậy rồi hai scene nạp lại, giữ ENet/slot, state/stats mới. Epoch chặn input/snapshot/RESULT/COMBAT từ trận cũ, kể cả khoảng nạp scene. Peer rời ở bất kỳ lúc nào → khóa tái đấu, giữ kết quả và hiện thông báo. |
 | `session_state.gd` | Dữ liệu sống qua các lần đổi scene: mùa Solo năm vòng theo `SOLO_LEVELS` (L01–L05), màn hiện tại, kết quả trước, thẻ văn hóa và màn Phần Lễ đã xem (`take_rites_before()` trước L01/L03/L05). Cờ `free_play`/`training` giữ mô phỏng SOLO nhưng chặn tăng vòng/nghi lễ, giữ tiến trình mùa khi rời trận. Sân tập chọn `drill_id` qua `begin_training()`; Sức vô hạn mặc định tắt, lưu cùng các cài đặt comfort bằng ConfigFile. |
 | `game_balance.gd`, `data_file.gd` | Đọc số từ `data/`. |
+| `key_bindings.gd` | Phím đang gán cho 8 hành động (mã `k<physical keycode>` hoặc `m<nút chuột>`), áp vào InputMap, lưu mục `[keys]` của `settings.cfg`. Gán trùng thì hai hành động đổi phím; `Esc`/`F12` không gán được. `label()`/`short_label()`/`move_label()` cho HUD, Cách chơi, Sân tập. |
+| `language.gd` | Ngôn ngữ: chữ tiếng Việt là khóa dịch, `data/lang/en.po` chỉ nạp khi chọn English nên tiếng Việt luôn là mặc định bất kể ngôn ngữ máy. Label/Button tự dịch; chuỗi ghép từ nhiều phần đi qua `Language.t()`. Lưu `language` trong `settings.cfg`. |
 | `yaw_basis.gd` | Vector trước/phải theo góc quay. |
 
 ### `scripts/core/`: trình bày (không đổi kết quả trận)
 
 | File | Việc của nó |
 |---|---|
-| `buffalo_animator.gd` | Chuyển động thủ tục cho model trâu: lúc chạy dựng bộ xương 4 chân (đùi + cẳng, skin mềm) cho `HeroBody`, chân xoay quanh hông/gối nên không bị kéo dãn; húc, lao, khóa sừng. Thân chỉ ngửa tối đa `MAX_NOSE_UP_DEG` (3°) để móng trước không nhấc khỏi đất khi bị húc. Lúc bị dắt ra (FLEE), bước chân tính theo tốc độ dắt nên đủ sải. File `.glb` gốc không đổi. | Khi thân chúi mũi (húc, lao, gồng sừng), `_ground_legs` gập chân bằng IK hai đoạn để móng không lún xuống đất (chân trước chống ra trước, `leg_ground_*`); góc chúi tối đa `max_nose_down_deg`.
+| `buffalo_animator.gd` | Chuyển động thủ tục cho model trâu: lúc chạy dựng bộ xương cho `HeroBody`: 4 chân (đùi + cẳng, skin mềm, xoay quanh hông/gối nên không bị kéo dãn), cổ (đầu + sừng, sừng theo nguyên khối) và hông (nửa sau, chân sau treo dưới hông); húc, lao, khóa sừng. `_update_spine`: cổ nhìn đối thủ, đi trước khi rẽ, gật theo bước, cúi trước khi húc, lắc khi choáng; hông trễ khi rẽ; lò xo `anim_neck_*`/`anim_hips_*`, thẳng lại khi khóa sừng. Thân chỉ ngửa tối đa `MAX_NOSE_UP_DEG` (3°) để móng trước không nhấc khỏi đất khi bị húc. Lúc bị dắt ra (FLEE), bước chân tính theo tốc độ dắt nên đủ sải. File `.glb` gốc không đổi. | Khi thân chúi mũi (húc, lao, gồng sừng), `_ground_legs` gập chân bằng IK hai đoạn để móng không lún xuống đất (chân trước chống ra trước, `leg_ground_*`); góc chúi tối đa `max_nose_down_deg`.
 | `buffalo_feedback.gd` | Chữ nổi cho khoảnh khắc đáng gọi tên ("GẠT SỪNG!", "PHẢN ĐÒN!", "ĐÁNH SƯỜN!", "ĐÁNH LƯNG!", "HỤT"): màu lấy theme, parry pha PAPER, cỡ/giữ ngắn qua `combat_callout_*`; chiếu khung đầu/sừng đối thủ để dời chữ lên hoặc sang bên, bỏ chữ khi cực gần không còn chỗ an toàn. Horn glow/shader giữ độc lập ở `assets/shaders/horn_glow.gdshader`. |
 | `match_vfx.gd` | Hiệu ứng chỉ đọc. Trúng đòn (húc, lao, phản, sườn/lưng): chớp sao lõi trắng, tia lửa kéo vệt theo hướng bay (shader cộng sáng, `ALIGN_Y_TO_VELOCITY`), sóng xung kích billboard, đèn Omni lóe ngắn (giới hạn số đèn), vòng vàng dưới đất và chùm đất văng theo hướng bị đẩy; đòn nặng mạnh hơn. Đỡ: tia lửa bật ngược; gạt sừng: chớp lớn + vòng tia lửa; khóa sừng: cú va lúc bắt đầu, tia lửa định kỳ và khi móc. Vung sừng: cung chém vàng trước đầu; bắt đầu lao: chớp muzzle, vòng bụi và đất bắn ngược ở móng sau. Ngoài ra: vệt cày khi trượt lùi, bụi từng móng khi lao, hơi thở khi đuối sức, tia ghìm, vòng vàng khi bị ép rào. Sprite Kenney Particle Pack (CC0) ở `assets/vfx/kenney_particle_pack/`. Rung camera theo lực ở `follow_camera.gd`. `warm_up()`: 2 khung đầu trận, dưới màn che tối, bắn một bản mọi preset trước camera cùng đèn gần như tắt để shader biên dịch trước, tránh giật lần đầu lao/trúng/khóa sừng (key `vfx_warm_up_*`); đếm frame bằng callback process_frame gắn node, tự ngắt khi rời cây, không coroutine treo sau free. |
 | `match_audio.gd`, `game_audio.gd` | Âm thanh trận đấu; `GameAudio` là autoload phát nhạc và tiếng, âm lượng theo `data/audio.json`. Cú trúng ghép lớp theo lực (va gỗ Kenney + `sfx_impact_thump`; cú lao/phản đòn dùng bản nặng + lớp `sfx_heavy_crack_N`), `COUNTER_HIT` nâng cấp chứ không phát trùng. Bốn tiếng tự tạo sinh lại bằng `python tools/gen_combat_sfx.py`. Khi thoát, GameAudio dừng/null stream, bỏ cache/voice references; MatchAudio nhả loop riêng và bỏ deferred impact sau khi rời cây. AudioServer headless có thể còn báo playback chưa nhả ở quit tức thời, xem báo cáo đợt 10. |
@@ -110,6 +112,9 @@ như host. Client chỉ gửi input; nó không tự tính luật.
 | `scripts/ui/culture_cards.gd` | Chọn thẻ văn hóa chưa xem trong mùa Solo qua SessionState; ưu tiên thẻ di sản khi thắng chung kết. Lịch sử sưu tầm Sổ tay lưu riêng, giữ qua lần chạy; file hỏng → rỗng, test `--script` mặc định không đọc/ghi file người chơi. |
 | `scripts/ui/ceremony_view.gd` | Màn Phần Lễ toàn màn hình: cảnh 3D + chú thích + nút tiếp tục. |
 | `scripts/core/graphics_quality.gd`, `scripts/ui/fps_overlay.gd` | Cài đặt Đồ họa: preset Thấp/Vừa/Cao + Khán giả, Bóng đổ, Môi trường, Chi tiết model, Độ phân giải 3D, Giới hạn FPS (Theo màn hình/30–144/Không giới hạn), Hiện FPS. Lưu `user://graphics.cfg` (riêng với settings); GPU tích hợp tự vào Thấp; test `--script` luôn dùng Cao, không đọc/ghi file người chơi. Thấp còn gom hàng rào theo cụm, cập nhật HUD live PLAYING ở `graphics_hud_refresh_hz_low` (30 Hz), giảm số hạt/thời gian bụi và bỏ emitter trang trí (`graphics_vfx_*_low`); chớp/tia va chạm chính và warm-up vẫn giữ. HUD cộng dồn delta để timer hiệu ứng không chậm; pause/countdown/result cập nhật ngay. Vừa/Cao và mô phỏng giữ nguyên. Bổ sung hiệu năng ngoài GDD v0.7. |
+| `scripts/ui/key_bind_button.gd` | Nút một hàng phím ở Cài đặt → Điều khiển: bấm để chờ phím/nút chuột mới, `Esc` hủy, báo hàng khác cập nhật khi hai phím đổi chỗ. |
+| `scripts/ui/credits_screen.gd` | Màn THỰC HIỆN từ menu: nhóm, tài nguyên CC0, công cụ đọc `data/credits.json`; dòng phiên bản lấy `application/config/version`. |
+| `scripts/ui/loading_card.gd` | Màn chờ "ĐANG VÀO SÂN" (ảnh `assets/ui/loading_arena.jpg` + chữ), dùng ở lớp chuyển cảnh vào trận (`UiMotion.change_scene(..., true)`) và lớp che lúc warm-up VFX. |
 | `scripts/ui/lobby.gd` | Sảnh LAN: tạo/vào phòng, trạng thái kết nối và đường quay về menu. |
 | `scripts/ui/settings_screen.gd`, `settings_controls.gd`, `settings_row.gd`, `settings_selector.gd` | Một overlay Cài đặt dùng chung menu/pause, 5 tab Âm thanh / Điều khiển / Camera / Đồ họa / Hiệu ứng; hàng đồng nhất có cột điều khiển cố định và cuộn theo focus. Selector chuyển vòng bằng mũi tên/Left/Right/D-pad; Q/E hoặc LB/RB đổi tab. Khôi phục mặc định chỉ reset tab hiện tại (Đồ họa dùng preset tự chọn theo GPU + FPS mặc định). Giữ nguyên SessionState/GraphicsQuality, khóa focus phía sau, Xong/Esc/B trả focus về nút mở và giữ trạng thái pause/LAN. |
 | `scenes/` | `main_menu.tscn` (scene khởi động), `arena.tscn`, `buffalo.tscn`, `lobby.tscn`. |
@@ -159,6 +164,8 @@ Test lifecycle: `hud_presenters_test.gd`, `match_overlay_lifecycle_test.gd`, `so
 | `ceremony.json` | Chữ và thời lượng 5 màn Phần Lễ. `water`/`giap`/`drums` hiện trước L01/L03/L05, mỗi màn một lần mỗi mùa hội. | Đổi lời dẫn nghi lễ. |
 | `culture_cards.json` | Năm thẻ văn hóa, nguồn tư liệu và thẻ ưu tiên khi thắng chung kết. | Chỉ đổi nội dung thẻ sau trận Solo, không đổi kết quả trận. |
 | `audio.json` | Âm lượng nhạc/tiếng và nhịp tiếng bước chân. | Đổi độ to nhỏ. |
+| `credits.json` | Các mục của màn THỰC HIỆN (nhóm, tài nguyên, công cụ). | Đổi danh sách ghi nhận. |
+| `lang/en.po` | Bản dịch tiếng Anh: `msgid` là chữ tiếng Việt trong code/data, `msgstr` là tiếng Anh. Tên riêng (CHỌI TRÂU, tên giáp) giữ nguyên. | Đổi chữ khi chơi bằng tiếng Anh; thiếu dòng thì chữ đó hiện tiếng Việt (`language_test.gd` bắt). |
 
 Cả `balance.json` và `presentation.json` đều đọc bằng `GameBalance.get_number("tên_key")`.
 Một key chỉ được nằm ở một file (`tests/data_files_test.gd` kiểm tra điều này).
@@ -187,6 +194,9 @@ hoặc 2 (xanh).
 - **Đổi cảnh sân hay Phần Lễ:** `arena_builder.gd` (phần có va chạm), `arena_dressing.gd`
   (cảnh trang trí), `ceremony_diorama.gd`; người và đồ vật dựng bằng `LowPoly`.
 - **Đổi góc camera:** các key `camera_*` trong `data/presentation.json`; code ở `follow_camera.gd`.
+- **Thêm chữ hiện trên màn hình:** viết tiếng Việt như cũ, thêm bản dịch vào `data/lang/en.po`; chuỗi
+  ghép (`%s`, nối chuỗi) bọc từng phần bằng `Language.t()`.
+- **Thêm phím cho hành động mới:** thêm vào `KeyBindings.ACTIONS`/`DEFAULTS`; hàng ở Cài đặt tự hiện.
 
 ## Test
 

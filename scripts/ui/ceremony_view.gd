@@ -107,7 +107,7 @@ func _build_caption(scene: Dictionary) -> void:
 	text.add_child(_label(String(scene.get("date", "")), 18, Color("#E8BC65")))
 	text.add_child(_label(String(scene.get("title", "")), 34, Color("#F2E6CF")))
 	var lines: Array = scene.get("lines", [])
-	caption_label = _label("\n".join(PackedStringArray(lines)), 20, Color("#F2E6CF"))
+	caption_label = _label("\n".join(PackedStringArray(lines.map(func(line: String): return Language.t(line)))), 20, Color("#F2E6CF"))
 	caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(caption_label)
 	text.add_child(_label(String(settings.get("skip_hint", "")), 15, Color("#C9B48A")))

@@ -18,11 +18,16 @@ func _ready() -> void:
 	keyboard.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
 	devices.add_child(keyboard)
 	keyboard.add_child(label("BÀN PHÍM", "heading", GOLD))
-	_key_row(keyboard, ["Esc"], "Tạm dừng")
-	_key_row(keyboard, ["F12"], "Chụp màn hình")
-	_key_row(keyboard, ["Q", "W", "E", "R", "T"], "W A S D · Đi theo hướng camera")
-	_key_row(keyboard, ["A", "S", "D", "F", "G"], "G · Gạt sừng đúng lúc")
-	_key_row(keyboard, ["Space"], "Hổ lao")
+	# Esc and F12 share a row so the page fits the 720p panel above "QUAY LẠI".
+	var system := _key_row(keyboard, ["Esc"], "Tạm dừng")
+	var gap := Control.new()
+	gap.custom_minimum_size.x = GameBalance.get_number("ui_howto_gap") * 2.0
+	system.add_child(gap)
+	system.add_child(keycap("F12"))
+	system.add_child(label("Chụp màn hình", "body", PAPER))
+	_key_row(keyboard, ["Q", "W", "E", "R", "T"], Language.t("%s · Đi theo hướng camera") % spaced_moves())
+	_key_row(keyboard, ["A", "S", "D", "F", "G"], Language.t("%s · Gạt sừng đúng lúc") % KeyBindings.label("parry"))
+	_key_row(keyboard, [KeyBindings.label("dash")], "Hổ lao")
 	keyboard.add_child(label("Phím vàng là phím dùng trong trận.", "body", PAPER))
 	var mouse := VBoxContainer.new()
 	mouse.custom_minimum_size.x = GameBalance.get_number("ui_howto_mouse_width")
@@ -32,8 +37,8 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
 	mouse.add_child(buttons)
-	for item in [["Chuột trái", "Húc"], ["Chuột phải", "Ghìm (giữ)"]]:
-		var cap := keycap(item[0] + "\n" + item[1])
+	for item in [[Language.t("Chuột trái"), _mouse_action(MOUSE_BUTTON_LEFT)], [Language.t("Chuột phải"), _mouse_action(MOUSE_BUTTON_RIGHT)]]:
+		var cap := keycap(item[0] + "\n" + item[1], item[1] != "—")
 		cap.name = "MouseLeft" if item[0] == "Chuột trái" else "MouseRight"
 		cap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cap.custom_minimum_size.y = GameBalance.get_number("ui_howto_mouse_button_height")
@@ -60,22 +65,41 @@ func _ready() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_gap"))
 	content.add_child(row)
-	for item in [["W A S D", "Đẩy về đối thủ"], ["Chuột trái", "Móc"], ["Chuột phải", "Nhả"]]:
+	for item in [[spaced_moves(), "Đẩy về đối thủ"], [KeyBindings.label("horn"), "Móc"], [KeyBindings.label("guard"), "Nhả"]]:
 		row.add_child(keycap(item[0]))
 		row.add_child(label(item[1], "body", PAPER))
 	content.add_child(label("Nhả lúc đối thủ móc khiến họ mất khí thế; nhả sai lúc bạn mất khí thế.", "body", PAPER))
 
 
-func _key_row(parent: Container, keys: Array, action: String) -> void:
+func _key_row(parent: Container, keys: Array, action: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", GameBalance.get_int("ui_howto_key_gap"))
 	parent.add_child(row)
+	var used := ["Esc", "F12"]
+	for entry in KeyBindings.ACTIONS:
+		used.append(KeyBindings.label(entry[0]))
 	for key: String in keys:
-		var cap := keycap(key, key in ["Esc", "F12", "W", "A", "S", "D", "G", "Space"])
-		if key == "Space":
+		var cap := keycap(key, key in used)
+		if key.length() > 3:
 			cap.custom_minimum_size.x = GameBalance.get_number("ui_howto_space_width")
 		row.add_child(cap)
 	row.add_child(label(action, "body", PAPER))
+	return row
+
+
+## "W A S D" for single-letter movement keys, else names joined by "/".
+static func spaced_moves() -> String:
+	var moves := KeyBindings.move_label()
+	return moves if moves.contains("/") else " ".join(moves.split(""))
+
+
+## What a mouse button does in a match, "—" when nothing is bound to it.
+static func _mouse_action(button: MouseButton) -> String:
+	var names := {"horn": "Húc", "guard": "Ghìm (giữ)", "dash": "Hổ lao", "parry": "Gạt sừng"}
+	for entry in KeyBindings.ACTIONS:
+		if KeyBindings.bindings[entry[0]] == "m%d" % button:
+			return Language.t(names.get(entry[0], entry[1]))
+	return "—"
 
 
 ## A shared festival keycap; unused context keys retain the muted fill.

@@ -57,8 +57,7 @@ func _build_session_overlay() -> void:
 	panel.anchor_bottom = 0.5
 	panel.offset_left = 64.0
 	panel.offset_right = 64.0 + 540.0
-	panel.offset_top = -230.0
-	panel.offset_bottom = 230.0
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var content := VBoxContainer.new()
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 20)
@@ -97,13 +96,15 @@ func _show_result(result_key: String) -> void:
 		result_title.text = "KHÉP MÙA HỘI"
 		result_detail.text = "Ông trâu vô địch được rước về đình.\nLễ tạ ơn, tiễn thần khép mùa hội."
 	else:
-		result_title.text = "KẾT QUẢ · %s" % _round_name(level)
-		var winner := "Ông trâu số 06" if won else "Ông trâu đối phương"
+		result_title.text = Language.t("KẾT QUẢ · %s") % _round_name(level)
+		var rival := Language.t("số %s") % _opponent_number(level)
+		var winner := Language.t("Ông trâu số 06") if won else Language.t("Ông trâu %s") % rival
+		var loser := Language.t("trâu %s lui sới") % rival if won else Language.t("trâu của bạn lui sới")
 		var reason: String = {
-			&"FLEE": "thắng thế, đối phương lui sới",
-			&"TIME": "khí thế cao hơn khi hết giờ",
-			&"LOT": "thắng bốc thăm"
-		}.get(data.reason, "trận đấu kết thúc")
+			&"FLEE": Language.t("thắng thế, %s") % loser,
+			&"TIME": Language.t("thắng nhờ khí thế cao hơn khi hết giờ"),
+			&"LOT": Language.t("thắng bốc thăm")
+		}.get(data.reason, Language.t("trận đấu kết thúc"))
 		result_detail.text = "%s · %s" % [winner, reason]
 	_render_culture_card(data.culture)
 	var content := result_actions.get_parent()
@@ -113,14 +114,11 @@ func _show_result(result_key: String) -> void:
 		old_stats.queue_free()
 	var arena := get_tree().current_scene as MatchController
 	if arena != null and arena.hud.stats != null:
-		result_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 		var block: GridContainer = arena.hud.stats.create_block()
 		content.add_child(block)
 		content.move_child(block, result_detail.get_index() + 1)
 		content.add_theme_constant_override("separation", GameBalance.get_int("stats_result_gap"))
 		result_panel.offset_right = result_panel.offset_left + GameBalance.get_number("stats_result_width")
-		result_panel.offset_top = -GameBalance.get_number("stats_result_half_height")
-		result_panel.offset_bottom = GameBalance.get_number("stats_result_half_height")
 
 	var retry := _button("CHƠI LẠI" if data.free_play else "CHƠI LẠI TRẬN NÀY", &"PrimaryButton")
 	retry.pressed.connect(_retry)
@@ -131,7 +129,7 @@ func _show_result(result_key: String) -> void:
 		result_actions.add_child(change)
 	elif won and not final_win:
 		retry.theme_type_variation = &"SecondaryButton"
-		var next := _button("TRẬN TIẾP THEO · %s" % _round_name(data.next_level), &"PrimaryButton")
+		var next := _button(Language.t("TRẬN TIẾP THEO · %s") % _round_name(data.next_level), &"PrimaryButton")
 		next.pressed.connect(_next)
 		result_actions.add_child(next)
 		result_actions.move_child(next, 0)
@@ -148,6 +146,7 @@ func _show_result(result_key: String) -> void:
 			style.content_margin_bottom = style.content_margin_top
 			button.add_theme_stylebox_override(state, style)
 	HudText.apply(result_panel)
+	_fit_height()
 	if final_win:
 		result_panel.hide()
 		_closing.call(reveal_result.bind(retry))
@@ -159,6 +158,13 @@ func _show_result(result_key: String) -> void:
 
 func _show_culture_card(final_win: bool) -> void:
 	_render_culture_card(_select_card.call(final_win))
+
+
+## Height follows the content: zero offsets on a centre anchor that grows both ways
+## leave the panel at its minimum size, centred.
+func _fit_height() -> void:
+	result_panel.offset_top = 0.0
+	result_panel.offset_bottom = 0.0
 
 
 func _render_culture_card(selection: Dictionary) -> void:
@@ -173,8 +179,7 @@ func _render_culture_card(selection: Dictionary) -> void:
 	var has_card := not card.is_empty()
 	result_panel.offset_left = 40.0 if has_card else 64.0
 	result_panel.offset_right = 640.0 if has_card else 604.0
-	result_panel.offset_top = -290.0 if has_card else -230.0
-	result_panel.offset_bottom = 290.0 if has_card else 230.0
+	_fit_height()
 	content.add_theme_constant_override("separation", 12 if has_card else 20)
 	HudText.set_size(result_title, "font_size", GameBalance.get_int("ui_result_title_size"))
 	HudText.set_size(result_detail, "font_size", GameBalance.get_int("ui_result_reason_size"))
@@ -194,7 +199,7 @@ func _render_culture_card(selection: Dictionary) -> void:
 	var text := VBoxContainer.new()
 	text.add_theme_constant_override("separation", 8)
 	panel.add_child(text)
-	var heading := "%s · %d/%d" % [data.label, selection.count, data.cards.size()]
+	var heading := "%s · %d/%d" % [Language.t(data.label), selection.count, data.cards.size()]
 	text.add_child(_culture_card_label(heading, "label", Color("#E8BC65")))
 	text.add_child(_culture_card_label(card.title, "title", Color("#F2E6CF")))
 	text.add_child(_culture_card_label(card.body, "body", Color("#F2E6CF")))
@@ -239,9 +244,14 @@ func _exit_tree() -> void:
 		_card_tween.kill()
 
 
+func _opponent_number(level: StringName) -> String:
+	var levels := DataFile.load_json("res://data/levels.json")
+	return String(levels.get(String(level), {}).get("opponent_number", "đối phương"))
+
+
 func _round_name(level: StringName) -> String:
 	var levels := DataFile.load_json("res://data/levels.json")
-	return String(levels.get(String(level), {}).get("title", "Mùa hội")).to_upper()
+	return Language.t(String(levels.get(String(level), {}).get("title", "Mùa hội"))).to_upper()
 
 
 func _make_label(text: String, font_size: int, color: Color) -> Label:

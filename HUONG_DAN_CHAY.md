@@ -1,10 +1,24 @@
 # Hướng dẫn chạy game *Chọi trâu: Đấu trường lễ hội*
 
-Game chưa đóng gói thành file `.exe`, nên cần chạy từ mã nguồn bằng Godot. Làm theo một trong
-hai cách dưới đây; nếu bạn nhờ AI agent (Claude Code, Codex, ...) chạy giúp, chỉ cần đưa nó
+Có hai cách chơi: chạy file `buffalo-fighting.exe` (Windows, không cần cài gì), hoặc chạy từ
+mã nguồn bằng Godot. Nếu bạn nhờ AI agent (Claude Code, Codex, ...) chạy giúp, chỉ cần đưa nó
 file này và bảo "làm theo mục Dành cho AI agent".
 
-## 1. Cần chuẩn bị
+## 0. Cách nhanh nhất: chạy file `.exe` (Windows)
+
+1. Lấy file `buffalo-fighting.exe` (khoảng 143 MB, một file duy nhất, đã gói sẵn mọi tài nguyên).
+2. Nhấp đúp để chạy. Windows SmartScreen có thể báo "Windows protected your PC" vì file chưa ký
+   số: bấm **More info → Run anyway**.
+3. Lần đầu vào trận có thể chờ vài giây ở màn **ĐANG VÀO SÂN** trong lúc card đồ họa chuẩn bị shader.
+
+Cài đặt, phím đã đổi và Sổ tay lễ hội được lưu ở
+`%APPDATA%\Godot\app_userdata\Chọi trâu- Đấu trường lễ hội\` (`settings.cfg`, `graphics.cfg`,
+`festival_notebook.json`); ảnh chụp bằng `F12` nằm trong thư mục con `screenshots`. Xóa thư mục này
+để đưa game về mặc định.
+
+Tự build lại file exe từ mã nguồn: xem mục *Chạy và kiểm tra* trong `README.md`.
+
+## 1. Cần chuẩn bị (chạy từ mã nguồn)
 
 | Thứ cần | Ghi chú |
 |---|---|
@@ -58,6 +72,13 @@ Mục tiêu: mở cửa sổ game cho người dùng xem. Làm đúng thứ tự
 
 ## 5. Điều khiển (bàn phím + chuột)
 
+Đây là phím mặc định. Đổi phím ở **Cài đặt → Điều khiển**: chọn một hàng, bấm phím hoặc nút chuột
+mới (`Esc` để hủy). Gán trùng một phím đang dùng thì hai hành động đổi phím cho nhau. `Esc` và `F12`
+giữ cố định. Hướng dẫn trong game (HUD, Cách chơi, Sân tập) luôn hiện đúng phím đang gán.
+
+Cũng ở **Cài đặt → Điều khiển**, mục **Ngôn ngữ / Language** đổi giữa tiếng Việt (mặc định) và
+tiếng Anh; đổi xong có hiệu lực ngay và được nhớ cho lần sau.
+
 | Phím | Tác dụng |
 |---|---|
 | `W A S D` | Đi theo hướng camera |
@@ -89,5 +110,7 @@ hơn thắng. Mọi đòn tốn **sức**, nghỉ thì hồi. Chi tiết xem **C
 | Báo lỗi C#/.NET | Đang dùng bản .NET, đổi sang bản Standard. |
 | Màn hình đen, báo lỗi OpenGL | Cập nhật driver card đồ họa; laptop 2 GPU thì chọn GPU rời cho Godot. |
 | Thiếu texture/model, màu hồng | Tài nguyên chưa nhập xong: chạy lại lệnh `--import` hoặc mở bằng giao diện và chờ. |
-| Game giật | `Esc` → Cài đặt → Đồ họa → chọn **Thấp**. |
+| Game giật | `Esc` → Cài đặt → Đồ họa → chọn **Thấp**. Máy có card đồ họa tích hợp được tự chọn Thấp ở lần chạy đầu. |
+| Lỡ đổi phím rối, không chơi được | Cài đặt → Điều khiển → **Khôi phục mặc định** (không đổi ngôn ngữ). |
+| Lỡ chọn tiếng Anh | Settings → Controls → **Ngôn ngữ / Language** → Tiếng Việt. |
 | LAN không vào được phòng | Cùng mạng Wi-Fi/LAN; cho phép Godot qua Windows Firewall (mạng Private); nhập đúng IPv4. |

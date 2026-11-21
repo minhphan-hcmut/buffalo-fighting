@@ -54,7 +54,7 @@ func _ready() -> void:
 func refresh() -> void:
 	for index in entries.size():
 		var card: Dictionary = cards[index]
-		entries[index].text = card.title if CultureCards.has_seen(StringName(card.id)) else "%d · Chưa mở" % (index + 1)
+		entries[index].text = card.title if CultureCards.has_seen(StringName(card.id)) else Language.t("%d · Chưa mở") % (index + 1)
 	show_card(0)
 
 
@@ -62,7 +62,7 @@ func show_card(index: int) -> void:
 	var card: Dictionary = cards[index]
 	var seen := CultureCards.has_seen(StringName(card.id))
 	heading.text = card.title if seen else "Chưa mở"
-	body.text = card.body if seen else ("Chưa mở — xem ở vòng %s" % card.round if card.has("round") else "Chưa mở")
+	body.text = card.body if seen else (Language.t("Chưa mở — xem ở vòng %s") % Language.t(card.round) if card.has("round") else Language.t("Chưa mở"))
 	reader.scroll_vertical = 0
 	for i in entries.size():
 		entries[i].toggle_mode = true

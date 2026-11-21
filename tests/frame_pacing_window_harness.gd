@@ -173,7 +173,7 @@ func run() -> void:
 		previous = now
 		nodes.append(int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
 		emitters.append(arena.vfx.bursts.get_child_count())
-		lights.append(arena.vfx.lights.get_child_count())
+		lights.append(arena.vfx.active_lights().size())
 		writes.append(arena.hud.label_writes - previous_writes)
 		previous_writes = arena.hud.label_writes
 	recording = false

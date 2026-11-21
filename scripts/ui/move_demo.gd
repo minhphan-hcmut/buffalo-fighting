@@ -6,13 +6,24 @@ signal tab_step_requested(direction: int)
 
 const BUFFALO_SCENE := preload("res://scenes/buffalo.tscn")
 const MOVES := [
-	{"id": &"horn", "name": "Húc", "keys": "Chuột trái", "text": "Húc gần để làm đối thủ mất khí thế.", "cost": "horn_cost"},
-	{"id": &"dash", "name": "Hổ lao", "keys": "Space", "text": "Lao nhanh về phía trước, đẩy lùi đối thủ.", "cost": "dash_cost"},
-	{"id": &"guard", "name": "Ghìm", "keys": "Giữ chuột phải", "text": "Đỡ phía trước, giảm khí thế mất và lực đẩy; không bị choáng.", "cost": "guard_stamina_per_s"},
-	{"id": &"parry", "name": "Gạt sừng", "keys": "G → Chuột trái", "text": "Gạt đúng lúc, rồi húc ngay để phản đòn.", "cost": "parry_stamina_cost"},
-	{"id": &"clash", "name": "Khóa sừng", "keys": "WASD Đẩy tới · Trái Móc · Phải Nhả", "text": "Hai đòn đối đầu tạo khóa. Đẩy về đối thủ; nhả khi họ móc, nhả sai lúc mất khí thế.", "cost": "lock_stamina_per_s"},
-	{"id": &"flank", "name": "Đánh sườn / lưng", "keys": "Chuột trái", "text": "Húc vào hông hoặc sau lưng khiến đối thủ mất khí thế nhiều hơn.", "cost": "horn_cost"},
+	{"id": &"horn", "name": "Húc", "text": "Húc gần để làm đối thủ mất khí thế.", "cost": "horn_cost"},
+	{"id": &"dash", "name": "Hổ lao", "text": "Lao nhanh về phía trước, đẩy lùi đối thủ.", "cost": "dash_cost"},
+	{"id": &"guard", "name": "Ghìm", "text": "Đỡ phía trước, giảm khí thế mất và lực đẩy; không bị choáng.", "cost": "guard_stamina_per_s"},
+	{"id": &"parry", "name": "Gạt sừng", "text": "Gạt đúng lúc, rồi húc ngay để phản đòn.", "cost": "parry_stamina_cost"},
+	{"id": &"clash", "name": "Khóa sừng", "text": "Hai đòn đối đầu tạo khóa. Đẩy về đối thủ; nhả khi họ móc, nhả sai lúc mất khí thế.", "cost": "lock_stamina_per_s"},
+	{"id": &"flank", "name": "Đánh sườn / lưng", "text": "Húc vào hông hoặc sau lưng khiến đối thủ mất khí thế nhiều hơn.", "cost": "horn_cost"},
 ]
+
+
+## Key hint for a move from the current bindings ("G → Chuột trái" by default).
+static func keys_for(id: StringName) -> String:
+	match id:
+		&"dash": return KeyBindings.label("dash")
+		&"guard": return Language.t("Giữ ") + KeyBindings.inline_label("guard")
+		&"parry": return "%s → %s" % [KeyBindings.label("parry"), KeyBindings.label("horn")]
+		&"clash": return Language.t("%s Đẩy tới · %s Móc · %s Nhả") % [KeyBindings.move_label(), KeyBindings.short_label("horn"), KeyBindings.short_label("guard")]
+	return KeyBindings.label("horn")
+
 
 var selected_move: StringName = &"horn"
 var elapsed := 0.0
@@ -63,7 +74,7 @@ func _ready() -> void:
 		button.gui_input.connect(_move_input.bind(index))
 		move_buttons.append(button)
 		list.add_child(button)
-	var hint := ControlsDiagram.label("↑ ↓ Chọn đòn\n← → Đổi tab", "body")
+	var hint := ControlsDiagram.label("↑ ↓ Chọn đòn\n← → Đổi tab", "body")
 	list.add_child(hint)
 	var right := VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -155,16 +166,16 @@ func select_move(id: StringName) -> void:
 		for child in keys.get_children():
 			keys.remove_child(child)
 			child.queue_free()
-		keys.add_child(ControlsDiagram.keycap(move.keys))
+		keys.add_child(ControlsDiagram.keycap(keys_for(move.id)))
 		description.text = move.text
-		cost.text = "SỨC: %d" % GameBalance.get_int(move.cost)
+		cost.text = Language.t("SỨC: %d") % GameBalance.get_int(move.cost)
 		match id:
 			&"guard":
-				cost.text += "/giây khi giữ · cần ít nhất %d" % GameBalance.get_int("guard_min_stamina")
+				cost.text += Language.t("/giây khi giữ · cần ít nhất %d") % GameBalance.get_int("guard_min_stamina")
 			&"parry":
-				cost.text += " gạt + %d húc phản đòn" % GameBalance.get_int("horn_cost")
+				cost.text += Language.t(" gạt + %d húc phản đòn") % GameBalance.get_int("horn_cost")
 			&"clash":
-				cost.text += "/giây đẩy · %d mỗi lần móc" % GameBalance.get_int("horn_cost")
+				cost.text += Language.t("/giây đẩy · %d mỗi lần móc") % GameBalance.get_int("horn_cost")
 	elapsed = 0.0
 	sampled_time = -1.0
 	fired_events.clear()

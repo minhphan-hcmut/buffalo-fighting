@@ -12,27 +12,7 @@ var guard_blocked_until_release := false
 
 static func configure() -> void:
 	configure_ui()
-	var keys := {
-		"move_left": KEY_A,
-		"move_right": KEY_D,
-		"move_forward": KEY_W,
-		"move_back": KEY_S,
-		"parry": KEY_G
-	}
-	for action in keys:
-		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-		if InputMap.action_get_events(action).is_empty():
-			var event := InputEventKey.new()
-			event.physical_keycode = keys[action]
-			InputMap.action_add_event(action, event)
-	_add_mouse_action("horn", MOUSE_BUTTON_LEFT)
-	_add_mouse_action("guard", MOUSE_BUTTON_RIGHT)
-	if not InputMap.has_action("dash"):
-		InputMap.add_action("dash")
-		var dash_event := InputEventKey.new()
-		dash_event.physical_keycode = KEY_SPACE
-		InputMap.action_add_event("dash", dash_event)
+	KeyBindings.apply()
 
 
 static func configure_ui() -> void:
@@ -42,15 +22,6 @@ static func configure_ui() -> void:
 		button.button_index = entry[1]
 		if not InputMap.action_has_event(entry[0], button):
 			InputMap.action_add_event(entry[0], button)
-
-
-static func _add_mouse_action(action: StringName, button: MouseButton) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
-	if InputMap.action_get_events(action).is_empty():
-		var event := InputEventMouseButton.new()
-		event.button_index = button
-		InputMap.action_add_event(action, event)
 
 
 ## Gate menu presses, including a click released in the same frame, until fresh gameplay input.

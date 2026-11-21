@@ -22,6 +22,9 @@ func check_centered(hud: CanvasLayer, screen: String) -> void:
 	var overlay: Rect2 = hud.pause_overlay.get_global_rect()
 	var panel: Rect2 = (hud.settings_screen.panel if hud.showing_settings else hud.pause_panel).get_global_rect()
 	check(overlay.encloses(panel), "%s panel lies fully inside the screen (panel %s, screen %s)" % [screen, panel, overlay])
+	# 2026-11-22: the pause dim was a cold teal; it now matches the warm festival browns.
+	var shade := hud.pause_overlay.get_node("PauseShade") as ColorRect
+	check(shade.color.r > shade.color.b and shade.color.a >= 0.85, "%s pause dim is warm brown: %s" % [screen, shade.color.to_html()])
 	check(panel.get_center().distance_to(overlay.get_center()) < 1.0, "%s panel is centred (panel centre %s, screen centre %s)" % [screen, panel.get_center(), overlay.get_center()])
 
 

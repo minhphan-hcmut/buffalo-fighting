@@ -47,8 +47,26 @@ static func populate(container: VBoxContainer, tab: int, on_sensitivity: Callabl
 				if on_sensitivity.is_valid():
 					on_sensitivity.call(actual)
 			)
+			# Named in both languages so a player can find it in either.
+			var language := _choice(container, "Language", "Ngôn ngữ / Language", Language.NAMES)
+			language.select(Language.index())
+			language.item_selected.connect(func(index: int):
+				Language.apply(Language.CODES[index])
+				SessionState.save_settings()
+			)
 			_slider(container, "Sensitivity", "Độ nhạy chuột", sensitivity)
 			_toggle(container, "Fullscreen", "Toàn màn hình", SessionState.fullscreen_enabled, set_fullscreen)
+			var buttons: Array[KeyBindButton] = []
+			for entry in KeyBindings.ACTIONS:
+				var button := KeyBindButton.new(entry[0])
+				buttons.append(button)
+				container.add_child(SettingsRow.new("Key_" + entry[0], entry[1], button))
+			for button in buttons:
+				# A swapped binding changes another row too.
+				button.rebound.connect(func(_action: String, _swapped: String):
+					for other in buttons:
+						other.refresh()
+				)
 		2:
 			var view := _choice(container, "CameraView", "Góc camera", ["Gần", "Vừa", "Xa"])
 			view.select(SessionState.camera_view)
@@ -136,12 +154,19 @@ static func reset_tab(container: VBoxContainer, tab: int) -> void:
 		(container.find_child("FpsLimit", true, false) as SettingsSelector).select(0)
 		(container.find_child("ShowFps", true, false) as CheckButton).button_pressed = false
 		return
+	if tab == 1:
+		KeyBindings.reset()
+		SessionState.save_settings()
 	for row: SettingsRow in container.get_children():
 		var widget := row.control
-		if widget is HSlider:
+		if widget is KeyBindButton:
+			widget.refresh()
+		elif widget is HSlider:
 			widget.value = 100.0 if tab == 0 else 0.5
 		elif widget is CheckButton:
 			widget.button_pressed = tab == 4
+		elif widget is SettingsSelector and widget.name == &"Language":
+			continue  # Restoring control defaults keeps the language the player can read.
 		elif widget is SettingsSelector:
 			widget.select(1 if widget.name == &"CameraView" else 0)
 			widget.item_selected.emit(widget.selected)

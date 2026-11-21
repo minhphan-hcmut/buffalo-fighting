@@ -41,6 +41,7 @@ func run() -> void:
 	_test_clash_steps(buffalo, animator)
 	_test_led_out_steps(buffalo, animator)
 	_test_turn_and_teleport(buffalo, animator)
+	_test_spine(buffalo, animator)
 	_test_result(animator, arena.opponent.visual as BuffaloAnimator)
 	_test_pause(buffalo, animator)
 	arena.free()
@@ -298,7 +299,7 @@ func _test_legs(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
 	_step(animator, 120)
 	if animator.leg_mesh == null:
 		return # Legacy model has separate meshes rather than the joined HERO body.
-	check(animator.leg_skeleton != null and animator.leg_skeleton.get_bone_count() == 9, "HERO gets a root plus upper/lower bones for each leg")
+	check(animator.leg_skeleton != null and animator.leg_skeleton.get_bone_count() == 11, "HERO gets a root, upper/lower bones for each leg, a neck and hips")
 	check(animator.leg_mesh.skin != null and animator.leg_mesh.get_node_or_null(animator.leg_mesh.skeleton) == animator.leg_skeleton, "HERO body is skinned to the leg rig")
 	var source := load("res://assets/characters/buffalo_hero/buffalo_hero.glb") as PackedScene
 	var original := source.instantiate()
@@ -427,6 +428,86 @@ func _test_turn_and_teleport(buffalo: Buffalo, animator: BuffaloAnimator) -> voi
 	check(animator.speed < 0.01, "a teleport (respawn) does not register as movement")
 
 
+# Owner 2026-11-22: the body read as one stiff block. The head now leads (looks at the
+# opponent, turns into a turn, dips before a horn strike) and the hips trail a turn.
+func _test_spine(buffalo: Buffalo, animator: BuffaloAnimator) -> void:
+	if animator.leg_skeleton == null:
+		return
+	var skeleton := animator.leg_skeleton
+	var neck := BuffaloAnimator.NECK_BONE
+	var hips := BuffaloAnimator.HIPS_BONE
+	check(skeleton.get_bone_name(neck) == "Neck" and skeleton.get_bone_name(hips) == "Hips", "neck and hips bones exist")
+	check(skeleton.get_bone_parent(5) == hips and skeleton.get_bone_parent(7) == hips and skeleton.get_bone_parent(1) == 0, "hind legs hang from the hips, front legs from the root")
+	var horn_neck := true
+	var hoof_still := true
+	var mesh := animator.leg_mesh.mesh
+	for surface in mesh.get_surface_count():
+		if not String(mesh.surface_get_material(surface).resource_name).containsn("horn"):
+			continue
+		var arrays := mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		for i in vertices.size():
+			var on_neck := weights[i * 4 + 3] if bones[i * 4 + 3] == neck else 0.0
+			if vertices[i].y > 1.0:
+				horn_neck = horn_neck and is_equal_approx(on_neck, 1.0)
+			elif vertices[i].y < 0.3:
+				hoof_still = hoof_still and on_neck == 0.0
+	check(horn_neck, "horns follow the neck rigidly (no bending)")
+	check(hoof_still, "front hooves never follow the head")
+
+	# Head looks toward an opponent standing off to the left.
+	_reset(buffalo, animator)
+	var rival := arena.opponent
+	var rival_position := rival.position
+	rival.position = Vector3(-4.0, 0.0, -4.0)
+	_step(animator, 120)
+	check(animator.neck_yaw.x > deg_to_rad(8.0), "standing head turns toward the opponent (%.1f deg)" % rad_to_deg(animator.neck_yaw.x))
+	var horn := animator.head_point(Vector3(0.0, 1.8, -1.15))
+	check(horn.x < -0.1, "horn VFX point follows the turned head")
+	rival.position = Vector3(0.0, 0.0, -6.0)
+	_step(animator, 120)
+	check(absf(animator.neck_yaw.x) < deg_to_rad(1.0), "head faces forward when the opponent is ahead")
+
+	# Turning: head leads into the turn, hips trail, spine bends the same way.
+	var bent_neck := 0.0
+	var bent_hips := 0.0
+	for i in 30:
+		buffalo.rotation.y = wrapf(buffalo.rotation.y + 0.06, -PI, PI)
+		_step(animator, 1)
+		bent_neck = maxf(bent_neck, animator.neck_yaw.x)
+		bent_hips = maxf(bent_hips, animator.hips_yaw.x)
+	check(bent_neck > deg_to_rad(5.0) and bent_hips > deg_to_rad(2.0), "turning left bends the spine (neck %.1f, hips %.1f deg)" % [rad_to_deg(bent_neck), rad_to_deg(bent_hips)])
+	var overshoot := 0.0
+	for i in 90:
+		_step(animator, 1)
+		overshoot = minf(overshoot, animator.hips_yaw.x)
+	check(overshoot < 0.0 and absf(animator.hips_yaw.x) < deg_to_rad(0.5), "the spine settles with a small follow-through after the turn")
+	for leg in 4:
+		check(absf(animator.hoof_position(leg).y) < 0.02, "hoof %d stays on the ground after the bend" % leg)
+
+	# Horn: the head dips first while winding up.
+	_reset(buffalo, animator)
+	_step(animator, 60)
+	buffalo.start_horn()
+	var lowest := 0.0
+	while buffalo.state == Buffalo.State.HORN_STARTUP:
+		buffalo.advance_state(TICK)
+		animator.update_pose(TICK)
+		lowest = minf(lowest, animator.neck_pitch.x)
+	check(lowest < deg_to_rad(-3.0), "horn wind-up dips the head ahead of the body (%.1f deg)" % rad_to_deg(lowest))
+
+	# Clash: heads stay locked.
+	_reset(buffalo, animator)
+	buffalo.state = Buffalo.State.CLASH
+	_step(animator, 120)
+	check(absf(animator.neck_yaw.x) < deg_to_rad(0.5) and absf(animator.neck_pitch.x) < deg_to_rad(0.5) and absf(animator.hips_yaw.x) < deg_to_rad(0.5), "clash keeps the neck and hips straight")
+	buffalo.state = Buffalo.State.NORMAL
+	rival.position = rival_position
+	_reset(buffalo, animator)
+
+
 func _test_result(winner: BuffaloAnimator, loser: BuffaloAnimator) -> void:
 	_reset(winner.buffalo, winner)
 	_reset(loser.buffalo, loser)
@@ -466,7 +547,7 @@ func _legs_at_rest(animator: BuffaloAnimator) -> bool:
 	for leg in 4:
 		if animator.hoof_offsets[leg].length() > 0.001:
 			return false
-	for bone in animator.leg_skeleton.get_bone_count():
+	for bone in range(1, 9):
 		if animator.leg_skeleton.get_bone_pose_rotation(bone).get_angle() > 0.002:
 			return false
 	return true

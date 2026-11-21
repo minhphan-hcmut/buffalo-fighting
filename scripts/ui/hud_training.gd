@@ -43,7 +43,7 @@ func setup(match_controller, root: Control, label_update: Callable) -> void:
 	training_popup.add_theme_color_override("font_color", Color("#E8BC65"))
 	training_popup.visible = false
 	rows.add_child(training_popup)
-	training_counter.text = String(controller.training.counter_text).format(training_counts)
+	training_counter.text = Language.t(String(controller.training.counter_text)).format(training_counts)
 	controller.combat_event.connect(on_combat_event)
 
 
@@ -103,7 +103,7 @@ func on_combat_event(event: StringName, source: int, target: int, _value: float)
 	elif event == &"TRAINING_REFILL" and training_popup_time <= 0.0:
 		success("Hồi khí thế")
 	if training_counter_dirty:
-		write_label.call(training_counter, String(controller.training.counter_text).format(training_counts))
+		write_label.call(training_counter, Language.t(String(controller.training.counter_text)).format(training_counts))
 		training_counter_dirty = false
 
 

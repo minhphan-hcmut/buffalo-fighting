@@ -11,11 +11,7 @@ var join_button: Button
 func _ready() -> void:
 	MatchInput.configure_ui()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := ColorRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.color = Color("#263B42")
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
+	_build_backdrop()
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -37,7 +33,7 @@ func _ready() -> void:
 	content.add_child(title)
 
 	var intro := Label.new()
-	intro.text = "Host tạo phòng hoặc Join bằng địa chỉ IPv4 trong cùng mạng."
+	intro.text = "Một máy tạo phòng. Máy kia nhập địa chỉ IPv4 của máy đó rồi vào phòng (cùng mạng Wi-Fi/LAN)."
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(intro)
@@ -56,7 +52,7 @@ func _ready() -> void:
 
 	address_edit = LineEdit.new()
 	address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	address_edit.placeholder_text = "IPv4 máy host"
+	address_edit.placeholder_text = "IPv4 máy tạo phòng"
 	address_edit.text = "127.0.0.1"
 	address_edit.custom_minimum_size.y = 42
 	address_edit.text_submitted.connect(func(_text: String): _join())
@@ -67,13 +63,13 @@ func _ready() -> void:
 	port_input.max_value = 65535
 	port_input.step = 1
 	port_input.value = GameBalance.get_int("lan_port", 7777)
-	port_input.prefix = "Port "
-	port_input.custom_minimum_size = Vector2(130, 42)
+	port_input.prefix = "Cổng "
+	port_input.custom_minimum_size = Vector2(160, 42)
 	address_row.add_child(port_input)
 
 	join_button = Button.new()
 	UiMotion.attach(join_button)
-	join_button.text = "JOIN PHÒNG"
+	join_button.text = "VÀO PHÒNG"
 	join_button.custom_minimum_size.y = 48
 	join_button.pressed.connect(_join)
 	content.add_child(join_button)
@@ -97,8 +93,29 @@ func _ready() -> void:
 		NetworkManager.lobby_ready.connect(_on_lobby_ready)
 	if not NetworkManager.connection_lost.is_connected(_on_connection_lost):
 		NetworkManager.connection_lost.connect(_on_connection_lost)
-	_set_status("Host mở phòng hoặc nhập IPv4 máy host để Join.")
+	_set_status("")
 	host_button.grab_focus()
+
+
+## Same festival backdrop and warm dim as the Solo chooser, so LAN does not look like a
+## different game.
+func _build_backdrop() -> void:
+	var container := SubViewportContainer.new()
+	container.name = "Backdrop"
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	container.stretch = true
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(container)
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	GraphicsQuality.apply_viewport(viewport)
+	container.add_child(viewport)
+	viewport.add_child(MenuBackdrop.new())
+	var dim := ColorRect.new()
+	dim.color = Color("#17120EB0")
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -156,7 +173,7 @@ func _set_status(message: String) -> void:
 
 func _on_status_changed(message: String) -> void:
 	_set_status(message)
-	if message.begins_with("Kết nối thất bại") or message.begins_with("Hết thời gian") or message.begins_with("Không thể"):
+	if message.begins_with(Language.t("Kết nối thất bại")) or message.begins_with(Language.t("Hết thời gian")) or message.begins_with(Language.t("Không thể")):
 		_set_controls_enabled(true)
 
 

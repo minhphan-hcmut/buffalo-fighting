@@ -56,11 +56,12 @@ func run() -> void:
 				found = found or event.button_index == BINDINGS[action][0]
 		check(found and controls.contains(BINDINGS[action][1]), "Control label matches InputMap: " + action)
 	check(controls.contains("F12") and FileAccess.get_file_as_string("res://scripts/ui/screenshot_service.gd").contains("event.keycode == KEY_F12"), "Screenshot label matches global handler")
-	check(HUD.CONTROLS.contains("WASD") and HUD.CONTROLS.contains("Space") and HUD.CONTROLS.contains("G Gạt") and HUD.CONTROLS.contains("Esc"), "HUD uses the checked action keys")
+	var hud_controls: String = HUD.TutorialPresenter.controls_text()
+	check(hud_controls.contains("WASD") and hud_controls.contains("Space") and hud_controls.contains("G Gạt") and hud_controls.contains("Esc"), "HUD uses the checked action keys")
 	var expected_keys := ["Chuột trái", "Space", "Giữ chuột phải", "G → Chuột trái", "WASD Đẩy tới · Trái Móc · Phải Nhả", "Chuột trái"]
 	for index in MoveDemo.MOVES.size():
 		var move: Dictionary = MoveDemo.MOVES[index]
-		check(move.keys == expected_keys[index] and move.cost == COSTS[move.id], "Move binding and balance key: " + move.name)
+		check(MoveDemo.keys_for(move.id) == expected_keys[index] and move.cost == COSTS[move.id], "Move binding and balance key: " + move.name)
 		demo.select_move(move.id)
 		var expected := "SỨC: %d" % GameBalance.get_int(COSTS[move.id])
 		if move.id == &"guard":
@@ -133,7 +134,7 @@ func vfx_checks(demo: MoveDemo) -> void:
 		demo.vfx.on_combat_event(event, 1, 2)
 		arena.combat_event.emit(event, 1, 2, 0.0)
 		check(kinds(demo.vfx) == kinds(arena.vfx), "Match signal preserves burst kinds: " + String(event))
-		check(demo.vfx.lights.get_child_count() == arena.vfx.lights.get_child_count(), "Match light parity: " + String(event))
+		check(demo.vfx.active_lights().size() == arena.vfx.active_lights().size(), "Match light parity: " + String(event))
 	for flash_mode in [0, 1, 2]:
 		SessionState.impact_flash = flash_mode
 		for preset in [GraphicsQuality.LOW, GraphicsQuality.HIGH]:
@@ -147,7 +148,7 @@ func vfx_checks(demo: MoveDemo) -> void:
 				var preview: CPUParticles3D = demo.vfx.bursts.get_child(index)
 				var match_effect: CPUParticles3D = arena.vfx.bursts.get_child(index)
 				check(preview.amount == match_effect.amount and preview.lifetime == match_effect.lifetime and preview.color_ramp.get_color(0) == match_effect.color_ramp.get_color(0), "Preset and comfort values match")
-			check(demo.vfx.lights.get_child(0).light_energy == arena.vfx.lights.get_child(0).light_energy, "Comfort light parity")
+			check(demo.vfx.active_lights()[0].light_energy == arena.vfx.active_lights()[0].light_energy, "Comfort light parity")
 	SessionState.impact_flash = 0
 	GraphicsQuality.set_preset(GraphicsQuality.HIGH)
 	arena.queue_free()

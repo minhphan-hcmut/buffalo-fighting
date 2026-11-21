@@ -274,7 +274,7 @@ func reset_duel() -> void:
 	for emitter in vfx.bursts.get_children():
 		emitter.free()
 	for light in vfx.lights.get_children():
-		light.free()
+		vfx.park_light(light)
 	vfx.impact_groups.clear()
 	for mark in vfx.furrows.get_children():
 		mark.free()
@@ -418,7 +418,7 @@ func test_impact_force(camera: Node3D) -> void:
 		var before := arena.get_snapshot()
 		vfx.on_combat_event(event, 1, 2)
 		var sparks := first_kind(&"ImpactSparks")
-		check(sparks != null and count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactShock") == 1 and vfx.lights.get_child_count() == 1, "FORCE hit layers " + String(event))
+		check(sparks != null and count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactShock") == 1 and vfx.active_lights().size() == 1, "FORCE hit layers " + String(event))
 		if sparks != null:
 			check(sparks.get_particle_flag(CPUParticles3D.PARTICLE_FLAG_ALIGN_Y_TO_VELOCITY) and sparks.mesh.size.y > sparks.mesh.size.x and sparks.mesh.material is ShaderMaterial and sparks.mesh.material.get_shader_parameter("sprite").resource_path.ends_with("trace_06.png") and sparks.direction.dot((b.position - a.position).normalized()) > 0.5 and sparks.gravity.y < 0.0 and sparks.lifetime <= 0.35, "FORCE velocity streak " + String(event))
 			check(sparks.color_ramp.get_color(0) == Color.WHITE and sparks.color_ramp.get_color(1) == MatchVFX.GOLD and sparks.color_ramp.get_color(2).g < sparks.color_ramp.get_color(1).g and sparks.color_ramp.get_color(3).a == 0.0, "FORCE hot cooling ramp " + String(event))
@@ -432,7 +432,7 @@ func test_impact_force(camera: Node3D) -> void:
 	var first_angle := flash.angle_min
 	var shock := first_kind(&"ImpactShock")
 	check(shock.mesh.material.albedo_texture.resource_path.ends_with("circle_03.png") and shock.mesh.material.billboard_mode == BaseMaterial3D.BILLBOARD_PARTICLES and shock.scale_amount_curve.sample(1.0) > shock.scale_amount_curve.sample(0.0) and shock.lifetime <= 0.2, "FORCE expanding billboard shock")
-	var light: OmniLight3D = vfx.lights.get_child(0)
+	var light: OmniLight3D = vfx.active_lights()[0]
 	var energy := light.light_energy
 	vfx._process(GameBalance.get_number("vfx_light_s") * 0.5)
 	check(light.light_energy > 0.0 and light.light_energy < energy and not light.shadow_enabled, "FORCE light fades on real clock")
@@ -442,7 +442,7 @@ func test_impact_force(camera: Node3D) -> void:
 	arena.paused = false
 	vfx._process(GameBalance.get_number("vfx_light_s"))
 	await process_frame
-	check(vfx.lights.get_child_count() == 0, "FORCE light self deletes")
+	check(vfx.active_lights().size() == 0, "FORCE light self deletes")
 	reset_duel()
 	vfx.on_combat_event(&"HORN_HIT", 1, 2)
 	check(first_kind(&"ImpactFlash").angle_min != first_angle, "FORCE random star rotation")
@@ -455,7 +455,7 @@ func test_impact_force(camera: Node3D) -> void:
 	vfx.on_combat_event(&"COUNTER_HIT", 1, 2)
 	vfx.on_combat_event(&"FLANK_HIT", 1, 2)
 	vfx.on_combat_event(&"BACK_HIT", 1, 2)
-	check(count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactSparks") == 1 and first_kind(&"ImpactSparks").amount > normal_count and vfx.lights.get_child_count() == 1, "FORCE hit annotations upgrade without duplicate bursts")
+	check(count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactSparks") == 1 and first_kind(&"ImpactSparks").amount > normal_count and vfx.active_lights().size() == 1, "FORCE hit annotations upgrade without duplicate bursts")
 	reset_duel()
 	vfx.on_combat_event(&"GUARD_HIT", 1, 2)
 	vfx.on_combat_event(&"HORN_HIT", 1, 2)
@@ -467,7 +467,7 @@ func test_impact_force(camera: Node3D) -> void:
 	check(parry != null and parry.emission_shape == CPUParticles3D.EMISSION_SHAPE_RING and parry.amount > normal_count and count_kind(&"ParryFlash") == 1 and first_kind(&"ParryFlash").color_ramp.get_color(0) == MatchVFX.PARRY and first_kind(&"ParryFlash").scale_amount_max > GameBalance.get_number("vfx_flash_size") * GameBalance.get_number("vfx_impact_heavy_scale") and count_kind(&"ParryShock") == 1, "FORCE parry ring and largest green star")
 	reset_duel()
 	vfx.on_combat_event(&"CLASH_START", 1, 2)
-	check(count_kind(&"ImpactSparks") == 1 and count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactShock") == 1 and vfx.lights.get_child_count() == 1, "FORCE clash entry impact")
+	check(count_kind(&"ImpactSparks") == 1 and count_kind(&"ImpactFlash") == 1 and count_kind(&"ImpactShock") == 1 and vfx.active_lights().size() == 1, "FORCE clash entry impact")
 	arena.clash.enter(0.0)
 	vfx._process(0.0)
 	var lock := first_kind(&"ClashSpark")
@@ -508,10 +508,10 @@ func test_impact_force(camera: Node3D) -> void:
 	for i in GameBalance.get_int("vfx_max_emitters") * 2:
 		vfx.on_combat_event(&"DASH_HIT", 1, 2)
 	check(vfx.bursts.get_child_count() == GameBalance.get_int("vfx_max_emitters"), "FORCE emitter cap")
-	check(vfx.lights.get_child_count() == GameBalance.get_int("vfx_max_lights"), "FORCE light cap")
+	check(vfx.active_lights().size() == GameBalance.get_int("vfx_max_lights"), "FORCE light cap")
 	vfx._process(2.0)
 	await process_frame
-	check(vfx.bursts.get_child_count() == 0 and vfx.lights.get_child_count() == 0, "FORCE capped effects self delete")
+	check(vfx.bursts.get_child_count() == 0 and vfx.active_lights().size() == 0, "FORCE capped effects self delete")
 	reset_duel()
 	var manager := arena.get_node("/root/NetworkManager")
 	arena.lan = MatchNetwork.new(arena, manager)

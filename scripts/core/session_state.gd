@@ -64,6 +64,9 @@ static func load_settings(path: String = "user://settings.cfg") -> void:
 	if not (sensitivity is float or sensitivity is int) or not is_finite(float(sensitivity)) or float(sensitivity) < GameBalance.get_number("ui_settings_sensitivity_min") or float(sensitivity) > GameBalance.get_number("ui_settings_sensitivity_max"):
 		sensitivity = GameBalance.get_number("mouse_sensitivity")
 	mouse_sensitivity = float(sensitivity)
+	KeyBindings.load_from(config)
+	KeyBindings.apply()
+	Language.apply(String(config.get_value("settings", "language", "vi")))
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen_enabled else DisplayServer.WINDOW_MODE_WINDOWED)
 
 
@@ -89,6 +92,8 @@ static func save_settings() -> Error:
 	config.set_value("settings", "camera_view", camera_view)
 	config.set_value("settings", "camera_side", camera_side)
 	config.set_value("settings", "mouse_sensitivity", get_mouse_sensitivity())
+	KeyBindings.save_to(config)
+	config.set_value("settings", "language", Language.code)
 	var error := config.save(settings_path)
 	if error != OK:
 		push_warning("Không thể lưu cài đặt: %s" % error_string(error))

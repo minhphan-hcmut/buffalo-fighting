@@ -71,7 +71,7 @@ static func enter_result(panel: Control, actions: Container) -> Tween:
 
 ## Changes scene immediately under a captured outgoing frame, fading through festival dark.
 ## The root owns the overlay so it survives freed menus, pause screens and Solo results.
-static func change_scene(tree: SceneTree, scene: PackedScene) -> Error:
+static func change_scene(tree: SceneTree, scene: PackedScene, loading := false) -> Error:
 	var overlay: CanvasLayer
 	if DisplayServer.get_name() != "headless":
 		var previous := tree.root.get_node_or_null("UiSceneFade")
@@ -95,6 +95,9 @@ static func change_scene(tree: SceneTree, scene: PackedScene) -> Error:
 		dark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		overlay.add_child(dark)
+		if loading:
+			# The arena still fades in with the dark, so the load reads as a loading screen.
+			dark.add_child(LoadingCard.build())
 		var tween := overlay.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		tween.tween_property(dark, "modulate:a", 1.0, GameBalance.get_number("ui_fade_out_s"))
 		tween.tween_callback(frame.queue_free)

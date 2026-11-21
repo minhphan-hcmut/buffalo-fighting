@@ -91,3 +91,6 @@ func _gui_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_accept") and control is CheckButton:
 		control.button_pressed = not control.button_pressed
 		accept_event()
+	elif event.is_action_pressed("ui_accept") and control is KeyBindButton:
+		control.start_capture()
+		accept_event()

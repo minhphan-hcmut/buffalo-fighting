@@ -38,9 +38,7 @@ var tutorial_label: RichTextLabel
 ## Player panels and timer; faded out once the result is decided so the outro shot is clean.
 var top_bar: HBoxContainer
 var result_fade_time := 0.0
-const CONTROLS := TutorialPresenter.CONTROLS
 const CLASH_KEYS := "WASD Đẩy tới · Trái Móc · Phải Nhả"
-const TUTORIAL := TutorialPresenter.TUTORIAL
 var tutorial_seen: Array[int]:
 	get: return tutorial_presenter.tutorial_seen
 	set(value): tutorial_presenter.tutorial_seen = value
@@ -122,6 +120,7 @@ var stamina_fills: Array[StyleBoxFlat] = []
 var timer_second := -1
 var tutorial_plain := ""
 var controls_formatted := ""
+var controls_formatted_for := ""
 var hint_visible := false
 var training_counter_dirty: bool:
 	get: return training_presenter.training_counter_dirty
@@ -307,7 +306,7 @@ func _ready() -> void:
 	HudText.set_size(tutorial_label, "normal_font_size", GameBalance.get_int("ui_controls_font_size"))
 	tutorial_label.add_theme_color_override("default_color", Color("#F2E6CF"))
 	tutorial_label.add_theme_stylebox_override("normal", _soft_style())
-	_set_tutorial_text(CONTROLS)
+	_set_tutorial_text(TutorialPresenter.controls_text())
 	root.add_child(tutorial_label)
 	result_label = Label.new()
 	result_label.visible = false
@@ -507,7 +506,7 @@ func _make_player_panel(title: String, color: Color, mirror: bool = false) -> Pa
 	number_label.add_theme_constant_override("outline_size", 4)
 	chip.add_child(number_label)
 	var title_label := Label.new()
-	title_label.text = "%s · %s" % [parts[0], parts[2]] if parts.size() > 2 else title
+	title_label.text = "%s · %s" % [Language.t(parts[0]), parts[2]] if parts.size() > 2 else title
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if mirror else HORIZONTAL_ALIGNMENT_LEFT
 	title_label.add_theme_font_size_override("font_size", 20)
 	title_label.add_theme_color_override("font_outline_color", Color("#1E1914"))
@@ -696,7 +695,7 @@ func _update_center(delta: float) -> void:
 		var dots := 1 + int(controller.outro.time * 4.0) % 3
 		if dots != lot_dot_count:
 			lot_dot_count = dots
-			lot_text = "BỐC THĂM" + ".".repeat(dots)
+			lot_text = Language.t("BỐC THĂM") + ".".repeat(dots)
 		text = lot_text
 	elif controller.phase == &"PLAYING" and fight_banner_time < banner_hold + banner_fade:
 		text = "VÀO TRẬN!"
@@ -754,14 +753,15 @@ func _set_tutorial_text(plain: String) -> void:
 	tutorial_plain = plain
 	HudText.set_size(tutorial_label, "bold_font_size", tutorial_label.get_meta("hud_base_normal_font_size", tutorial_label.get_theme_font_size("normal_font_size")))
 	var formatted := plain
-	if plain == CONTROLS and controls_formatted.is_empty():
+	var controls := TutorialPresenter.controls_text()
+	if plain == controls and controls_formatted_for != controls:
 		var items := PackedStringArray()
-		for item in plain.split(" · "):
-			var pair := item.split(" ", true, 1)
-			items.append("[b][color=#E8BC65]%s[/color][/b] %s" % [pair[0], pair[1]])
+		for pair in TutorialPresenter.controls_pairs():
+			items.append("[b][color=#E8BC65]%s[/color][/b] %s" % pair)
 		var separator := " [color=%s]·[/color] " % Color(1.0, 1.0, 1.0, GameBalance.get_number("ui_controls_separator_alpha")).to_html()
 		controls_formatted = separator.join(items)
-	if plain == CONTROLS:
+		controls_formatted_for = controls
+	if plain == controls:
 		formatted = controls_formatted
 	if tutorial_label.text != formatted:
 		tutorial_label.text = formatted
@@ -795,13 +795,13 @@ func _update_clash() -> void:
 	var time_left := maxf(0.0, GameBalance.get_number("lock_max_s") - float(clash.get("time", 0.0)))
 	if time_left != clash_clock:
 		clash_clock = time_left
-		_label(clash_time_label, "ĐỐI PHƯƠNG  ←  %.1f s  →  BẠN" % time_left)
+		_label(clash_time_label, Language.t("ĐỐI PHƯƠNG  ←  %.1f s  →  BẠN") % time_left)
 	var mask := int(controller.player.clash_hooked) + int(controller.opponent.clash_hooked) * 2
 	if mask != hook_mask or hook_large != SessionState.hud_text_large:
 		hook_mask = mask
 		hook_large = SessionState.hud_text_large
 		_label(clash_hook_label, HOOK_TEXT[mask])
-		_label(clash_title, "KHÓA SỪNG" if mask == 0 else "KHÓA SỪNG · " + (HOOK_LARGE[mask] if hook_large else HOOK_TEXT[mask]))
+		_label(clash_title, "KHÓA SỪNG" if mask == 0 else Language.t("KHÓA SỪNG · ") + Language.t(HOOK_LARGE[mask] if hook_large else HOOK_TEXT[mask]))
 
 
 func show_result(winner_slot: int, reason: StringName) -> void:
@@ -836,6 +836,9 @@ func _apply_text_scale() -> void:
 	clash_time_label.position.y = GameBalance.get_number("hud_large_clash_time_top") if SessionState.hud_text_large else normal_text_layout.clash_time_top
 	clash_keys_label.position.y = GameBalance.get_number("hud_large_clash_keys_top") if SessionState.hud_text_large else normal_text_layout.clash_keys_top
 	center_label.position = normal_banner_position
+	if SessionState.hud_text_large:
+		# Larger glyphs and taller status text: the banner sits a little lower.
+		center_label.position.y = GameBalance.get_number("hud_large_banner_top")
 	if not controller.training.is_empty():
 		var top := GameBalance.get_number("hud_large_training_clash_top") if SessionState.hud_text_large else GameBalance.get_number("training_clash_top")
 		clash_panel.position.y = top
