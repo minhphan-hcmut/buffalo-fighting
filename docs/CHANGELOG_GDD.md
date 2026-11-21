@@ -1,5 +1,29 @@
 # Changelog GDD
 
+## v0.7.4 — 22/11/2026 (bản 1.0.0)
+
+Bổ sung ngoài GDD v0.7, đều không đổi luật chơi hay payload LAN:
+
+- **Đổi phím:** 8 hành động đổi được ở Cài đặt → Điều khiển (bàn phím hoặc nút chuột), gán trùng thì đổi chỗ; `Esc`, `F12` cố định. Gợi ý phím ở HUD, Cách chơi, Sân tập đọc phím đang gán.
+- **Tiếng Anh:** toàn bộ chữ trong game (kể cả Phần Lễ, thẻ văn hóa, Sân tập) có bản tiếng Anh; tiếng Việt mặc định. Tên riêng (Chọi trâu, Đồ Sơn, ông trâu, tên giáp) giữ tiếng Việt, kèm giải thích.
+- **Màn THỰC HIỆN** (tiếng Anh: CREDITS) và nhãn phiên bản 1.0.0 ở menu.
+- **Màn chờ "ĐANG VÀO SÂN"** khi vào trận, thay màn đen.
+- **Giao diện:** bảng kết quả ôm theo nội dung; chữ đếm ngược đặt cao hơn, không đè thanh khí thế; nền tạm dừng nâu ấm.
+- **Chuyển động trâu:** thêm cổ và hông vào bộ xương dựng lúc chạy. Cổ nhìn đối thủ, đi trước khi rẽ, cúi trước khi húc, lắc khi choáng; hông trễ khi rẽ nên thân cong; lò xo có độ nảy. Chỉ là trình bày.
+- **Hiệu năng:** hiệu ứng va chạm dùng lại đèn và biên dịch shader trước dưới màn che; khung tệ nhất trên card tích hợp (Cao) 320 → 36 ms.
+
+## v0.7.3 — 22/11/2026
+
+Ghi lại các thay đổi đã có trong game từ 13/11 tới bản nộp; PDF gốc v0.7 chưa sửa theo.
+
+- **Gạt sừng (thêm, ngoài GDD v0.7):** phím `G`. Cửa sổ gạt 0,15 s, cung trước 60°, tốn 10 STAMINA, hồi 0,8 s; gạt hụt chậm 0,45 s. Gạt trúng HORN làm bên đánh STUNNED 0,5 s, trúng DASH 0,7 s và bị đẩy lùi. Ngay sau đó có 0,5 s phản đòn: HORN khởi động 0,08 s, sát thương × 1,3. Số ở `parry_*`, `counter_*` trong `data/balance.json`.
+- **Chế độ chơi:** Solo có Mùa hội 5 vòng (L01 Vòng loại → L05 Chung kết, `data/levels.json`) kèm Phần Lễ; thêm Đấu tự do (chọn thẳng một vòng) và Sân tập (5 bài, Sức vô hạn, không thua). AI bài tập nghỉ 0,8 s sau khi bị gạt choáng (`post_stun_rest_s` trong `data/ai_profiles.json`) để người tập thấy rõ choáng.
+- **Màn phụ:** Cách chơi (4 tab, demo từng đòn dùng VFX thật), Sổ tay lễ hội (thẻ văn hóa đã mở), Cài đặt 5 tab (âm thanh, điều khiển, camera, đồ họa, hiệu ứng) dùng chung ở menu và pause, lưu giữa các lần chạy; tự tạm dừng khi game mất focus (tắt được).
+- **Kết trận:** trâu đứng yên rồi mới hiện kết quả; người dắt dẫn trâu thua ra cổng; màn kết quả có bảng chỉ số hai cột và lý do thắng (FLEE/TIME/LOT).
+- **LAN:** phòng chờ ghi địa chỉ IPv4 của máy tạo phòng để máy kia nhập; đấu lại (ĐẤU LẠI) không cần tạo phòng mới; camera kết quả quay về trâu thắng; HUD hiện ping (đổi màu cảnh báo khi trễ cao). Đã thử 9 trận ở 3 mức mạng giả lập (`tools/lan_netem_proxy.py`), thay cho REQ-N05 (trễ 50 ms phía host); chưa thử trên hai máy thật.
+- **Cân bằng:** mô phỏng 6020 trận AI đấu AI (`tools/balance_sim.gd`). Đề xuất `dash_cost` 28→32, `dash_damage` 14→12 cải thiện ít nên **chưa áp**; `data/balance.json` giữ nguyên.
+- **Giao diện:** ba tầng nút (chính/phụ/chữ) thống nhất mọi màn, menu chính dạng danh sách; HUD tách thành các presenter (`hud_training.gd`, `hud_tutorial.gd`, `lan_result_view.gd`), không đổi hành vi.
+
 ## v0.7.2 — 13/11/2026
 
 - Bảng 17: làm 3 màn Phần Lễ SHOULD (rước nước trước L01, các giáp đưa trâu vào hội trước L02, trống khai hội và múa cờ trên sới trước L03). Mỗi màn hiện một lần mỗi mùa hội, bỏ qua bằng một phím. Chữ ở `data/ceremony.json`, cảnh ở `scripts/core/ceremony_diorama.gd`.

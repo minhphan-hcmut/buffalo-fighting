@@ -4,7 +4,13 @@ Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là 
 
 **Chạy game lần đầu (người hoặc AI agent): xem [`HUONG_DAN_CHAY.md`](HUONG_DAN_CHAY.md).**
 
+Phiên bản hiện tại: **1.0.0** (hiện ở góc menu và màn THỰC HIỆN). Có tiếng Việt (mặc định) và
+tiếng Anh, đổi ở Cài đặt → Điều khiển → Ngôn ngữ / Language.
+
 ## Điều khiển
+
+Phím mặc định dưới đây đổi được ở Cài đặt → Điều khiển (trừ `Esc`, `F12`); mọi gợi ý phím trong game
+đọc phím đang gán.
 
 - `W/A/S/D`: đi theo hướng camera; đi ngang và lùi có hệ số tốc độ riêng.
 - Chuột: xoay camera quanh trâu; thân trâu quay theo camera với giới hạn tốc độ.
@@ -13,6 +19,7 @@ Source game Godot nằm trực tiếp tại thư mục dự án này. Đây là 
 - `G`: PARRY (gạt sừng).
 - Giữ chuột phải: GUARD; trong CLASH nhấn xuống để nhả khóa.
 - `Esc`: tạm dừng và thả chuột (LAN: gửi yêu cầu tạm dừng cho đối phương); click chuột trái để khóa chuột lại.
+- `F12`: chụp màn hình.
 
 Trận dùng SPIRIT và STAMINA, không có HP/gore. Trận kết thúc bằng FLEE, TIME hoặc LOT. Solo có ba profile AI và cấu hình bùn theo level. Mỗi level đọc chỉ số từ `data/balance.json`, `data/levels.json` và `data/ai_profiles.json`.
 
@@ -25,7 +32,8 @@ Chi tiết từng file và luồng một trận: [`docs/ARCHITECTURE.md`](docs/A
   (chuyển động trâu, hiệu ứng, âm thanh, camera, đoạn kết, dựng sân và Phần Lễ).
 - `scripts/ai/`: FSM AI. `scripts/network/`: ENet Host/Join. `scripts/ui/`: menu, lobby, HUD, Phần Lễ.
 - `data/`: `balance.json` (luật chơi), `presentation.json` (hình, tiếng, HUD), `levels.json`,
-  `ai_profiles.json`, `ceremony.json`, `audio.json`.
+  `ai_profiles.json`, `ceremony.json`, `audio.json`, `credits.json` (màn THỰC HIỆN),
+  `lang/en.po` (bản dịch tiếng Anh).
 - `assets/characters/buffalo_hero/buffalo_hero.glb`: model gameplay hiện tại; nguồn tại `assets/blender/ancient_east_water_buffalo_HERO.blend`.
 - `assets/characters/buffalo/buffalo.glb`: model dự phòng; nguồn tại `assets/blender/buffalo.blend`.
 - `assets/audio/`: âm thanh gameplay; ZIP nguồn chỉ giữ local trong `assets/audio/source/` (không commit).
@@ -69,10 +77,15 @@ bash tools/run_tests.sh
 
 Chạy lẻ một test: `godot --headless --path . --script res://tests/combat_test.gd`. Log từng test nằm ở `.godot/test-logs/`.
 
-Xuất bản Windows (cần cài export templates Godot 4.7.2 qua *Editor → Manage Export Templates*):
+Xuất bản Windows (cần cài export templates Godot 4.7.2 qua *Editor → Manage Export Templates*).
+Kết quả là một file exe duy nhất (đã gói tài nguyên, khoảng 143 MB) trong `build/` (không commit):
 
 ```sh
-godot --headless --path . --export-debug "Windows Desktop" build/windows/buffalo-fighting.exe
+godot --headless --path . --export-release "Windows Desktop" build/windows/buffalo-fighting.exe
 ```
 
-LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A), có bước chân chéo và nhấc móng cho model HERO bằng blend shape runtime, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/presentation.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Trên LAN, snapshot gửi kèm tiến độ đòn và client nội suy giữa hai snapshot; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
+Thêm hoặc đổi chữ hiện trên màn hình: chữ tiếng Việt trong code/`data/` là khóa dịch. Thêm dòng
+`msgid` (tiếng Việt) / `msgstr` (tiếng Anh) vào `data/lang/en.po`; `tests/language_test.gd` báo
+chuỗi có dấu nào còn thiếu bản dịch.
+
+LAN vẫn cần kiểm tra hai instance trên hai máy cùng mạng để nghiệm thu ENet, đồng bộ kết quả và disconnect. Asset trâu chưa có rig; chuyển động hiện là procedural (giai đoạn A): lúc chạy, game dựng bộ xương cho model HERO (4 chân, cổ, hông). Chân bước chéo và nhấc móng, nhịp bước theo quãng đường thực tế (đi tới/lùi/ngang). Cổ nhìn về đối thủ, đi trước khi rẽ, cúi trước khi húc; hông trễ khi rẽ nên thân cong; cả hai chạy bằng lò xo có độ nảy (`anim_neck_*`, `anim_hips_*`). Có thể chỉnh `gait_stride_length`, `gait_step_reach`, `gait_hoof_lift` trong `data/presentation.json`. Khi clash, chân bước ngắn theo hướng dịch chuyển thực tế (tiến/lùi), đứng yên thì trụ chân; chỉnh bằng `clash_gait_stride_length`, `clash_gait_step_reach`, `clash_gait_hoof_lift`, không đổi lực đẩy. Chuyển tiếp vào khóa sừng dùng easing; tốc độ dịch chuyển cặp trâu tăng/giảm dần theo `clash_slide_acceleration`/`clash_slide_deceleration`, hãm trước khi đảo hướng và bỏ đà bị chặn ở hàng rào. Luật tính balance, stamina và kết quả clash không đổi. Motion húc sừng có ba pha lấy lực → thúc/hất → hồi thế; chỉnh biên độ bằng `horn_visual_windup`, `horn_visual_reach`, `horn_visual_dip_deg`, `horn_visual_toss_deg` (chỉ hình ảnh, không đổi hitbox hoặc thời gian đòn). Dash có nén thân, thúc lao và hồi thế ghìm đà bằng hình ảnh; chỉnh `dash_visual_reach`, `dash_visual_dip_deg`, `dash_visual_brake_pitch_deg`, không đổi vận tốc hoặc thời gian gameplay. Trên LAN, snapshot gửi kèm tiến độ đòn và client nội suy giữa hai snapshot; phần animation, nghi lễ tĩnh, audio và decor cần hoàn thiện tiếp.
