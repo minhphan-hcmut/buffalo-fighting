@@ -1,0 +1,28 @@
+{
+  "sections": [
+    {
+      "title": "Nhóm thực hiện",
+      "lines": [
+        "Hungg101",
+        "minhphan-hcmut"
+      ]
+    },
+    {
+      "title": "Tài nguyên miễn phí (CC0)",
+      "lines": [
+        "Người xem làng: Quaternius · Animated Human (opengameart.org)",
+        "Cây dừa: Kenney · Nature Kit (kenney.nl)",
+        "Hiệu ứng bụi, tia, vệt sừng: Kenney · Particle Pack (kenney.nl)",
+        "Tiếng va chạm: Kenney · Impact Sounds (kenney.nl)",
+        "Nền đất, vũng bùn: Rob Tuytel · Poly Haven (Sand 01, Brown Mud 03)"
+      ]
+    },
+    {
+      "title": "Công cụ",
+      "lines": [
+        "Godot Engine 4.7 (godotengine.org) · giấy phép MIT",
+        "Blender"
+      ]
+    }
+  ]
+}
