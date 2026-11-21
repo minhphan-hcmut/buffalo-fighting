@@ -247,7 +247,7 @@ func announcer_active() -> bool:
 func announcer_text() -> String:
 	if not training.is_empty():
 		return ""
-	return "%s · %s gặp %s" % [_level_config().get("title", String(level_id)), player.get_meta("announcer_name"), opponent.get_meta("announcer_name")]
+	return Language.t("%s · %s gặp %s") % [Language.t(_level_config().get("title", String(level_id))), player.get_meta("announcer_name"), opponent.get_meta("announcer_name")]
 
 
 func start_playing() -> void:

@@ -96,6 +96,7 @@ func _build_main_menu() -> void:
 	menu_layout.add_theme_constant_override("separation", GameBalance.get_int("ui_menu_gap"))
 	add_child(menu_layout)
 	var title := _make_label("CHỌI TRÂU", 72, Color("#E8BC65"))
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED  # The game's name stays Vietnamese.
 	title.add_theme_color_override("font_outline_color", Color("#241D18"))
 	title.add_theme_constant_override("outline_size", 10)
 	menu_layout.add_child(title)
@@ -120,18 +121,34 @@ func _build_main_menu() -> void:
 	settings.name = "SettingsButton"
 	settings.pressed.connect(_show_settings)
 	menu_layout.add_child(settings)
+	var credits := _button("THỰC HIỆN")
+	credits.name = "CreditsButton"
+	credits.pressed.connect(_show_credits)
+	menu_layout.add_child(credits)
 	var quit := _button("THOÁT")
 	quit.pressed.connect(func(): get_tree().quit())
 	menu_layout.add_child(quit)
-	for item in [solo, lan, howto, settings, quit]:
+	for item in [solo, lan, howto, settings, credits, quit]:
 		item.theme_type_variation = &"MenuPrimary" if item == solo else &"MenuSecondary"
 		item.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		item.set_meta("menu_item", true)
+	credits.theme_type_variation = &"QuietButton"
 	quit.theme_type_variation = &"QuietButton"
 	var footer := _make_label("Mùa hội: Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết", GameBalance.get_int("ui_menu_footer_size"), SettingsControls.MUTED)
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	menu_layout.add_child(footer)
+	var version := _make_label(CreditsScreen.version_text(), GameBalance.get_int("ui_menu_footer_size"), SettingsControls.MUTED)
+	version.name = "VersionLabel"
+	version.autowrap_mode = TextServer.AUTOWRAP_OFF
+	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	version.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	version.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	version.offset_right = -GameBalance.get_number("ui_version_margin")
+	version.offset_bottom = -GameBalance.get_number("ui_version_margin")
+	version.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(version)
 	solo.grab_focus()
 
 
@@ -174,6 +191,14 @@ func _make_left_shade() -> TextureRect:
 	return shade
 
 
+## Labels re-translate themselves; the composed version line has to be rebuilt.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_instance_valid(menu_layout):
+		var version := menu_layout.find_child("VersionLabel", true, false) as Label
+		if version != null:
+			version.text = CreditsScreen.version_text()
+
+
 func _show_settings() -> void:
 	if not is_instance_valid(menu_settings_layer):
 		menu_settings_layer = SettingsScreen.new()
@@ -193,6 +218,18 @@ func _show_how_to_play() -> void:
 		menu_layout.get_node("HowToPlayButton").grab_focus()
 	)
 	add_child(howto)
+
+
+func _show_credits() -> void:
+	if get_node_or_null("Credits") != null:
+		return
+	menu_layout.hide()
+	var credits := CreditsScreen.new()
+	credits.closed.connect(func():
+		menu_layout.show()
+		menu_layout.get_node("CreditsButton").grab_focus()
+	)
+	add_child(credits)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -346,7 +383,7 @@ func _go_to_arena() -> void:
 		var requested := ResourceLoader.load_threaded_get_status(ARENA_SCENE) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
 		# load_threaded_get() waits for a load still in flight.
 		_arena_scene = ResourceLoader.load_threaded_get(ARENA_SCENE) if requested else load(ARENA_SCENE)
-	UiMotion.change_scene(get_tree(), _arena_scene)
+	UiMotion.change_scene(get_tree(), _arena_scene, true)
 
 
 func _ensure_session_overlay() -> void:
@@ -391,7 +428,7 @@ func _show_closing_ceremony(done: Callable) -> void:
 
 func _round_name(level: StringName) -> String:
 	var levels := DataFile.load_json("res://data/levels.json")
-	return String(levels.get(String(level), {}).get("title", "Mùa hội")).to_upper()
+	return Language.t(String(levels.get(String(level), {}).get("title", "Mùa hội"))).to_upper()
 
 
 func _retry_match() -> void:

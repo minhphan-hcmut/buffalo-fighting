@@ -5,7 +5,7 @@ const SETTINGS := "user://settings_screen_test.cfg"
 const GRAPHICS := "user://settings_screen_graphics_test.cfg"
 const KEYS := [
 	["Master", "Music", "SFX"],
-	["Sensitivity", "Fullscreen"],
+	["Language", "Sensitivity", "Fullscreen", "Key_move_forward", "Key_move_back", "Key_move_left", "Key_move_right", "Key_horn", "Key_guard", "Key_dash", "Key_parry"],
 	["CameraView", "CameraSide"],
 	["Preset", "crowd", "shadows", "scenery", "models", "render_scale", "FpsLimit", "ShowFps"],
 	["CameraShake", "CameraPunch", "ImpactFlash", "Hitstop", "AutoPause", "Rumble", "Replay", "HudTextSize"],

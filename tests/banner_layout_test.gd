@@ -40,9 +40,9 @@ func run() -> void:
 				var label: Label = arena.hud.center_label
 				label.scale = Vector2.ONE * GameBalance.get_number("ui_banner_pop_scale")
 				label.pivot_offset = label.size * 0.5
-				var rect := label.get_global_rect().grow(GameBalance.get_number("ui_banner_outline_size") + GameBalance.get_number("ui_banner_shadow_offset_y"))
+				var rect := glyph_rect(label).grow(GameBalance.get_number("ui_banner_outline_size") + GameBalance.get_number("ui_banner_shadow_offset_y"))
 				var context := "%s / %s / %s" % [resolution, "Lớn" if large else "Thường", text]
-				check(not rect.intersects(arena.hud.top_bar.get_global_rect()), "banner clears names and bars at max pop: " + context)
+				check(clears(rect, arena.hud.top_bar), "banner clears names and bars at max pop: %s glyphs %s label pos %s size %s" % [context, rect, label.position, label.size])
 				check(not rect.intersects(arena.hud.timer_label.get_global_rect()), "banner clears timer at max pop: " + context)
 				check(root.get_visible_rect().encloses(rect), "banner including outline/shadow fits: " + context)
 			arena.free()
@@ -51,3 +51,27 @@ func run() -> void:
 	SessionState.return_to_menu()
 	print("BANNER LAYOUT FAILURES: ", failures)
 	quit(0 if failures == 0 else 1)
+
+## The drawn glyphs of a centred, centre-pivoted label (its box is wider and taller than the text).
+static func glyph_rect(label: Label) -> Rect2:
+	var font := label.get_theme_font("font")
+	var size := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size("font_size")) * label.scale
+	var centre := label.get_global_transform() * (label.size * 0.5)
+	return Rect2(centre - size * 0.5, size)
+
+
+## What the top strip actually draws: names, number plates, bars and status text.
+static func drawn_rects(strip: Control) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for node in strip.find_children("*", "", true, false):
+		if (node is Label or node is ProgressBar or node is PanelContainer and node.get_parent() is HBoxContainer and node.get_parent() != strip) and node.is_visible_in_tree():
+			rects.append((node as Control).get_global_rect())
+	return rects
+
+
+static func clears(rect: Rect2, strip: Control) -> bool:
+	for other in drawn_rects(strip):
+		if rect.intersects(other):
+			return false
+	return true
+

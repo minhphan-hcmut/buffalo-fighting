@@ -35,9 +35,10 @@ static func create_card(index: int) -> VBoxContainer:
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caption.add_theme_font_size_override("normal_font_size", GameBalance.get_int("ui_howto_body_font_size"))
 	caption.add_theme_color_override("default_color", ControlsDiagram.PAPER)
-	var text: String = CAPTIONS[index]
+	var text := Language.t(CAPTIONS[index])
 	for word in ["khí thế", "Khí thế", "sức", "sát rào", "Gạt sừng", "bốc thăm"]:
-		text = text.replace(word, "[b][color=#E8BC65]%s[/color][/b]" % word)
+		var shown := Language.t(word)
+		text = text.replace(shown, "[b][color=#E8BC65]%s[/color][/b]" % shown)
 	caption.text = text
 	card.add_child(caption)
 	return card
@@ -66,13 +67,13 @@ func _ready() -> void:
 func refresh() -> void:
 	match kind:
 		Kind.WIN:
-			get_node("Clock").text = "%d giây" % GameBalance.get_int("match_duration_s")
+			get_node("Clock").text = Language.t("%d giây") % GameBalance.get_int("match_duration_s")
 		Kind.STAMINA:
-			get_node("Stamina").text = "SỨC · %d" % GameBalance.get_int("stamina_max")
+			get_node("Stamina").text = Language.t("SỨC · %d") % GameBalance.get_int("stamina_max")
 		Kind.TARGET:
-			get_node("Flank").text = "Sườn ×%s" % GameBalance.get_number("flank_damage_multiplier")
-			get_node("BackMultiplier").text = "Lưng ×%s" % GameBalance.get_number("back_damage_multiplier")
-			get_node("Fence").text = "Sát rào ×%s" % GameBalance.get_number("pinned_spirit_multiplier")
+			get_node("Flank").text = Language.t("Sườn ×%s") % GameBalance.get_number("flank_damage_multiplier")
+			get_node("BackMultiplier").text = Language.t("Lưng ×%s") % GameBalance.get_number("back_damage_multiplier")
+			get_node("Fence").text = Language.t("Sát rào ×%s") % GameBalance.get_number("pinned_spirit_multiplier")
 	queue_redraw()
 
 

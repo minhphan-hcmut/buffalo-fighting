@@ -1,0 +1,1035 @@
+# English translation of "Chọi trâu: Đấu trường lễ hội".
+# msgid is the Vietnamese source text used in code and data.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+msgid " gạt + %d húc phản đòn"
+msgstr " parry + %d counter strike"
+
+msgid "%d giây"
+msgstr "%d s"
+
+msgid "%d · Chưa mở"
+msgstr "%d · Locked"
+
+msgid "%s · %s gặp %s"
+msgstr "%s · %s meets %s"
+
+msgid "%s · Gạt sừng đúng lúc"
+msgstr "%s · Parry on time"
+
+msgid "%s · Đi theo hướng camera"
+msgstr "%s · Move relative to the camera"
+
+msgid "%s Đẩy tới · %s Móc · %s Nhả"
+msgstr "%s Push · %s Hook · %s Release"
+
+msgid "%s để húc khi sừng hướng về đối thủ"
+msgstr "%s to strike when your horns face the opponent"
+
+msgid "%s để hổ lao"
+msgstr "%s for a Tiger Charge"
+
+msgid "%s để đi, chuột để nhìn"
+msgstr "%s to move, mouse to look"
+
+msgid "/giây khi giữ · cần ít nhất %d"
+msgstr "/s while held · needs at least %d"
+
+msgid "/giây đẩy · %d mỗi lần móc"
+msgstr "/s pushing · %d per hook"
+
+msgid "0 → lui sới"
+msgstr "0 → flees the ring"
+
+msgid "Bao cát"
+msgstr "Sandbag"
+
+msgid "Buổi tập đã dừng."
+msgstr "Training is paused."
+
+msgid "BÀN PHÍM"
+msgstr "KEYBOARD"
+
+msgid "Bán kết"
+msgstr "Semifinal"
+
+msgid "Bóng đổ"
+msgstr "Shadows"
+
+msgid "BẠN CÓ BIẾT?"
+msgstr "DID YOU KNOW?"
+
+msgid "Bấm %s đúng lúc để gạt sừng, rồi húc ngay để phản đòn"
+msgstr "Press %s on time to parry, then strike at once to counter"
+
+msgid "Bấm phím bất kỳ hoặc nhấp chuột để tiếp tục"
+msgstr "Press any key or click to continue"
+
+msgid "Bấm phím bất kỳ để bỏ qua"
+msgstr "Press any key to skip"
+
+msgid "Bật"
+msgstr "On"
+
+msgid "Bị trúng đòn"
+msgstr "Hits taken"
+
+msgid "BỐC THĂM"
+msgstr "DRAWING LOTS"
+
+msgid "BỐC THĂM · LOT"
+msgstr "DRAWING LOTS · LOT"
+
+msgid "CHUỘT"
+msgstr "MOUSE"
+
+msgid "CHƠI LẠI"
+msgstr "PLAY AGAIN"
+
+msgid "CHƠI LẠI TRẬN NÀY"
+msgstr "REPLAY THIS MATCH"
+
+msgid "CHẤP NHẬN"
+msgstr "ACCEPT"
+
+msgid "Canh góc tấn công và thắng khóa sừng."
+msgstr "Find your angle and win the horn lock."
+
+msgid "Canh nhịp Húc để gạt và phản đòn."
+msgstr "Read the strike timing to parry and counter."
+
+msgid "Cao"
+msgstr "High"
+
+msgid "Chi tiết model"
+msgstr "Model detail"
+
+msgid "Chi tiết model (trâu, người)"
+msgstr "Model detail (buffalo, people)"
+
+msgid "Chung kết"
+msgstr "Final"
+
+msgid "Chuột"
+msgstr "Mouse"
+
+msgid "Chuột %d"
+msgstr "Mouse %d"
+
+msgid "Chuột 4"
+msgstr "Mouse 4"
+
+msgid "Chuột 5"
+msgstr "Mouse 5"
+
+msgid "Chuột giữa"
+msgstr "Middle mouse"
+
+msgid "Chuột phải"
+msgstr "Right mouse"
+
+msgid "Chuột trái"
+msgstr "Left mouse"
+
+msgid "Chưa mở"
+msgstr "Locked"
+
+msgid "Chưa mở — xem ở vòng %s"
+msgstr "Locked — unlocks in %s"
+
+msgid "Chất lượng"
+msgstr "Quality"
+
+msgid "Chỉ áp dụng khi đấu Solo"
+msgstr "Solo matches only"
+
+msgid "Chớp sáng khi trúng đòn"
+msgstr "Flash on hit"
+
+msgid "Chụp màn hình"
+msgstr "Screenshot"
+
+msgid "CÀI ĐẶT"
+msgstr "SETTINGS"
+
+msgid "CÁC GIÁP ĐƯA ÔNG TRÂU VÀO HỘI"
+msgstr "THE GIÁP BRING THEIR BUFFALOES"
+
+msgid "CÁC ĐÒN"
+msgstr "MOVES"
+
+msgid "CÁCH CHƠI"
+msgstr "HOW TO PLAY"
+
+msgid "Các giáp dắt ông trâu của mình về đình, dâng lễ trình Thần linh."
+msgstr "Each giáp leads its buffalo to the communal house and presents offerings to the spirits."
+
+msgid "Cây dừa: Kenney · Nature Kit (kenney.nl)"
+msgstr "Coconut palms: Kenney · Nature Kit (kenney.nl)"
+
+msgid "Công cụ"
+msgstr "Tools"
+
+msgid "Cùng Húc để khóa; móc để thắng giằng co."
+msgstr "Strike together to lock; hook to win the struggle."
+
+msgid "Cùng Húc để khóa; nhả khi trâu xanh móc."
+msgstr "Strike together to lock; release when blue hooks."
+
+msgid "Căn đòn, giữ sức và nắm thời cơ quyết định."
+msgstr "Time your strikes, save stamina and seize the decisive moment."
+
+msgid "Cầu cho mùa hội an lành, biển lặng, thuyền ra khơi bình an."
+msgstr "They pray for a peaceful season, calm seas and safe voyages."
+
+msgid "Cổng "
+msgstr "Port "
+
+msgid "Cỡ chữ HUD"
+msgstr "HUD text size"
+
+msgid "Di chuột:\nnhìn quanh"
+msgstr "Move mouse:\nlook around"
+
+msgid "Di sản văn hóa"
+msgstr "Cultural heritage"
+
+msgid "DÂNG HƯƠNG · THƯỢNG CỜ KHAI HỘI"
+msgstr "INCENSE OFFERING · RAISING THE FESTIVAL FLAG"
+
+msgid "Dân làng cầu mưa thuận gió hòa cho mùa hội."
+msgstr "The village prays for gentle rain and kind winds."
+
+msgid "Dân làng dâng hương ở đền, cờ hội được kéo lên trong tiếng trống điểm."
+msgstr "Villagers offer incense at the temple as the festival flag rises to the beat of the drum."
+
+msgid "Dễ"
+msgstr "Easy"
+
+msgid "Dễ+"
+msgstr "Easy+"
+
+msgid "Dịu"
+msgstr "Gentle"
+
+msgid "Dồn sát rào: mạnh hơn\nGạt sừng đúng lúc → phản đòn"
+msgstr "Pinned to the fence: hits harder\nParry on time → counter"
+
+msgid "GIỮ SỨC"
+msgstr "SAVE STAMINA"
+
+msgid "Ghìm"
+msgstr "Guard"
+
+msgid "Ghìm (giữ)"
+msgstr "Guard (hold)"
+
+msgid "Ghìm / nhả"
+msgstr "Guard / release"
+
+msgid "Giao hữu LAN"
+msgstr "LAN friendly"
+
+msgid "Giật camera khi trúng đòn"
+msgstr "Camera shake on hit"
+
+msgid "Giới hạn FPS"
+msgstr "FPS limit"
+
+msgid "Giữ "
+msgstr "Hold "
+
+msgid "Giữ %s để ghìm đòn phía trước"
+msgstr "Hold %s to guard against frontal hits"
+
+msgid "Giữ sức, tránh vùng bùn đầu tiên."
+msgstr "Save stamina and avoid the first mud patch."
+
+msgid "Giữa"
+msgstr "Middle"
+
+msgid "Godot Engine 4.7 (godotengine.org) · giấy phép MIT"
+msgstr "Godot Engine 4.7 (godotengine.org) · MIT licence"
+
+msgid "Góc camera"
+msgstr "Camera view"
+
+msgid "GẠT SỪNG!"
+msgstr "PARRY!"
+
+msgid "GẠT ĐƯỢC!"
+msgstr "PARRIED!"
+
+msgid "Gạt Húc"
+msgstr "Parry the Horn"
+
+msgid "Gạt Hổ lao"
+msgstr "Parry the Charge"
+
+msgid "Gạt sừng"
+msgstr "Parry"
+
+msgid "Gạt thành công"
+msgstr "Parries"
+
+msgid "Gạt {parried}/{attacks} · Phản đòn {counters}"
+msgstr "Parried {parried}/{attacks} · Counters {counters}"
+
+msgid "Gạt đúng lúc rồi húc để phản đòn."
+msgstr "Parry on time, then strike to counter."
+
+msgid "Gạt đúng lúc, rồi húc ngay để phản đòn."
+msgstr "Parry on time, then strike at once to counter."
+
+msgid "Gần"
+msgstr "Close"
+
+msgid "Gọn"
+msgstr "Light"
+
+msgid "GỬI YÊU CẦU TIẾP TỤC"
+msgstr "REQUEST TO RESUME"
+
+msgid "HAI BÊN MÓC"
+msgstr "BOTH HOOK"
+
+msgid "Hai người chơi đã đồng ý tạm dừng."
+msgstr "Both players agreed to pause."
+
+msgid "Hai đòn đối đầu tạo khóa. Đẩy về đối thủ; nhả khi họ móc, nhả sai lúc mất khí thế."
+msgstr "Two head-on strikes lock horns. Push toward the opponent; release when they hook, but a mistimed release costs spirit."
+
+msgid "Hiện FPS"
+msgstr "Show FPS"
+
+msgid "Hiệu ứng"
+msgstr "Effects"
+
+msgid "Hiệu ứng bụi, tia, vệt sừng: Kenney · Particle Pack (kenney.nl)"
+msgstr "Dust, spark and horn-trail effects: Kenney · Particle Pack (kenney.nl)"
+
+msgid "Hãy nhập địa chỉ IPv4 của máy tạo phòng"
+msgstr "Enter the host PC's IPv4 address"
+
+msgid "Húc"
+msgstr "Horn"
+
+msgid "Húc / móc"
+msgstr "Horn / hook"
+
+msgid "Húc gần để làm đối thủ mất khí thế."
+msgstr "Strike up close to drain the opponent's spirit."
+
+msgid "Húc vào hông hoặc sau lưng khiến đối thủ mất khí thế nhiều hơn."
+msgstr "Strikes to the side or rear drain more spirit."
+
+msgid "Hết giờ: khí thế cao hơn thắng\nBằng nhau/cùng hết: bốc thăm\nKhí thế không hồi"
+msgstr "Time up: higher spirit wins\nTied or both empty: drawing lots\nSpirit never recovers"
+
+msgid "Hết thời gian"
+msgstr "Timed out"
+
+msgid "Hết thời gian chờ kết nối (10 giây)"
+msgstr "Connection timed out (10 seconds)"
+
+msgid "Hồi khí thế"
+msgstr "Spirit restored"
+
+msgid "HỔ LAO!"
+msgstr "TIGER CHARGE!"
+
+msgid "Hổ lao"
+msgstr "Tiger Charge"
+
+msgid "Hổ lao trúng"
+msgstr "Tiger Charges landed"
+
+msgid "HỤT"
+msgstr "MISS"
+
+msgid "IPv4 máy tạo phòng"
+msgstr "Host IPv4"
+
+msgid "KHÉP MÙA HỘI"
+msgstr "SEASON COMPLETE"
+
+msgid "KHÍ THẾ"
+msgstr "SPIRIT"
+
+msgid "KHÍ THẾ "
+msgstr "SPIRIT "
+
+msgid "KHÓA SỪNG"
+msgstr "HORN LOCK"
+
+msgid "KHÓA SỪNG · "
+msgstr "HORN LOCK · "
+
+msgid "Khán giả"
+msgstr "Crowd"
+
+msgid "Khí thế"
+msgstr "Spirit"
+
+msgid "Khó"
+msgstr "Hard"
+
+msgid "Khóa sừng"
+msgstr "Horn Lock"
+
+msgid "Khóa sừng: tập Móc"
+msgstr "Horn Lock: Hook"
+
+msgid "Khóa sừng: tập Nhả"
+msgstr "Horn Lock: Release"
+
+msgid "Khôi phục mặc định"
+msgstr "Restore defaults"
+
+msgid "Không giới hạn"
+msgstr "Unlimited"
+
+msgid "Không thể"
+msgstr "Could not"
+
+msgid "Không thể bắt đầu kết nối: %s"
+msgstr "Could not start the connection: %s"
+
+msgid "Không thể chụp ảnh màn hình."
+msgstr "Could not take a screenshot."
+
+msgid "Không thể lưu cài đặt: %s"
+msgstr "Could not save settings: %s"
+
+msgid "Không thể lưu sổ tay: %s"
+msgstr "Could not save the notebook: %s"
+
+msgid "Không thể lưu ảnh: %s"
+msgstr "Could not save the screenshot: %s"
+
+msgid "Không thể mở phòng: %s"
+msgstr "Could not open the room: %s"
+
+msgid "Khựng khi trúng đòn"
+msgstr "Hit-stop"
+
+msgid "Kiệu hoa rước bình nước về đình, cờ ngũ sắc dẫn đường trong tiếng trống chiêng."
+msgstr "A flower palanquin carries the water jar to the communal house, led by five-colour flags, drums and gongs."
+
+msgid "KẾT QUẢ TRẬN LAN"
+msgstr "LAN MATCH RESULT"
+
+msgid "KẾT QUẢ · %s"
+msgstr "RESULT · %s"
+
+msgid "Kết nối thất bại"
+msgstr "Connection failed"
+
+msgid "Kết nối thất bại; kiểm tra IP, port và firewall"
+msgstr "Connection failed; check the IP, port and firewall"
+
+msgid "Kết quả đã khóa · bấm Esc để thả chuột"
+msgstr "Result locked · press Esc to free the mouse"
+
+msgid "LUẬT CHƠI"
+msgstr "RULES"
+
+msgid "Lao nhanh về phía trước, đẩy lùi đối thủ."
+msgstr "Burst forward and drive the opponent back."
+
+msgid "Làm quen nhịp đấu và giữ khoảng cách."
+msgstr "Learn the rhythm and keep your distance."
+
+msgid "Lưng ×%s"
+msgstr "Back ×%s"
+
+msgid "Lễ rước nước"
+msgstr "The water procession"
+
+msgid "Lễ tạ ơn, tiễn thần khép lại mùa hội."
+msgstr "A thanksgiving rite sends off the spirits and closes the season."
+
+msgid "Lớn"
+msgstr "Large"
+
+msgid "MÓC → NHẢ"
+msgstr "HOOK → RELEASE"
+
+msgid "MÙA HỘI"
+msgstr "FESTIVAL SEASON"
+
+msgid "Móc"
+msgstr "Hook"
+
+msgid "Môi trường"
+msgstr "Scenery"
+
+msgid "Mùa hội"
+msgstr "Festival season"
+
+msgid "Mùa hội: Vòng loại · Vòng hai · Tứ kết · Bán kết · Chung kết"
+msgstr "Festival season: Qualifier · Round Two · Quarterfinal · Semifinal · Final"
+
+msgid "Mùng 1 tháng 8 âm lịch"
+msgstr "1st day of the 8th lunar month"
+
+msgid "Mùng 10 tháng 8 âm lịch"
+msgstr "10th day of the 8th lunar month"
+
+msgid "Mùng 7 tháng 8 âm lịch"
+msgstr "7th day of the 8th lunar month"
+
+msgid "Mùng 8 tháng 8 âm lịch"
+msgstr "8th day of the 8th lunar month"
+
+msgid "Mùng 9 tháng 8 âm lịch"
+msgstr "9th day of the 8th lunar month"
+
+msgid "MẤT KẾT NỐI\nĐối phương đã rời trận."
+msgstr "CONNECTION LOST\nThe opponent left the match."
+
+msgid "Một máy tạo phòng. Máy kia nhập địa chỉ IPv4 của máy đó rồi vào phòng (cùng mạng Wi-Fi/LAN)."
+msgstr "One PC hosts a room. The other enters the host's IPv4 address and joins (same Wi-Fi/LAN)."
+
+msgid "NHẢ ĐÚNG LÚC!"
+msgstr "PERFECT RELEASE!"
+
+msgid "Nghỉ → hồi sức"
+msgstr "Rest → recover"
+
+msgid "Ngoài đời không có thanh KHÍ THẾ: ông trâu nào nhụt chí sẽ tự quay đầu chạy khỏi sới. Luật thua “bỏ chạy” trong game lấy từ chính điều đó."
+msgstr "Real fights have no SPIRIT bar: a buffalo that loses heart simply turns and runs from the ring. The game's “flee” defeat comes straight from that."
+
+msgid "Ngôn ngữ"
+msgstr "Language"
+
+msgid "Người xem làng: Quaternius · Animated Human (opengameart.org)"
+msgstr "Village crowd: Quaternius · Animated Human (opengameart.org)"
+
+msgid "Nhìn"
+msgstr "Look"
+
+msgid "Nhóm thực hiện"
+msgstr "Team"
+
+msgid "Nhạc"
+msgstr "Music"
+
+msgid "Nhả"
+msgstr "Release"
+
+msgid "Nhả lúc đối thủ móc khiến họ mất khí thế; nhả sai lúc bạn mất khí thế."
+msgstr "Release as the opponent hooks and they lose spirit; release at the wrong time and you do."
+
+msgid "Nhả đúng {releases} · Đối thủ móc {hooks}"
+msgstr "Good releases {releases} · Opponent hooks {hooks}"
+
+msgid "Nhấn phím…"
+msgstr "Press a key…"
+
+msgid "Năm 2012, Chọi trâu Đồ Sơn thành Di sản văn hóa phi vật thể quốc gia. Lễ hội giữ phần Lễ trang nghiêm và cấm cá cược."
+msgstr "In 2012 the Đồ Sơn Buffalo Fighting Festival became National Intangible Cultural Heritage. The festival keeps its solemn rites and bans betting."
+
+msgid "Nền đất, vũng bùn: Rob Tuytel · Poly Haven (Sand 01, Brown Mud 03)"
+msgstr "Ground and mud: Rob Tuytel · Poly Haven (Sand 01, Brown Mud 03)"
+
+msgid "PHẢN ĐÒN!"
+msgstr "COUNTER!"
+
+msgid "Phiên bản %s"
+msgstr "Version %s"
+
+msgid "Phía camera"
+msgstr "Camera side"
+
+msgid "Phím vàng là phím dùng trong trận."
+msgstr "Gold keys are used in matches."
+
+msgid "Phải"
+msgstr "Right"
+
+msgid "Phản đòn"
+msgstr "Counters"
+
+msgid "QUAY LẠI"
+msgstr "BACK"
+
+msgid "Rung tay cầm"
+msgstr "Controller rumble"
+
+msgid "RƯỚC NƯỚC"
+msgstr "WATER PROCESSION"
+
+msgid "RƯỚC ÔNG TRÂU VÔ ĐỊCH VỀ ĐÌNH"
+msgstr "THE CHAMPION RETURNS TO THE COMMUNAL HOUSE"
+
+msgid "Rước Thành hoàng ra sới; trai làng tấu trống chiêng, múa cờ mừng hội."
+msgstr "The guardian spirit is carried to the ring; young men play drums and gongs and dance with flags."
+
+msgid "RỜI TRẬN"
+msgstr "LEAVE MATCH"
+
+msgid "SOLO · MÙA HỘI"
+msgstr "SOLO · FESTIVAL SEASON"
+
+msgid "Sang phải"
+msgstr "Move right"
+
+msgid "Sang trái"
+msgstr "Move left"
+
+msgid "SÂN TẬP"
+msgstr "TRAINING GROUND"
+
+msgid "Sát rào ×%s"
+msgstr "Fence ×%s"
+
+msgid "SƯỜN +"
+msgstr "FLANK +"
+
+msgid "Sườn / lưng"
+msgstr "Flank / back"
+
+msgid "Sườn ×%s"
+msgstr "Flank ×%s"
+
+msgid "SỔ TAY"
+msgstr "NOTEBOOK"
+
+msgid "SỚI GIAO HỮU · LAN"
+msgstr "FRIENDLY RING · LAN"
+
+msgid "SỨC THẤP"
+msgstr "LOW STAMINA"
+
+msgid "SỨC · %d"
+msgstr "STAMINA · %d"
+
+msgid "SỨC: %d"
+msgstr "STAMINA: %d"
+
+msgid "Sức vô hạn"
+msgstr "Unlimited stamina"
+
+msgid "THOÁT"
+msgstr "QUIT"
+
+msgid "THẮNG THẾ NÀO"
+msgstr "HOW TO WIN"
+
+msgid "THẮNG THẾ · ĐỐI PHƯƠNG LUI SỚI"
+msgstr "WIN · THE OPPONENT FLED THE RING"
+
+msgid "THẮNG THỜI GIAN · KHÍ THẾ CAO HƠN"
+msgstr "WIN ON TIME · HIGHER SPIRIT"
+
+msgid "THỰC HIỆN"
+msgstr "CREDITS"
+
+msgid "TIẾP TỤC"
+msgstr "CONTINUE"
+
+msgid "TRÚNG ĐÒN"
+msgstr "HIT"
+
+msgid "TRẬN KẾT THÚC"
+msgstr "MATCH OVER"
+
+msgid "TRẬN LAN ĐANG TẠM DỪNG"
+msgstr "LAN MATCH PAUSED"
+
+msgid "TRẬN TIẾP THEO · %s"
+msgstr "NEXT MATCH · %s"
+
+msgid "TRỐNG KHAI HỘI · MÚA CỜ"
+msgstr "OPENING DRUMS · FLAG DANCE"
+
+msgid "TRỞ VỀ"
+msgstr "RETURN"
+
+msgid "Theo màn hình"
+msgstr "Match display"
+
+msgid "Thưa"
+msgstr "Sparse"
+
+msgid "Thường"
+msgstr "Normal"
+
+msgid "Thường+"
+msgstr "Normal+"
+
+msgid "Thấp"
+msgstr "Low"
+
+msgid "Thắng khóa sừng"
+msgstr "Horn locks won"
+
+msgid "Thắng khóa {wins}/{locks}"
+msgstr "Locks won {wins}/{locks}"
+
+msgid "Tinh thần thượng võ"
+msgstr "A fighting spirit"
+
+msgid "Tiếng va chạm: Kenney · Impact Sounds (kenney.nl)"
+msgstr "Impact sounds: Kenney · Impact Sounds (kenney.nl)"
+
+msgid "Toàn màn hình"
+msgstr "Fullscreen"
+
+msgid "Trái"
+msgstr "Left"
+
+msgid "Trúng {hits} · Sườn/lưng {flanks}"
+msgstr "Hits {hits} · Flank/back {flanks}"
+
+msgid "Trúng đòn"
+msgstr "Hits landed"
+
+msgid "Trước"
+msgstr "Front"
+
+msgid "Trước ngày đấu, làng rước nước về đình trên kiệu hoa để cầu mưa thuận gió hòa. Ở hội chọi trâu, phần Lễ luôn đi trước phần chọi."
+msgstr "Before the fights, the village carries water to the communal house on a flower palanquin to pray for good weather. At a buffalo festival the rites always come before the fighting."
+
+msgid "Trận solo đã dừng."
+msgstr "The solo match is paused."
+
+msgid "Trống hội và múa cờ"
+msgstr "Festival drums and flag dances"
+
+msgid "Trống khai hội mở đầu ngày hội chính. Tiếng trống giục giã và cờ tung bay là hiệu báo hai ông trâu sắp ra sới."
+msgstr "The opening drums start the main festival day. Urgent drumming and waving flags signal that two buffaloes are about to enter the ring."
+
+msgid "Tài nguyên miễn phí (CC0)"
+msgstr "Free assets (CC0)"
+
+msgid "Tùy chỉnh"
+msgstr "Custom"
+
+msgid "TẠM DỪNG"
+msgstr "PAUSED"
+
+msgid "TẠO PHÒNG"
+msgstr "HOST ROOM"
+
+msgid "Tạm dừng"
+msgstr "Pause"
+
+msgid "Tập Húc, Hổ lao và đánh sườn/lưng."
+msgstr "Practise Horn, Tiger Charge and flank/back hits."
+
+msgid "Tắt"
+msgstr "Off"
+
+msgid "Tốn sức"
+msgstr "Costs stamina"
+
+msgid "Tứ kết"
+msgstr "Quarterfinal"
+
+msgid "TỪ CHỐI"
+msgstr "DECLINE"
+
+msgid "Tự tạm dừng khi rời cửa sổ"
+msgstr "Pause when the window loses focus"
+
+msgid "Tự động lưu"
+msgstr "Saved automatically"
+
+msgid "VÀO CHUNG KẾT"
+msgstr "TO THE FINAL"
+
+msgid "VÀO MÙA HỘI"
+msgstr "BEGIN THE SEASON"
+
+msgid "VÀO PHÒNG"
+msgstr "JOIN ROOM"
+
+msgid "VÀO TRẬN!"
+msgstr "FIGHT!"
+
+msgid "VÀO TỨ KẾT"
+msgstr "TO THE QUARTERFINAL"
+
+msgid "VÀO VÒNG LOẠI"
+msgstr "TO THE QUALIFIER"
+
+msgid "Vòng hai"
+msgstr "Round Two"
+
+msgid "Vòng loại"
+msgstr "Qualifier"
+
+msgid "VỀ MENU"
+msgstr "MAIN MENU"
+
+msgid "Vừa"
+msgstr "Medium"
+
+msgid "WASD Đẩy tới · Trái Móc · Phải Nhả"
+msgstr "WASD Push · Left Hook · Right Release"
+
+msgid "XANH"
+msgstr "BLUE"
+
+msgid "XANH MÓC"
+msgstr "BLUE HOOKS"
+
+msgid "XANH đang móc"
+msgstr "BLUE is hooking"
+
+msgid "XEM LẠI"
+msgstr "REPLAY"
+
+msgid "XONG"
+msgstr "DONE"
+
+msgid "Xa"
+msgstr "Far"
+
+msgid "Xem lại pha quyết định"
+msgstr "Replay the deciding moment"
+
+msgid "YÊU CẦU TỪ NGƯỜI CHƠI %d"
+msgstr "REQUEST FROM PLAYER %d"
+
+msgid "Yêu cầu tiếp tục trận đã gửi tới đối phương."
+msgstr "Resume request sent to the opponent."
+
+msgid "Yêu cầu tạm dừng đã gửi tới đối phương."
+msgstr "Pause request sent to the opponent."
+
+msgid "bốc thăm"
+msgstr "drawing lots"
+
+msgid "khí thế"
+msgstr "spirit"
+
+msgid "sát rào"
+msgstr "fence"
+
+msgid "số %s"
+msgstr "No. %s"
+
+msgid "sức"
+msgstr "stamina"
+
+msgid "thắng bốc thăm"
+msgstr "wins the drawing of lots"
+
+msgid "thắng nhờ khí thế cao hơn khi hết giờ"
+msgstr "wins on higher spirit at time"
+
+msgid "thắng thế, %s"
+msgstr "wins, %s"
+
+msgid "trâu %s lui sới"
+msgstr "buffalo %s fled the ring"
+
+msgid "trâu của bạn lui sới"
+msgstr "your buffalo fled the ring"
+
+msgid "trận đấu kết thúc"
+msgstr "match over"
+
+msgid "xanh"
+msgstr "blue"
+
+msgid "Âm lượng tổng"
+msgstr "Master volume"
+
+msgid "Âm thanh"
+msgstr "Audio"
+
+msgid "ÔNG TRÂU XANH"
+msgstr "BLUE BUFFALO"
+
+msgid "ÔNG TRÂU ĐỎ"
+msgstr "RED BUFFALO"
+
+msgid "Ông trâu"
+msgstr "Ông trâu, the honoured buffalo"
+
+msgid "Ông trâu %s"
+msgstr "Buffalo %s"
+
+msgid "Ông trâu số %s cờ %s %s"
+msgstr "Buffalo No. %s · %s flag · %s"
+
+msgid "Ông trâu số 06"
+msgstr "Buffalo No. 06"
+
+msgid "Ông trâu số 06 của giáp Đông bước vào tứ kết."
+msgstr "Giáp Đông's Buffalo No. 06 advances to the quarterfinal."
+
+msgid "Ông trâu số 06 giáp Đông thắng thế, được rước về đình trong tiếng trống chiêng."
+msgstr "Giáp Đông's Buffalo No. 06 wins and is carried home to drums and gongs."
+
+msgid "Ông trâu vô địch được rước về đình.\nLễ tạ ơn, tiễn thần khép mùa hội."
+msgstr "The champion buffalo is carried home to the communal house.\nA thanksgiving rite closes the festival season."
+
+msgid "Ông trâu được rước ra sân cho trận chung kết."
+msgstr "Your buffalo is led out for the final."
+
+msgid "ĐANG CHỜ"
+msgstr "WAITING"
+
+msgid "ĐANG CHỜ XÁC NHẬN"
+msgstr "WAITING FOR CONFIRMATION"
+
+msgid "ĐANG VÀO SÂN"
+msgstr "ENTERING THE RING"
+
+msgid "ĐIỀU KHIỂN"
+msgstr "CONTROLS"
+
+msgid "Đang kết nối tới %s:%d (tối đa 10 giây)"
+msgstr "Connecting to %s:%d (up to 10 seconds)"
+
+msgid "Đi"
+msgstr "Move"
+
+msgid "Đi lùi"
+msgstr "Move back"
+
+msgid "Đi tới"
+msgstr "Move forward"
+
+msgid "Điều khiển"
+msgstr "Controls"
+
+msgid "ĐÁNH CHỖ NÀO"
+msgstr "WHERE TO HIT"
+
+msgid "ĐÁNH LƯNG!"
+msgstr "BACK HIT!"
+
+msgid "ĐÁNH SƯỜN!"
+msgstr "FLANK HIT!"
+
+msgid "ĐÓNG"
+msgstr "CLOSE"
+
+msgid "Đánh sườn / lưng"
+msgstr "Flank / back hit"
+
+msgid "Đã gửi yêu cầu. Đang chờ đối phương…"
+msgstr "Request sent. Waiting for the opponent…"
+
+msgid "Đã kết nối người chơi · phòng đầy"
+msgstr "Player connected · room full"
+
+msgid "Đã lưu ảnh"
+msgstr "Screenshot saved"
+
+msgid "Đã mất kết nối tới máy tạo phòng"
+msgstr "Lost the connection to the host"
+
+msgid "Đã tạo phòng · cổng %d · chờ người chơi"
+msgstr "Room open · port %d · waiting for a player"
+
+msgid "Đã tạo phòng · máy kia nhập %s (cổng %d) · chờ người chơi"
+msgstr "Room open · the other PC enters %s (port %d) · waiting for a player"
+
+msgid "Đã vào phòng LAN · đang tải trận"
+msgstr "Joined the LAN room · loading the match"
+
+msgid "Đòn và ghìm tốn sức\nNghỉ thì hồi · Hết sức: không ghìm"
+msgstr "Moves and guarding cost stamina\nRest to recover · Empty: no guard"
+
+msgid "ĐẤU LẠI"
+msgstr "REMATCH"
+
+msgid "ĐẤU TRƯỜNG LỄ HỘI"
+msgstr "FESTIVAL ARENA"
+
+msgid "ĐẤU TỰ DO"
+msgstr "FREE FIGHT"
+
+msgid "Đầy đủ"
+msgstr "Full"
+
+msgid "ĐẨY"
+msgstr "PUSH"
+
+msgid "Đẩy về đối thủ"
+msgstr "Push toward the opponent"
+
+msgid "Đẩy về đối thủ · %s móc · %s nhả"
+msgstr "Push toward the opponent · %s hook · %s release"
+
+msgid "ĐỎ"
+msgstr "RED"
+
+msgid "ĐỎ MÓC"
+msgstr "RED HOOKS"
+
+msgid "ĐỎ đang móc"
+msgstr "RED is hooking"
+
+msgid "ĐỎ đang móc · XANH đang móc"
+msgstr "RED is hooking · BLUE is hooking"
+
+msgid "ĐỐI PHƯƠNG  ←  %.1f s  →  BẠN"
+msgstr "OPPONENT  ←  %.1f s  →  YOU"
+
+msgid "Đối phương muốn tiếp tục trận."
+msgstr "The opponent wants to resume."
+
+msgid "Đối phương muốn tạm dừng trận."
+msgstr "The opponent wants to pause."
+
+msgid "Đối phương muốn đấu lại"
+msgstr "The opponent wants a rematch"
+
+msgid "Đối phương đã ngắt kết nối"
+msgstr "The opponent disconnected"
+
+msgid "Đối phương đã rời trận."
+msgstr "The opponent left the match."
+
+msgid "ĐỒNG Ý"
+msgstr "ACCEPT"
+
+msgid "Đồ họa"
+msgstr "Graphics"
+
+msgid "ĐỔI BÀI TẬP"
+msgstr "CHANGE DRILL"
+
+msgid "ĐỔI TRẬN"
+msgstr "CHANGE MATCH"
+
+msgid "Đổi hướng linh hoạt, tránh bị dồn giữa hai vùng bùn."
+msgstr "Change direction quickly; don't get trapped between two mud patches."
+
+msgid "Đổi từ trận sau"
+msgstr "Applies from the next match"
+
+msgid "Độ nhạy chuột"
+msgstr "Mouse sensitivity"
+
+msgid "Độ phân giải 3D"
+msgstr "3D resolution"
+
+msgid "ĐỠ ĐƯỢC"
+msgstr "BLOCKED"
+
+msgid "Đỡ phía trước, giảm khí thế mất và lực đẩy; không bị choáng."
+msgstr "Block from the front: less spirit lost, less knockback, no stun."
+
+msgid "đỏ"
+msgstr "red"
+
+msgid "đối phương"
+msgstr "the opponent"
+
+msgid "Ở Đồ Sơn, trâu chọi không bị gọi là “con” mà được tôn là “ông trâu”. Mỗi ông trâu mang số hiệu riêng khi vào hội, như số 06 của bạn."
+msgstr "In Đồ Sơn a fighting buffalo is never called a mere animal: it is honoured as “ông trâu”, Sir Buffalo. Each one enters the festival with its own number, like your No. 06."
+
+msgid "↑ ↓ Chọn đòn\n← → Đổi tab"
+msgstr "↑ ↓ Choose move\n← → Switch tab"

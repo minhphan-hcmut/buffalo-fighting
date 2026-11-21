@@ -2,15 +2,37 @@ extends Node
 ## Scene-owned, read-only tutorial state and combat-event observer.
 ## Untyped controller avoids a HUD -> presenter -> MatchController -> HUD type cycle.
 
-const CONTROLS := "WASD Đi · Chuột Nhìn · Trái Húc · Space Hổ lao · Phải Ghìm · G Gạt sừng · Esc Tạm dừng"
-const TUTORIAL := {
-	1: "WASD để đi, chuột để nhìn",
-	2: "Chuột trái để húc khi sừng hướng về đối thủ",
-	3: "Space để hổ lao",
-	4: "Giữ chuột phải để ghìm đòn phía trước",
-	5: "Đẩy về đối thủ · chuột trái móc · chuột phải nhả",
-	6: "Bấm G đúng lúc để gạt sừng, rồi húc ngay để phản đòn"
-}
+## Hints read the current key bindings (Cài đặt → Điều khiển), so a rebind shows here too.
+static func controls_pairs() -> Array:
+	return [
+		[KeyBindings.move_label(), "Đi"],
+		[Language.t("Chuột"), "Nhìn"],
+		[KeyBindings.short_label("horn"), "Húc"],
+		[KeyBindings.short_label("dash"), "Hổ lao"],
+		[KeyBindings.short_label("guard"), "Ghìm"],
+		[KeyBindings.short_label("parry"), "Gạt sừng"],
+		["Esc", "Tạm dừng"],
+	]
+
+
+static func controls_text() -> String:
+	var items := PackedStringArray()
+	for pair in controls_pairs():
+		items.append("%s %s" % [pair[0], Language.t(pair[1])])
+	return " · ".join(items)
+
+
+static func tutorial_text(id: int) -> String:
+	match id:
+		1: return Language.t("%s để đi, chuột để nhìn") % KeyBindings.move_label()
+		2: return Language.t("%s để húc khi sừng hướng về đối thủ") % KeyBindings.label("horn")
+		3: return Language.t("%s để hổ lao") % KeyBindings.label("dash")
+		4: return Language.t("Giữ %s để ghìm đòn phía trước") % KeyBindings.inline_label("guard")
+		5: return Language.t("Đẩy về đối thủ · %s móc · %s nhả") % [KeyBindings.inline_label("horn"), KeyBindings.inline_label("guard")]
+		6: return Language.t("Bấm %s đúng lúc để gạt sừng, rồi húc ngay để phản đòn") % KeyBindings.inline_label("parry")
+	return controls_text()
+
+
 var controller
 var label: RichTextLabel
 var write_text: Callable
@@ -75,7 +97,7 @@ func update(delta: float) -> bool:
 		controls_hint_time += delta
 	HudText.set_size(label, "normal_font_size", GameBalance.get_int("ui_controls_font_size"))
 	if not enabled():
-		write_text.call(CONTROLS)
+		write_text.call(controls_text())
 		var duration := GameBalance.get_number("ui_controls_hint_s")
 		var fade := GameBalance.get_number("ui_controls_hint_fade_s")
 		hint_visible = controls_hint_time < duration
@@ -99,7 +121,7 @@ func update(delta: float) -> bool:
 			tutorial_current = tutorial_queue.pop_front()
 			tutorial_seen.append(tutorial_current)
 			tutorial_time = GameBalance.get_number("tutorial_hint_s")
-	write_text.call(TUTORIAL[tutorial_current] if tutorial_current > 0 else CONTROLS)
+	write_text.call(tutorial_text(tutorial_current))
 	var remaining := tutorial_time if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_s") - controls_hint_time
 	var fade := GameBalance.get_number("tutorial_hint_fade_s") if tutorial_current > 0 else GameBalance.get_number("ui_controls_hint_fade_s")
 	hint_visible = remaining > 0.0

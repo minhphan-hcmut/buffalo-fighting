@@ -104,7 +104,7 @@ func show_free_play() -> void:
 	var levels := DataFile.load_json("res://data/levels.json")
 	for level: StringName in SessionState.SOLO_LEVELS:
 		var data: Dictionary = levels[level]
-		var button := _button("%s · %s\n%s · %s" % [data.title.to_upper(), levels.difficulty_labels[data.ai_profile], data.opponent_number, data.opponent_giap])
+		var button := _button("%s · %s\n%s · %s" % [Language.t(data.title).to_upper(), Language.t(levels.difficulty_labels[data.ai_profile]), data.opponent_number, data.opponent_giap])
 		if level == SessionState.SOLO_LEVELS[0]:
 			button.theme_type_variation = &"PrimaryButton"
 		button.name = String(level)
@@ -130,7 +130,7 @@ func show_training() -> void:
 		var keys: Array[String] = []
 		for move: Dictionary in MoveDemo.MOVES:
 			if drill.moves.has(String(move.id)):
-				keys.append(move.keys)
+				keys.append(MoveDemo.keys_for(move.id))
 		var button := Button.new()
 		button.text = drill.name
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT

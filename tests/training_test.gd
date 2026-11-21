@@ -80,7 +80,7 @@ func _check_entry() -> void:
 		check(button != null and button.text == drill.name and button.get_node("Description").text == drill.goal, "drill row shows name and goal: %s" % drill.id)
 		for move: Dictionary in MoveDemo.MOVES:
 			if drill.moves.has(String(move.id)):
-				check(button.get_node("Keys").get_children().any(func(cap: PanelContainer): return cap.get_child(0).text == move.keys), "drill keycaps reuse MOVES text: %s/%s" % [drill.id, move.id])
+				check(button.get_node("Keys").get_children().any(func(cap: PanelContainer): return cap.get_child(0).text == MoveDemo.keys_for(move.id)), "drill keycaps reuse MOVES text: %s/%s" % [drill.id, move.id])
 		check(focus == button, "native keyboard/gamepad focus reaches %s" % drill.id)
 		focus = focus.find_next_valid_focus()
 	var toggle := page.find_child("UnlimitedStamina", true, false) as CheckButton

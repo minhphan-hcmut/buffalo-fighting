@@ -295,6 +295,15 @@ bg_color = Color(0, 0, 0, 0)
 border_width_left = 3
 border_color = Color(0.9098039, 0.7372549, 0.39607844, 1)
 
+[sub_resource type="StyleBoxFlat" id="TabHover"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7372549, 0.39607844, 0.45)
+
 [sub_resource type="StyleBoxFlat" id="TabActive"]
 content_margin_left = 12.0
 content_margin_top = 12.0
@@ -423,9 +432,9 @@ MenuSecondary/colors/font_focus_color = Color(0.9098039, 0.7372549, 0.39607844, 
 MenuSecondary/colors/font_pressed_color = Color(0.9098039, 0.7372549, 0.39607844, 1)
 
 QuietTab/base_type = &"QuietButton"
-QuietTab/styles/hover = SubResource("TabActive")
+QuietTab/styles/hover = SubResource("TabHover")
 QuietTab/styles/pressed = SubResource("TabActive")
-QuietTab/styles/focus = SubResource("TabActive")
+QuietTab/styles/focus = SubResource("TabHover")
 
 PrimaryTab/base_type = &"QuietButton"
 PrimaryTab/colors/font_color = Color(0.9098039, 0.7372549, 0.39607844, 1)

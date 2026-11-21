@@ -83,7 +83,9 @@ func run() -> void:
 		_check_layout(overlay, panel)
 	overlay._show_result("exhausted")
 	check(overlay.find_child("CultureCard", true, false) == null, "exhausted session has no card panel")
-	check(overlay.result_panel.offset_left == 64.0 and overlay.result_panel.offset_top == -230.0, "no card restores original panel layout")
+	await process_frame
+	check(overlay.result_panel.offset_left == 64.0, "no card restores original panel width")
+	_check_fit(overlay)
 
 	SessionState.return_to_menu()
 	SessionState.mode = &"LAN"
@@ -111,7 +113,16 @@ func run() -> void:
 
 func _check_layout(overlay: Control, panel: PanelContainer) -> void:
 	check(root.get_visible_rect().encloses(overlay.result_panel.get_global_rect()), "result panel fits 1280x720: %s" % overlay.result_panel.get_global_rect())
+	_check_fit(overlay)
 	check(panel.get_global_rect().end.x <= 640.0, "culture card stays in left half")
 	check(panel.get_global_rect().end.y <= overlay.result_actions.get_global_rect().position.y, "card does not overlap result actions")
 	for label: Label in panel.get_child(0).get_children():
 		check(panel.get_global_rect().encloses(label.get_global_rect()), "card text stays inside panel")
+
+
+## 2026-11-22: the result panel used fixed heights and left an empty band under VỀ MENU.
+func _check_fit(overlay: Control) -> void:
+	var panel: Control = overlay.result_panel
+	var empty := panel.size.y - panel.get_combined_minimum_size().y
+	check(empty <= 1.0, "result panel hugs its content: %.0f px spare" % empty)
+	check(is_equal_approx(panel.get_global_rect().get_center().y, root.get_visible_rect().size.y * 0.5), "result panel stays vertically centred")

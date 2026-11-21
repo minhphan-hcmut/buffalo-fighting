@@ -36,7 +36,7 @@ func ensure_shell() -> void:
 	var shade := ColorRect.new()
 	shade.name = "PauseShade"
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color("#17262EE8")
+	shade.color = Color("#1E140CE6")
 	pause_overlay.add_child(shade)
 	pause_panel = PanelContainer.new()
 	pause_overlay.add_child(pause_panel)
@@ -120,7 +120,7 @@ func _focus_first() -> void:
 func show_pause(mode: StringName, training: bool) -> void:
 	_prepare_pause()
 	pause_title.text = "TẠM DỪNG" if mode == &"SOLO" else "TRẬN LAN ĐANG TẠM DỪNG"
-	pause_detail.text = "Trận solo đã dừng." if mode == &"SOLO" else "Hai người chơi đã đồng ý tạm dừng."
+	pause_detail.text = ("Buổi tập đã dừng." if training else "Trận solo đã dừng.") if mode == &"SOLO" else "Hai người chơi đã đồng ý tạm dừng."
 	button("GỬI YÊU CẦU TIẾP TỤC" if mode == &"LAN" else "TIẾP TỤC", actions.resume, null, &"PrimaryButton")
 	if training:
 		button("ĐỔI BÀI TẬP", actions.change_training)
@@ -142,7 +142,7 @@ func show_wait(requested_pause: bool) -> void:
 
 func show_confirmation(peer_id: int, requested_pause: bool) -> void:
 	_prepare_pause()
-	pause_title.text = "YÊU CẦU TỪ NGƯỜI CHƠI %d" % peer_id
+	pause_title.text = Language.t("YÊU CẦU TỪ NGƯỜI CHƠI %d") % peer_id
 	pause_detail.text = "Đối phương muốn tạm dừng trận." if requested_pause else "Đối phương muốn tiếp tục trận."
 	button("CHẤP NHẬN", actions.answer.bind(true), null, &"PrimaryButton")
 	button("TỪ CHỐI", actions.answer.bind(false))

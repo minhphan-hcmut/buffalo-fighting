@@ -81,7 +81,7 @@ static func add_lighting(parent: Node3D) -> void:
 
 
 static func add_identifier(actor: Buffalo, color: Color, number: String, faction: String) -> void:
-	actor.set_meta("announcer_name", "Ông trâu số %s cờ %s %s" % [number, "đỏ" if color.r > color.b else "xanh", faction.capitalize()])
+	actor.set_meta("announcer_name", Language.t("Ông trâu số %s cờ %s %s") % [number, Language.t("đỏ" if color.r > color.b else "xanh"), faction.capitalize()])
 	var bright := color.r > color.b
 	Buffalo.add_team_outline(actor, OUTLINE_RED if bright else OUTLINE_BLUE)
 

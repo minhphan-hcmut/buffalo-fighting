@@ -1,5 +1,7 @@
 extends SceneTree
 
+const BannerLayout := preload("res://tests/banner_layout_test.gd")
+
 var failures := 0
 
 
@@ -57,7 +59,9 @@ func run() -> void:
 	check(hud.center_label.pivot_offset == hud.center_label.size * 0.5, "punch pivots around label center")
 	await process_frame
 	var digit_rect: Rect2 = hud.center_label.get_global_rect()
-	check(is_equal_approx(digit_rect.position.y, GameBalance.get_number("hud_banner_top")) and digit_rect.position.y > hud.top_bar.get_global_rect().end.y and digit_rect.position.y > hud.timer_label.get_global_rect().end.y, "countdown sits at the configured top, clear of both strips and timer")
+	check(is_equal_approx(digit_rect.position.y, GameBalance.get_number("hud_banner_top")) and BannerLayout.clears(BannerLayout.glyph_rect(hud.center_label), hud.top_bar) and digit_rect.position.y > hud.timer_label.get_global_rect().end.y, "countdown sits at the configured top, clear of both strips and timer")
+	# 2026-11-22: the digit used to sit over the player's horns; keep it in the upper 45% of the screen.
+	check(digit_rect.end.y <= root.get_visible_rect().size.y * 0.45, "countdown ends above the horns: bottom %.0f" % digit_rect.end.y)
 	check(GameBalance.get_int("ui_countdown_font_size") >= 96 and GameBalance.get_int("ui_countdown_font_size") <= 110 and punch_scale <= 1.2, "compact countdown font and short pop leave the distant opponent visible")
 	check(not hud.tutorial_label.visible and hud.tutorial_label.get_parsed_text().contains("G Gạt sừng"), "controls wait for VÀO TRẬN! so the loa ribbon speaks alone")
 	arena.phase = &"PLAYING"
@@ -65,7 +69,7 @@ func run() -> void:
 	check(hud.center_label.text == "VÀO TRẬN!", "COUNTDOWN to PLAYING starts fight banner")
 	check(hud.center_label.get_theme_color("font_color") == Color("#E8BC65") and is_equal_approx(hud.center_label.scale.x, punch_scale), "fight banner is gold and punches")
 	check(hud.tutorial_label.visible, "L02 controls start visible")
-	check(hud.tutorial_label.bbcode_enabled and hud.tutorial_label.get_parsed_text() == hud.CONTROLS, "styled controls preserve every key, action and separator")
+	check(hud.tutorial_label.bbcode_enabled and hud.tutorial_label.get_parsed_text() == hud.TutorialPresenter.controls_text(), "styled controls preserve every key, action and separator")
 	for key in ["WASD", "Chuột", "Trái", "Space", "Phải", "G", "Esc"]:
 		check(hud.tutorial_label.text.contains("[b][color=#E8BC65]%s[/color][/b]" % key), "control key is gold and bold: " + key)
 	await process_frame
